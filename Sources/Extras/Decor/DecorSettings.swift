@@ -215,11 +215,11 @@ struct DecorSettings: View {
     private var glassCard: some View {
         SettingsCard(
             title: "Liquid Glass",
-            footer: "Szklany wygląd wymaga macOS 26 lub nowszego. Na starszych systemach notch zostaje czarny."
+            footer: "Szklane tło panelu i banerów wymaga macOS 26 lub nowszego; na starszych systemach zostaje czarne. Przyciski i kafelki dostają wtedy szkło rysowane."
         ) {
             if !DecorStore.glassIsAvailable {
                 SettingsStatus(
-                    text: "Ten Mac ma starszy system niż macOS 26, więc przełączniki są wyłączone.",
+                    text: "Ten Mac ma starszy system niż macOS 26, więc przełączniki tła są wyłączone.",
                     symbol: "info.circle.fill",
                     tint: .secondary
                 )
@@ -243,6 +243,14 @@ struct DecorSettings: View {
                 preview: DecorStore.glassIsAvailable ? { previewBanner() } : nil
             )
             .disabled(!DecorStore.glassIsAvailable)
+
+            SettingsToggle(
+                title: "Systemowe szkło (Liquid Glass)",
+                subtitle: "Przyciski i kafelki w otwartym notchu. Na macOS starszym niż 26 używane jest szkło rysowane.",
+                symbol: "square.stack.3d.up.fill",
+                tint: SettingsStyle.teal,
+                isOn: $store.systemGlass
+            )
         }
     }
 

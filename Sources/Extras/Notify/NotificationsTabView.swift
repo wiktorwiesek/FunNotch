@@ -122,26 +122,29 @@ private struct NotificationRow: View {
                     } label: {
                         Text("Kopiuj")
                             .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 6)
+                            .foregroundStyle(.yellow)
+                            .padding(.horizontal, 7)
                             .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.yellow))
+                            .notchGlass(in: Capsule(), tint: .yellow, lit: true)
+                            .contentShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchPressStyle())
                     .help("Skopiuj kod " + code)
                 }
             }
             .padding(7)
             .frame(maxWidth: .infinity, minHeight: 50, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(isHovering ? 0.14 : 0.08))
+            .notchGlass(
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                lit: isHovering,
+                subtle: !isHovering
             )
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.98))
+        .notchHoverLift(isHovering, scale: 1.015)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
         .help("Otwórz: " + item.appName)
     }
@@ -157,7 +160,7 @@ private struct NotificationRow: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 26, height: 26)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.1)))
+                .notchGlass(in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
     }
 
@@ -193,9 +196,12 @@ private struct NotificationSourceBar: View {
             Spacer(minLength: 0)
             if !center.items.isEmpty {
                 Button("Wyczyść") { center.clear() }
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchPressStyle())
                     .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 1.5)
+                    .notchControl(in: Capsule(), resting: true)
             }
         }
         .frame(height: 16)
@@ -212,9 +218,12 @@ private struct NotificationSourceBar: View {
                 .lineLimit(1)
             if let fix {
                 Button(fix.0, action: fix.1)
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchPressStyle())
                     .font(.system(size: 9.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 1.5)
+                    .notchControl(in: Capsule(), resting: true)
             }
         }
     }

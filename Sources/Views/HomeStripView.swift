@@ -47,10 +47,7 @@ struct HomePanelChrome<Content: View>: View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 7)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(.white.opacity(0.045))
-            )
+            .notchCard(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -644,7 +641,8 @@ private struct RecentShelfPanel: View {
                             .frame(width: 22, height: 22)
                             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(NotchPressStyle(scale: 0.9))
+                        .notchControl(in: RoundedRectangle(cornerRadius: 5, style: .continuous), lift: 1.08)
                         .help(item.name)
                     }
                 }
@@ -674,7 +672,8 @@ private struct ClipboardPanel: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle(scale: 0.97))
+                .notchControl(in: RoundedRectangle(cornerRadius: 5, style: .continuous), lift: 1.02)
                 .help("Kliknij, aby skopiować ponownie")
             } else {
                 Text("Jeszcze nic")
@@ -714,7 +713,8 @@ private struct NotesPanel: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.97))
+        .notchControl(in: RoundedRectangle(cornerRadius: 5, style: .continuous), lift: 1.02)
         .help("Otwórz kartę Notatki")
     }
 }
@@ -796,7 +796,8 @@ private struct OpenAppPanel: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.95))
+        .notchControl(in: RoundedRectangle(cornerRadius: 7, style: .continuous), lift: 1.04)
         .disabled(icon == nil)
         .help(icon == nil ? "Wybierz aplikację w Ustawieniach" : "Otwórz: \(name)")
     }

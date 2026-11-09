@@ -71,25 +71,29 @@ struct ShelfView: View {
 
             Spacer()
 
-            if shelf.selection.count > 1 {
-                ShelfToolbarButton(systemName: "doc.zipper", label: "Spakuj") {
-                    ShelfConverter.shared.run(.zip, on: shelf.items.filter { shelf.selection.contains($0.id) })
-                }
-            }
-            ShelfToolbarButton(systemName: "square.and.arrow.up", label: "Udostępnij") {
-                ShareAnchor.share(urls: shelf.shareURLs)
-            }
-            ShelfToolbarButton(systemName: "dot.radiowaves.right", label: "AirDrop") {
-                shelf.airDrop(shelf.shareURLs)
-            }
-            ShelfToolbarButton(systemName: "doc.on.doc", label: "Kopiuj") {
-                shelf.copyToPasteboard(shelf.shareURLs)
-            }
-            ShelfToolbarButton(systemName: "trash", label: "Wyczyść") {
-                if shelf.selection.isEmpty {
-                    shelf.clear()
-                } else {
-                    shelf.removeSelected()
+            NotchGlassGroup {
+                HStack(spacing: 8) {
+                    if shelf.selection.count > 1 {
+                        ShelfToolbarButton(systemName: "doc.zipper", label: "Spakuj") {
+                            ShelfConverter.shared.run(.zip, on: shelf.items.filter { shelf.selection.contains($0.id) })
+                        }
+                    }
+                    ShelfToolbarButton(systemName: "square.and.arrow.up", label: "Udostępnij") {
+                        ShareAnchor.share(urls: shelf.shareURLs)
+                    }
+                    ShelfToolbarButton(systemName: "dot.radiowaves.right", label: "AirDrop") {
+                        shelf.airDrop(shelf.shareURLs)
+                    }
+                    ShelfToolbarButton(systemName: "doc.on.doc", label: "Kopiuj") {
+                        shelf.copyToPasteboard(shelf.shareURLs)
+                    }
+                    ShelfToolbarButton(systemName: "trash", label: "Wyczyść") {
+                        if shelf.selection.isEmpty {
+                            shelf.clear()
+                        } else {
+                            shelf.removeSelected()
+                        }
+                    }
                 }
             }
         }
@@ -145,8 +149,6 @@ private struct ShelfToolbarButton: View {
     let label: String
     let action: () -> Void
 
-    @State private var isHovering = false
-
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
@@ -155,15 +157,13 @@ private struct ShelfToolbarButton: View {
                 Text(label)
                     .font(.system(size: 10, weight: .medium))
             }
-            .foregroundStyle(.white.opacity(isHovering ? 1 : 0.7))
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(Color.white.opacity(isHovering ? 0.16 : 0.08)))
+            .foregroundStyle(.white.opacity(0.9))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3.5)
+            .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
-        }
+        .buttonStyle(NotchPressStyle())
+        .notchControl(in: Capsule(), resting: true)
     }
 }
 
@@ -221,9 +221,6 @@ private struct ShelfItemTile: View {
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(0.08))
-
                 if let thumbnail = item.thumbnail {
                     Image(nsImage: thumbnail)
                         .resizable()
@@ -236,21 +233,30 @@ private struct ShelfItemTile: View {
                 }
             }
             .frame(width: 62, height: 62)
+            .notchGlass(
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                tint: isSelected ? settings.accentColor : nil,
+                lit: isHovering || isSelected,
+                subtle: !isHovering && !isSelected
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.accentColor : Color.white.opacity(isHovering ? 0.3 : 0.08),
-                            lineWidth: isSelected ? 2 : 1)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(isSelected ? settings.accentColor : .clear, lineWidth: 1.5)
             )
             .overlay(alignment: .topTrailing) {
                 if isHovering {
                     Button {
                         shelf.remove(id: item.id)
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.white, .black.opacity(0.6))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 17, height: 17)
+                            .notchGlass(in: Circle(), lit: true)
+                            .contentShape(Circle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchPressStyle())
+                    .transition(.opacity.combined(with: .scale(scale: 0.7)))
                     .offset(x: 5, y: -5)
                 }
             }
@@ -263,9 +269,9 @@ private struct ShelfItemTile: View {
                 .frame(width: 66)
         }
         .contentShape(Rectangle())
-        .scaleEffect(isHovering ? 1.04 : 1)
+        .notchHoverLift(isHovering)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
             // Keep the notch open while the pointer is over an item being dragged.
             viewModel.pinnedOpen = hovering
         }
@@ -341,22 +347,19 @@ private struct FolderTargetChip: View {
 
     @ObservedObject private var shelf = ShelfManager.shared
     @EnvironmentObject private var settings: Settings
-    @State private var isHovering = false
 
     var body: some View {
         Button(action: send) {
             Text((path as NSString).lastPathComponent)
                 .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.white.opacity(isHovering ? 1 : 0.7))
+                .foregroundStyle(.white.opacity(0.85))
                 .lineLimit(1)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Capsule().fill(Color.white.opacity(isHovering ? 0.18 : 0.08)))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3.5)
+                .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
-        }
+        .buttonStyle(NotchPressStyle())
+        .notchControl(in: Capsule(), resting: true)
         .help("Wyślij zaznaczone do \(path)")
     }
 

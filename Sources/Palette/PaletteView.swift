@@ -132,10 +132,12 @@ private struct PaletteRow: View {
         }
         .padding(.horizontal, 10)
         .frame(height: PaletteMetrics.rowHeight)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? Color.white.opacity(0.14) : .clear)
-        )
+        .background {
+            if isSelected {
+                NotchGlassSurface(shape: RoundedRectangle(cornerRadius: 10, style: .continuous), lit: true)
+                    .transition(.opacity)
+            }
+        }
     }
 
     @ViewBuilder

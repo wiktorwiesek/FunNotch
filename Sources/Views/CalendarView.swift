@@ -10,6 +10,8 @@ import SwiftUI
 struct CalendarPane: View {
     @ObservedObject private var manager = CalendarManager.shared
     @EnvironmentObject private var settings: Settings
+    /// One marker shared by the day cells, so a new selection slides.
+    @Namespace private var daySelection
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -37,9 +39,10 @@ struct CalendarPane: View {
                 DayCell(
                     date: day,
                     isSelected: Calendar.current.isDate(day, inSameDayAs: manager.selectedDate),
-                    isToday: Calendar.current.isDateInToday(day)
+                    isToday: Calendar.current.isDateInToday(day),
+                    namespace: daySelection
                 ) {
-                    manager.select(date: day)
+                    withAnimation(NotchGlassMotion.select) { manager.select(date: day) }
                 }
             }
         }
@@ -104,12 +107,12 @@ struct CalendarPane: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
             Button("Zezwól na dostęp") { manager.requestAccess() }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle())
                 .font(.system(size: 10, weight: .medium))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(Capsule().fill(Color.white.opacity(0.15)))
                 .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .notchControl(in: Capsule(), resting: true)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -119,25 +122,40 @@ private struct DayCell: View {
     let date: Date
     let isSelected: Bool
     let isToday: Bool
+    let namespace: Namespace.ID
     let action: () -> Void
+
+    @State private var isHovering = false
+
+    private let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
 
     var body: some View {
         Button(action: action) {
             VStack(spacing: 1) {
                 Text(weekdaySymbol)
                     .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(isSelected ? .black.opacity(0.55) : .white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(isSelected ? 0.7 : 0.45))
                 Text(dayNumber)
                     .font(.system(size: 11, weight: isToday ? .bold : .medium))
-                    .foregroundStyle(isSelected ? .black : (isToday ? .red : .white))
+                    .foregroundStyle(isToday ? .red : .white)
             }
             .frame(width: 24, height: 30)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.white : Color.clear)
-            )
+            .contentShape(shape)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.94))
+        .onHover { hovering in
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
+        }
+        // The selected day carries the shared marker; a hovered one a lighter
+        // glass of its own that fades in and out.
+        .background {
+            if isHovering, !isSelected {
+                NotchGlassSurface(shape: shape)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
+        }
+        .notchSelection(isSelected, id: "day", in: namespace, shape: shape)
+        .notchHoverLift(isHovering && !isSelected, scale: 1.04)
     }
 
     /// One formatter for every cell: building a `DateFormatter` costs far more
@@ -162,7 +180,6 @@ private struct AgendaRow: View {
     let item: AgendaItem
 
     @EnvironmentObject private var settings: Settings
-    @State private var isHovering = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
@@ -174,7 +191,7 @@ private struct AgendaRow: View {
                         .font(.system(size: 10))
                         .foregroundStyle(item.calendarColor)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle())
                 .padding(.top, 1)
             } else {
                 RoundedRectangle(cornerRadius: 1.5)
@@ -200,10 +217,7 @@ private struct AgendaRow: View {
                             .foregroundStyle(.white.opacity(0.55))
                             .padding(.horizontal, 3)
                             .padding(.vertical, 1)
-                            .background(
-                                RoundedRectangle(cornerRadius: 2.5)
-                                    .fill(.white.opacity(0.12))
-                            )
+                            .notchGlass(in: RoundedRectangle(cornerRadius: 3, style: .continuous), subtle: true)
                             .fixedSize()
                     }
                 }
@@ -224,20 +238,16 @@ private struct AgendaRow: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(Capsule().fill(settings.accentColor))
+                        .notchGlass(in: Capsule(), tint: settings.accentColor, lit: true)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle())
                 .help("Dołącz do spotkania")
             }
         }
         .padding(.vertical, 2)
         .padding(.horizontal, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(Color.white.opacity(isHovering ? 0.08 : 0))
-        )
         .contentShape(Rectangle())
-        .onHover { isHovering = $0 }
+        .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.01)
         .onTapGesture { CalendarManager.shared.open(item: item) }
     }
 }

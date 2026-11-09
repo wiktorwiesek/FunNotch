@@ -81,9 +81,12 @@ struct WeatherPane: View {
                     .foregroundStyle(.white.opacity(0.5))
                 if !weather.isLocationAuthorized {
                     Button("Zezwól…") { weather.requestAccess() }
-                        .buttonStyle(.plain)
+                        .buttonStyle(NotchPressStyle())
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 4)
+                        .notchControl(in: Capsule(), resting: true)
                 }
             }
         }

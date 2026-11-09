@@ -45,14 +45,17 @@ struct QuickActionStrip: View {
 
     var body: some View {
         VStack(spacing: 3) {
-            HStack(spacing: Self.spacing) {
-                ForEach(items) { item in
-                    QuickActionChip(item: item, lit: hovered == item.id)
-                        // Entering a chip names it; leaving it does not clear
-                        // the name, so the pointer can go down to "Opcje".
-                        .onHover { inside in
-                            if inside { hovered = item.id }
-                        }
+            // One glass group: neighbouring chips blend as the pointer moves.
+            NotchGlassGroup {
+                HStack(spacing: Self.spacing) {
+                    ForEach(items) { item in
+                        QuickActionChip(item: item, lit: hovered == item.id)
+                            // Entering a chip names it; leaving it does not clear
+                            // the name, so the pointer can go down to "Opcje".
+                            .onHover { inside in
+                                if inside { setHovered(item.id) }
+                            }
+                    }
                 }
             }
             .frame(maxHeight: .infinity)
@@ -61,9 +64,14 @@ struct QuickActionStrip: View {
         }
         // Only leaving the whole tile puts the hint back.
         .onHover { inside in
-            if !inside { hovered = nil }
+            if !inside { setHovered(nil) }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.86), value: hovered)
+    }
+
+    /// Hover is the only thing that animates here, and it does so through one
+    /// explicit transaction rather than an implicit animation on the tile.
+    private func setHovered(_ id: String?) {
+        withAnimation(NotchGlassMotion.hover) { hovered = id }
     }
 
     @ViewBuilder
@@ -93,10 +101,10 @@ struct QuickActionStrip: View {
                         .foregroundStyle(.white.opacity(0.75))
                         .padding(.horizontal, 6)
                         .frame(maxHeight: .infinity)
-                        .background(Capsule().fill(.white.opacity(0.12)))
+                        .notchGlass(in: Capsule(), lit: true, subtle: true)
                         .contentShape(Capsule())
                     }
-                    .buttonStyle(ChipPressStyle())
+                    .buttonStyle(NotchPressStyle())
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
                 }
             } else {
@@ -124,8 +132,8 @@ private struct QuickActionChip: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(ChipPressStyle())
-        .background { ChipBackground(tint: item.activeTint, lit: lit) }
+        .buttonStyle(NotchPressStyle())
+        .notchGlass(in: RoundedRectangle(cornerRadius: 10, style: .continuous), tint: item.activeTint, lit: lit)
         // A chip with options carries a small mark, so they are not a secret.
         .overlay(alignment: .bottomTrailing) {
             if !item.menu.isEmpty {
@@ -136,7 +144,7 @@ private struct QuickActionChip: View {
                     .allowsHitTesting(false)
             }
         }
-        .scaleEffect(lit ? 1.04 : 1)
+        .notchHoverLift(lit)
         .contextMenu {
             ForEach(Array(item.menu.enumerated()), id: \.offset) { _, entry in
                 Button(entry.title) { entry.perform() }
@@ -144,62 +152,5 @@ private struct QuickActionChip: View {
             }
         }
         .help(item.help)
-    }
-}
-
-/// Drawn glass: a lit top edge, a soft sheen and a hairline rim, brighter
-/// under the pointer and tinted while the action is on. System Liquid Glass
-/// (`glassEffect`) was tried here, but inside the notch's non-activating
-/// panel it renders in its inactive, flat state and draws nothing at all
-/// offscreen, so it could neither look right nor be checked.
-private struct ChipBackground: View {
-    let tint: Color?
-    let lit: Bool
-
-    private let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-
-    var body: some View {
-        let base = tint ?? .white
-        shape
-            .fill(
-                LinearGradient(
-                    colors: [
-                        base.opacity(tint == nil ? (lit ? 0.20 : 0.12) : 0.34),
-                        base.opacity(tint == nil ? (lit ? 0.09 : 0.045) : 0.16),
-                    ],
-                    startPoint: .top, endPoint: .bottom
-                )
-            )
-            .overlay(
-                // The sheen: light gathered along the top, as on a glass bead.
-                shape
-                    .inset(by: 1)
-                    .fill(
-                        LinearGradient(
-                            colors: [.white.opacity(lit ? 0.22 : 0.12), .clear],
-                            startPoint: .top, endPoint: .center
-                        )
-                    )
-            )
-            .overlay(
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: [.white.opacity(lit ? 0.42 : 0.26), .white.opacity(0.03)],
-                        startPoint: .top, endPoint: .bottom
-                    ),
-                    lineWidth: 0.7
-                )
-            )
-            .shadow(color: (tint ?? .black).opacity(tint == nil ? 0.35 : 0.45), radius: lit ? 6 : 3, y: lit ? 2 : 1)
-    }
-}
-
-/// A small, quick press: the chip sinks and dims, then springs back.
-private struct ChipPressStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .animation(.spring(response: 0.22, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }

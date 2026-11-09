@@ -8,6 +8,7 @@
 //
 
 import AppKit
+import SwiftUI
 import Combine
 import Foundation
 
@@ -23,6 +24,9 @@ final class DownloadWatcher: ObservableObject {
     private var startedAt = Date()
     private var cancellables = Set<AnyCancellable>()
     private var rescanWork: DispatchWorkItem?
+    /// Files that arrived by AirDrop within the last moment, announced together.
+    private var airDropBatch: [URL] = []
+    private var airDropWork: DispatchWorkItem?
     /// Bumped on every restart, so a slow start that finishes after a newer
     /// one is thrown away rather than attached.
     private var generation = 0
@@ -132,9 +136,9 @@ final class DownloadWatcher: ObservableObject {
             // finished file lands under its real name a moment later.
             guard !Self.inProgressExtensions.contains(url.pathExtension.lowercased()) else { continue }
 
-            let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
-            guard let created, created >= startedAt.addingTimeInterval(-2) else { continue }
-
+            // Creation date is judged later, in `finish`: an AirDropped file
+            // may carry the sender's date, so it cannot be checked before the
+            // quarantine record says where the file came from.
             waitUntilStable(url)
         }
     }
@@ -146,9 +150,34 @@ final class DownloadWatcher: ObservableObject {
             guard FileManager.default.fileExists(atPath: url.path) else { return }
             let now = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
             if now == size {
-                self.announce(url)
+                self.finish(url)
             } else if attempt < 600 {
                 self.waitUntilStable(url, attempt: attempt + 1)
+            }
+        }
+    }
+
+    /// Decides what a finished file is: AirDrop gets its own island (and the
+    /// generic download activity stays quiet), everything else is a download.
+    private func finish(_ url: URL, rechecksDone: Int = 0) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
+        let route = DownloadRoute.decide(
+            origin: AirDropDetector.origin(of: url),
+            createdAt: created,
+            watchStartedAt: startedAt,
+            rechecksDone: rechecksDone
+        )
+        switch route {
+        case .download:
+            announce(url)
+        case .airDrop:
+            receiveAirDrop(url)
+        case .ignore:
+            break
+        case .recheck:
+            DispatchQueue.main.asyncAfter(deadline: .now() + DownloadRoute.recheckDelay) { [weak self] in
+                self?.finish(url, rechecksDone: rechecksDone + 1)
             }
         }
     }
@@ -169,5 +198,50 @@ final class DownloadWatcher: ObservableObject {
                 duration: 3.0
             )
         }
+    }
+
+    // MARK: - AirDrop
+
+    private func receiveAirDrop(_ url: URL) {
+        DiagnosticLog.write("downloads", "airdrop \(url.lastPathComponent)")
+
+        // Has its own switch: AirDrop is not the same decision as "put every
+        // download on the shelf".
+        if ShelfClipPrefs.airDropToShelf {
+            ShelfManager.shared.add(url: url)
+        }
+
+        // Several photos arrive as separate files a moment apart; one island
+        // for the batch instead of a flicker per file.
+        airDropBatch.append(url)
+        airDropWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.announceAirDrop() }
+        airDropWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
+    }
+
+    private func announceAirDrop() {
+        let urls = airDropBatch
+        airDropBatch = []
+        airDropWork = nil
+        guard let first = urls.first else { return }
+
+        let name = urls.count == 1 ? first.lastPathComponent : Polish.count(urls.count, "plik", "pliki", "plików")
+        // "airdrop" exists on current macOS; the fallback keeps the island
+        // from showing an empty wing if a future release renames it.
+        let symbol = NSImage(systemSymbolName: "airdrop", accessibilityDescription: nil) != nil
+            ? "airdrop" : "antenna.radiowaves.left.and.right"
+
+        IslandCenter.shared.post(Island(
+            symbol: symbol,
+            tint: Color(red: 0.35, green: 0.68, blue: 1),
+            title: "AirDrop",
+            detail: " · " + name,
+            action: IslandAction(title: "Pokaż") {
+                NSWorkspace.shared.activateFileViewerSelecting(urls)
+            },
+            // Long enough to reach the button.
+            duration: 5
+        ))
     }
 }

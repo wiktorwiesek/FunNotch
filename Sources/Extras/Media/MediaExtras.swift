@@ -141,12 +141,13 @@ private struct MediaPanelFrame<Content: View>: View {
                         Text("Wróć")
                             .font(.system(size: 10, weight: .medium))
                     }
-                    .foregroundStyle(.white.opacity(0.7))
-                    .padding(.horizontal, 7)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.white.opacity(0.1)))
+                    .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle())
+                .notchControl(in: Capsule(), resting: true)
 
                 Image(systemName: symbol)
                     .font(.system(size: 10, weight: .medium))

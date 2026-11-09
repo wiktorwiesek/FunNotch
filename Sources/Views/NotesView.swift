@@ -37,10 +37,7 @@ struct NotesView: View {
                     .tint(.accentColor)
             }
             .padding(.horizontal, 2)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(.white.opacity(0.05))
-            )
+            .notchCard(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .padding(.horizontal, 4)
         .padding(.bottom, 2)
@@ -92,7 +89,10 @@ struct NotesView: View {
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8, weight: .semibold))
                 }
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(.white.opacity(0.85))
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .notchControl(in: Capsule(), resting: true)
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -100,9 +100,12 @@ struct NotesView: View {
 
             if !notes.isToday {
                 Button("Dziś") { notes.openToday() }
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchPressStyle())
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2.5)
+                    .notchControl(in: Capsule(), tint: .blue, active: true)
             }
 
             Spacer()
@@ -114,9 +117,12 @@ struct NotesView: View {
             } label: {
                 Image(systemName: "folder")
                     .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 22, height: 22)
+                    .contentShape(Circle())
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white.opacity(0.5))
+            .buttonStyle(NotchPressStyle())
+            .notchControl(in: Circle())
             .help("Pokaż tę notatkę w Finderze")
         }
     }

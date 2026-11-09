@@ -83,12 +83,12 @@ struct ClipboardView: View {
                             .font(.system(size: 9))
                             .foregroundStyle(.white.opacity(0.4))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchPressStyle())
                 }
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
-            .background(Capsule().fill(Color.white.opacity(0.08)))
+            .notchGlass(in: Capsule(), subtle: true)
             .frame(width: 150)
 
             Text(Polish.count(visibleEntries.count, "element", "elementy", "elementów"))
@@ -96,12 +96,13 @@ struct ClipboardView: View {
                 .foregroundStyle(.white.opacity(0.5))
             Spacer()
             Button("Wyczyść") { clipboard.clear() }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle())
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.7))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Capsule().fill(Color.white.opacity(0.1)))
+                .foregroundStyle(.white.opacity(0.9))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3.5)
+                .contentShape(Capsule())
+                .notchControl(in: Capsule(), resting: true)
         }
         .padding(.horizontal, 2)
     }
@@ -188,21 +189,21 @@ private struct ClipboardTile: View {
             }
             .padding(7)
             .frame(width: 132, height: 96, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(isHovering ? 0.14 : 0.08))
+            .notchGlass(
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                tint: justCopied || flashed ? settings.accentColor : nil,
+                lit: isHovering || justCopied || flashed,
+                subtle: !isHovering && !justCopied && !flashed
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(
-                        justCopied || flashed || entry.isPinned
-                            ? settings.accentColor.opacity(justCopied || flashed ? 1 : 0.5)
-                            : Color.white.opacity(0.08),
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(
+                        entry.isPinned ? settings.accentColor.opacity(0.55) : .clear,
                         lineWidth: 1
                     )
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.97))
         .overlay(alignment: .bottom) {
             // Outside the tile's own button, so these are real buttons of
             // their own rather than part of "copy this entry".
@@ -214,9 +215,10 @@ private struct ClipboardTile: View {
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundStyle(.white)
                                 .frame(width: 24, height: 18)
-                                .background(Capsule().fill(Color.white.opacity(0.2)))
+                                .notchGlass(in: Capsule(), lit: true)
+                                .contentShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(NotchPressStyle())
                         .help(action.title)
                     }
                 }
@@ -224,9 +226,9 @@ private struct ClipboardTile: View {
                 .transition(.opacity)
             }
         }
-        .scaleEffect(isHovering ? 1.03 : 1)
+        .notchHoverLift(isHovering, scale: 1.03)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
         .contextMenu {
             ForEach(smartActions) { action in

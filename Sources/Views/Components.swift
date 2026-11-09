@@ -274,7 +274,8 @@ struct MarqueeText: View {
     }
 }
 
-/// Button that lights up on hover, used for every control in the notch.
+/// Round glass button used for every control in the notch: the glass appears
+/// under the pointer, and stays (tinted) while the thing it controls is on.
 struct HoverButton: View {
     let systemName: String
     var size: CGFloat = 16
@@ -283,34 +284,52 @@ struct HoverButton: View {
     var tint: Color = .white
     /// Optional glyph drawn over the symbol, e.g. the "1" of repeat-one.
     var badge: String? = nil
+    /// Keep the glass drawn without the pointer, for the one button that
+    /// should always read as the main action (play / pause).
+    var resting: Bool = false
     let action: () -> Void
-
-    @State private var isHovering = false
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: size, weight: .medium))
-                .foregroundStyle(isActive ? tint : .white)
-                .overlay {
-                    if let badge {
+            glyph
+                .frame(width: size + padding * 2, height: size + padding * 2)
+                .contentShape(Circle())
+        }
+        .buttonStyle(NotchPressStyle())
+        .notchControl(in: Circle(), tint: tint, active: isActive, resting: resting, lift: 1.06)
+    }
+
+    private var symbol: some View {
+        Image(systemName: systemName)
+            .font(.system(size: size, weight: .medium))
+            .foregroundStyle(isActive ? tint : .white)
+    }
+
+    @ViewBuilder
+    private var glyph: some View {
+        if let badge {
+            // The badge sits in a hole cut out of the symbol, not on a black
+            // patch, so it stays clean on glass of any colour.
+            symbol
+                .mask {
+                    ZStack {
+                        Rectangle().fill(.white)
                         Text(badge)
                             .font(.system(size: size * 0.5, weight: .bold))
-                            .foregroundStyle(isActive ? tint : .white)
                             .padding(.horizontal, 1)
                             .background(Color.black)
+                            .blendMode(.destinationOut)
                     }
+                    .compositingGroup()
                 }
-                .frame(width: size + padding * 2, height: size + padding * 2)
-                .background(
-                    Circle()
-                        .fill(Color.white.opacity(isHovering ? 0.16 : 0))
-                )
-                .scaleEffect(isHovering ? 1.06 : 1)
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
+                .overlay {
+                    Text(badge)
+                        .font(.system(size: size * 0.5, weight: .bold))
+                        .foregroundStyle(isActive ? tint : .white)
+                        .padding(.horizontal, 1)
+                }
+        } else {
+            symbol
         }
     }
 }

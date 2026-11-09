@@ -347,20 +347,15 @@ private struct GamePicker: View {
                     .foregroundStyle(selected ? .white : .white.opacity(0.5))
                     .padding(.horizontal, 8)
                     .frame(height: 20)
-                    .background {
-                        if selected {
-                            Capsule()
-                                .fill(Color.white.opacity(0.15))
-                                .matchedGeometryEffect(id: "game", in: highlight)
-                        }
-                    }
                     .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle(scale: 0.95))
+                .notchSelection(selected, id: "game", in: highlight, shape: Capsule())
             }
         }
         .padding(1.5)
-        .background(Capsule().fill(Color.white.opacity(0.06)))
+        .notchGlass(in: Capsule(), subtle: true)
+        .animation(NotchGlassMotion.select, value: selection)
         .fixedSize()
     }
 }
@@ -488,11 +483,14 @@ private struct ColourButton: View {
             }
             .padding(.horizontal, 6)
             .frame(height: 17)
-            .background(Capsule().fill(Color.white.opacity(isHovering ? 0.12 : 0.05)))
+            .notchGlass(in: Capsule(), lit: isHovering, subtle: !isHovering)
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
-        .onHover { hovering in isHovering = hovering }
+        .buttonStyle(NotchPressStyle())
+        .notchHoverLift(isHovering)
+        .onHover { hovering in
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
+        }
         .help(colourHelp(game))
     }
 
@@ -544,19 +542,16 @@ private struct HeaderButton: View {
     var dimmed = false
     let action: () -> Void
 
-    @State private var isHovering = false
-
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 9.5, weight: .semibold))
-                .foregroundStyle(.white.opacity(dimmed ? 0.4 : (isHovering ? 0.95 : 0.7)))
+                .foregroundStyle(.white.opacity(dimmed ? 0.4 : 0.8))
                 .frame(width: 20, height: 20)
-                .background(Circle().fill(Color.white.opacity(isHovering ? 0.12 : 0)))
                 .contentShape(Circle())
         }
-        .buttonStyle(.plain)
-        .onHover { hovering in isHovering = hovering }
+        .buttonStyle(NotchPressStyle())
+        .notchControl(in: Circle())
         .help(help)
     }
 }

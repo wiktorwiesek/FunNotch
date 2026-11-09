@@ -16,10 +16,14 @@ enum ShelfClipPrefs {
     static let smartActionsKey = "extras.shelfclip.smartActions"
     static let linkTitlesKey = "extras.shelfclip.linkTitles"
     static let ocrKey = "extras.shelfclip.ocr"
+    static let copiedIslandKey = "extras.shelfclip.copiedIsland"
+    static let airDropToShelfKey = "extras.shelfclip.airDropToShelf"
 
     static var smartActions: Bool { value(smartActionsKey, default: true) }
     static var linkTitles: Bool { value(linkTitlesKey, default: false) }
     static var ocr: Bool { value(ocrKey, default: true) }
+    static var copiedIsland: Bool { value(copiedIslandKey, default: true) }
+    static var airDropToShelf: Bool { value(airDropToShelfKey, default: true) }
 
     private static func value(_ key: String, default fallback: Bool) -> Bool {
         UserDefaults.standard.object(forKey: key) as? Bool ?? fallback
@@ -66,6 +70,8 @@ struct ShelfClipExtrasSettings: View {
     @AppStorage(ShelfClipPrefs.smartActionsKey) private var smartActions = true
     @AppStorage(ShelfClipPrefs.linkTitlesKey) private var linkTitles = false
     @AppStorage(ShelfClipPrefs.ocrKey) private var ocr = true
+    @AppStorage(ShelfClipPrefs.copiedIslandKey) private var copiedIsland = true
+    @AppStorage(ShelfClipPrefs.airDropToShelfKey) private var airDropToShelf = true
 
     @ObservedObject private var titles = LinkTitleStore.shared
 
@@ -104,6 +110,13 @@ struct ShelfClipExtrasSettings: View {
                     tint: SettingsStyle.blue,
                     isOn: $ocr
                 )
+                SettingsToggle(
+                    title: "Pokazuj „Skopiowano” w notchu",
+                    subtitle: "Krótka informacja z podglądem tego, co trafiło do schowka. Pomija hasła i kopie zrobione przez Fun Notch.",
+                    symbol: "doc.on.doc",
+                    tint: SettingsStyle.blue,
+                    isOn: $copiedIsland
+                )
                 if ocr {
                     SettingsStatus(
                         text: ocrLanguages.isEmpty
@@ -126,6 +139,13 @@ struct ShelfClipExtrasSettings: View {
                 title: "Półka",
                 footer: "Wyniki trafiają z powrotem na Półkę jako nowe elementy. Wszystko dzieje się lokalnie."
             ) {
+                SettingsToggle(
+                    title: "Dodawaj pliki z AirDrop na Półkę",
+                    subtitle: "Plik odebrany przez AirDrop pokazuje się w notchu z przyciskiem „Pokaż”. Działa, gdy włączone jest wykrywanie pobranych plików.",
+                    symbol: "airdrop",
+                    tint: SettingsStyle.blue,
+                    isOn: $airDropToShelf
+                )
                 SettingsStatus(
                     text: "Klik prawym na elemencie: Konwertuj (obrazy, PDF, wideo, dźwięk), Usuń tło, Spakuj do ZIP, Rozpakuj.",
                     symbol: "arrow.triangle.2.circlepath",

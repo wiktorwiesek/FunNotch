@@ -49,7 +49,7 @@ struct LyricsPlayerBlock: View {
                 .clipped()
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.98))
         .help("Pokaż cały tekst")
     }
 

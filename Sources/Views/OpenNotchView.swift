@@ -74,10 +74,13 @@ private struct GameBlockedDuringFocus: View {
                 FocusTabState.shared.mode = .focus
                 withAnimation(.notchContent) { viewModel.currentTab = .focus }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(NotchPressStyle())
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(.white.opacity(0.8))
-            .padding(.top, 2)
+            .foregroundStyle(.white.opacity(0.9))
+            .padding(.horizontal, 11)
+            .padding(.vertical, 5)
+            .notchControl(in: Capsule(), resting: true)
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -90,24 +93,29 @@ struct NotchHeader: View {
     @ObservedObject private var calendar = CalendarManager.shared
     @ObservedObject private var focus = FocusManager.shared
     @ObservedObject private var notify = NotifyCenter.shared
+    /// Shared by the tabs so one glass marker slides between them.
+    @Namespace private var tabSelection
 
     var body: some View {
         HStack(spacing: 0) {
-            HStack(spacing: Self.tabSpacing) {
-                ForEach(availableTabs) { tab in
-                    let labelled = viewModel.currentTab == tab && availableTabs.count <= 4
-                    TabChip(
-                        tab: tab,
-                        isSelected: viewModel.currentTab == tab,
-                        // The header shares its row with the camera cutout, so
-                        // only the selected tab is labelled, and only while
-                        // there are few enough tabs for it to fit.
-                        showsLabel: labelled,
-                        width: labelled ? nil : Self.tabWidth(
-                            count: availableTabs.count, cutoutWidth: viewModel.closedNotchSize.width
-                        )
-                    ) {
-                        withAnimation(.notchContent) { viewModel.currentTab = tab }
+            NotchGlassGroup {
+                HStack(spacing: Self.tabSpacing) {
+                    ForEach(availableTabs) { tab in
+                        let labelled = viewModel.currentTab == tab && availableTabs.count <= 4
+                        TabChip(
+                            tab: tab,
+                            isSelected: viewModel.currentTab == tab,
+                            namespace: tabSelection,
+                            // The header shares its row with the camera cutout, so
+                            // only the selected tab is labelled, and only while
+                            // there are few enough tabs for it to fit.
+                            showsLabel: labelled,
+                            width: labelled ? nil : Self.tabWidth(
+                                count: availableTabs.count, cutoutWidth: viewModel.closedNotchSize.width
+                            )
+                        ) {
+                            withAnimation(NotchGlassMotion.select) { viewModel.currentTab = tab }
+                        }
                     }
                 }
             }
@@ -175,12 +183,15 @@ struct NotchHeader: View {
 private struct TabChip: View {
     let tab: NotchTab
     let isSelected: Bool
+    let namespace: Namespace.ID
     let showsLabel: Bool
     /// A fixed width, for icon-only tabs that have to share the row.
     var width: CGFloat?
     let action: () -> Void
 
     @State private var isHovering = false
+
+    private let shape = Capsule()
 
     var body: some View {
         Button(action: action) {
@@ -192,19 +203,26 @@ private struct TabChip: View {
                         .font(.system(size: 11, weight: .medium))
                 }
             }
-            .foregroundStyle(isSelected ? .white : .white.opacity(0.55))
+            .foregroundStyle(isSelected ? .white : .white.opacity(isHovering ? 0.85 : 0.55))
             .padding(.horizontal, width == nil ? 9 : 0)
             .frame(width: width)
             .padding(.vertical, 4)
-            .background(
-                Capsule().fill(Color.white.opacity(isSelected ? 0.18 : (isHovering ? 0.1 : 0)))
-            )
-            .contentShape(Capsule())
+            .contentShape(shape)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.94))
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
+        // The selected tab carries the shared marker; a hovered one a lighter
+        // glass of its own that fades in and out.
+        .background {
+            if isHovering, !isSelected {
+                NotchGlassSurface(shape: shape)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
+        }
+        .notchSelection(isSelected, id: "tab", in: namespace, shape: shape)
+        .notchHoverLift(isHovering && !isSelected, scale: 1.04)
         .help(tab.title)
     }
 }
@@ -257,12 +275,12 @@ struct AlbumArtwork: View {
                 RoundedRectangle(cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.opened)
                     .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
-            .scaleEffect(isHovering ? 1.03 : 1)
+            .notchHoverLift(isHovering, scale: 1.03)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.97))
         .disabled(music.track.bundleIdentifier == nil)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.18)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
         .overlay(alignment: .bottomTrailing) {
             if let icon = music.sourceAppIcon {
@@ -470,7 +488,7 @@ struct PlayerControls: View {
                 .foregroundStyle(.white.opacity(0.4))
                 .frame(height: Metrics.hint)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(NotchPressStyle(scale: 0.97))
         } else {
             Text("Brak informacji o pozycji")
                 .font(.system(size: 9))
@@ -549,6 +567,13 @@ struct PlayerControls: View {
     }
 
     private func transportRow(shuffleAndRepeat: Bool, likes: Bool) -> some View {
+        // One glass group, so a hovered button blends with its neighbours.
+        NotchGlassGroup {
+            transportButtons(shuffleAndRepeat: shuffleAndRepeat, likes: likes)
+        }
+    }
+
+    private func transportButtons(shuffleAndRepeat: Bool, likes: Bool) -> some View {
         let likeStatus = likes ? music.track.likeStatus : nil
         let extras = shuffleAndRepeat && settings.showShuffleAndRepeat
         return HStack(spacing: 0) {
@@ -580,7 +605,8 @@ struct PlayerControls: View {
             HoverButton(
                 systemName: music.isPlaying ? "pause.fill" : "play.fill",
                 size: Metrics.playGlyph,
-                padding: Metrics.padding
+                padding: Metrics.padding,
+                resting: true
             ) { music.togglePlayPause() }
 
             HoverButton(systemName: "forward.fill", size: Metrics.skipGlyph, padding: Metrics.padding) {

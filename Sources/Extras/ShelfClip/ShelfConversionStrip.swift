@@ -78,12 +78,12 @@ private struct ShelfConversionRow: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.45))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(NotchPressStyle())
             .help(job.state == .running ? "Anuluj" : "Zamknij")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
-        .background(Capsule().fill(Color.white.opacity(0.08)))
+        .notchGlass(in: Capsule(), subtle: true)
     }
 
     @ViewBuilder

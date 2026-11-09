@@ -130,7 +130,8 @@ struct AgentSessionsTile: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(NotchPressStyle(scale: 0.97))
+            .notchControl(in: RoundedRectangle(cornerRadius: 7, style: .continuous), lift: 1.02)
             .help("Pokaż: \(session.name)")
         } else {
             HStack(spacing: 6) {
@@ -161,8 +162,6 @@ struct AgentSessionsTile: View {
 private struct AgentRow: View {
     let session: AgentSessionsManager.Session
 
-    @State private var hovering = false
-
     var body: some View {
         Button {
             AgentSessionsManager.shared.bringForward(session)
@@ -185,14 +184,10 @@ private struct AgentRow: View {
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 2.5)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(Color.white.opacity(hovering ? 0.08 : 0))
-            )
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .buttonStyle(NotchPressStyle(scale: 0.97))
+        .notchControl(in: RoundedRectangle(cornerRadius: 7, style: .continuous), lift: 1.01)
         .help("\(session.agent.rawValue), projekt \(session.project) — kliknij, aby pokazać")
     }
 

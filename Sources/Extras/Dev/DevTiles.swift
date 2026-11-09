@@ -134,7 +134,8 @@ struct GitHubTile: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.95))
+        .notchControl(in: Capsule(), lift: 1.04, bleed: 4)
         .help("\(help) · otwórz w przeglądarce")
     }
 
@@ -191,7 +192,8 @@ struct GitHubTile: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.98))
+        .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.01, bleed: 3)
         .help("Otwórz w przeglądarce")
     }
 
@@ -514,7 +516,8 @@ struct LauncherTile: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.97))
+        .notchControl(in: RoundedRectangle(cornerRadius: 8, style: .continuous), lift: 1.02)
         .help("Wybierz aplikacje do przypięcia")
     }
 
@@ -552,10 +555,10 @@ struct LauncherTile: View {
                 .font(.system(size: size * 0.4, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.5))
                 .frame(width: size, height: size)
-                .background(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous).fill(.white.opacity(0.08)))
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.92))
+        .notchControl(in: RoundedRectangle(cornerRadius: size * 0.26, style: .continuous), resting: true, lift: 1.08)
         .help("Dodaj aplikację")
     }
 
@@ -578,7 +581,8 @@ struct LauncherTile: View {
             .opacity(dragging == path ? 0.35 : 1)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.92))
+        .notchControl(in: RoundedRectangle(cornerRadius: size * 0.26, style: .continuous), lift: 1.08, bleed: 3)
         .disabled(icon == nil)
         .help(icon == nil ? "\(store.name(of: path)) — nie znaleziono aplikacji" : store.name(of: path))
         .contextMenu {

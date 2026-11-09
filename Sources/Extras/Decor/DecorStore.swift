@@ -4,7 +4,8 @@
 //
 //  Preferences for the decorations: alternative HUD styles, timer mascots, a
 //  custom idle animation and Liquid Glass. Everything defaults to "off" so the
-//  notch looks exactly as it did before until the user opts in.
+//  notch looks as it did before until the user opts in, except the glass
+//  material of buttons and cards (`systemGlass`), which is on.
 //
 //  Values live in UserDefaults under `extras.decor.*`; views observe this
 //  store so a change in settings shows up in the notch at once.
@@ -87,6 +88,7 @@ final class DecorStore: ObservableObject {
         static let idleSide = "extras.decor.idleSide"
         static let glassPanel = "extras.decor.glassPanel"
         static let glassBanners = "extras.decor.glassBanners"
+        static let systemGlass = "extras.decor.systemGlass"
     }
 
     private let defaults = UserDefaults.standard
@@ -153,6 +155,14 @@ final class DecorStore: ObservableObject {
         didSet { defaults.set(glassBanners, forKey: Key.glassBanners) }
     }
 
+    /// Chrome of the buttons and cards inside the open notch: Apple's Liquid
+    /// Glass (macOS 26+) when on, the drawn glass of `NotchGlass` otherwise.
+    /// On by default, so unlike the toggles above it is read with `object` to
+    /// tell "never set" from "off".
+    @Published var systemGlass: Bool {
+        didSet { defaults.set(systemGlass, forKey: Key.systemGlass) }
+    }
+
     private var loadGeneration = 0
 
     private init() {
@@ -167,6 +177,7 @@ final class DecorStore: ObservableObject {
         idleSide = defaults.string(forKey: Key.idleSide).flatMap(DecorIdleSide.init(rawValue:)) ?? .leading
         glassPanel = defaults.bool(forKey: Key.glassPanel)
         glassBanners = defaults.bool(forKey: Key.glassBanners)
+        systemGlass = defaults.object(forKey: Key.systemGlass) as? Bool ?? true
         idleName = defaults.string(forKey: Key.idleName)
     }
 

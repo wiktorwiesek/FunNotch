@@ -160,14 +160,14 @@ private struct ModeSwitcher: View {
             }
         }
         .padding(2)
-        .background(Capsule().fill(Color.white.opacity(0.06)))
+        .notchGlass(in: Capsule(), subtle: true)
         .fixedSize()
     }
 
     private func segment(_ mode: TimeMode) -> some View {
         let selected = state.mode == mode
         return Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { state.mode = mode }
+            withAnimation(NotchGlassMotion.select) { state.mode = mode }
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: mode.symbol)
@@ -188,16 +188,10 @@ private struct ModeSwitcher: View {
             .foregroundStyle(selected ? .white : .white.opacity(0.5))
             .padding(.horizontal, iconsOnly ? 7 : 9)
             .padding(.vertical, 4)
-            .background {
-                if selected {
-                    Capsule()
-                        .fill(Color.white.opacity(0.14))
-                        .matchedGeometryEffect(id: "mode", in: highlight)
-                }
-            }
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.95))
+        .notchSelection(selected, id: "mode", in: highlight, shape: Capsule())
         .help(mode.title)
     }
 
@@ -905,14 +899,7 @@ private struct SidePanel: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
-        )
+        .notchCard(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .padding(.vertical, 4)
         .transition(.opacity)
         .id(mode)
@@ -1058,7 +1045,7 @@ private struct RecentRow: View {
                     .font(.system(size: 7.5, weight: .bold))
                     .foregroundStyle(ClockPalette.timer)
                     .frame(width: 14, height: 14)
-                    .background(Circle().fill(ClockPalette.timer.opacity(0.18)))
+                    .notchGlass(in: Circle(), tint: ClockPalette.timer, subtle: true)
                 Text(TimerManager.shortLength(seconds))
                     .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.85))
@@ -1072,15 +1059,13 @@ private struct RecentRow: View {
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(Color.white.opacity(isHovering ? 0.1 : 0.04))
-            )
+            .notchGlass(in: RoundedRectangle(cornerRadius: 7, style: .continuous), lit: isHovering, subtle: true)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NotchPressStyle(scale: 0.97))
+        .notchHoverLift(isHovering, scale: 1.02)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
     }
 }
@@ -1170,12 +1155,13 @@ struct ClockButton: View {
             .foregroundStyle(foreground)
             .padding(.horizontal, iconOnly ? 0 : 11)
             .frame(width: iconOnly ? 25 : nil, height: 25)
-            .background(Capsule().fill(background))
+            .notchGlass(in: Capsule(), tint: glassTint, lit: isHovering)
             .contentShape(Capsule())
         }
-        .buttonStyle(PressScaleStyle())
+        .buttonStyle(NotchPressStyle(scale: 0.94))
+        .notchHoverLift(isHovering)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
         .help(iconOnly ? title : "")
         .fixedSize()
@@ -1189,21 +1175,14 @@ struct ClockButton: View {
         }
     }
 
-    private var background: Color {
+    /// Primary and destructive actions tint the glass; secondary ones leave
+    /// it clear.
+    private var glassTint: Color? {
         switch style {
-        case .primary: return tint.opacity(isHovering ? 0.32 : 0.22)
-        case .secondary: return .white.opacity(isHovering ? 0.16 : 0.09)
-        case .destructive: return ClockPalette.slowest.opacity(isHovering ? 0.28 : 0.18)
+        case .primary: return tint
+        case .secondary: return nil
+        case .destructive: return ClockPalette.slowest
         }
-    }
-}
-
-/// Shrinks a touch while held, so a click is felt as well as seen.
-struct PressScaleStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
@@ -1220,12 +1199,13 @@ private struct StepButton: View {
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.white.opacity(0.85))
                 .frame(width: 25, height: 25)
-                .background(Circle().fill(Color.white.opacity(isHovering ? 0.16 : 0.09)))
+                .notchGlass(in: Circle(), lit: isHovering)
                 .contentShape(Circle())
         }
-        .buttonStyle(PressScaleStyle())
+        .buttonStyle(NotchPressStyle(scale: 0.94))
+        .notchHoverLift(isHovering)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
         .help(help)
     }
@@ -1245,12 +1225,13 @@ private struct PresetChip: View {
                 .foregroundStyle(.white.opacity(isHovering ? 1 : 0.75))
                 .padding(.horizontal, 8)
                 .frame(height: 20)
-                .background(Capsule().fill(Color.white.opacity(isHovering ? 0.15 : 0.07)))
+                .notchGlass(in: Capsule(), lit: isHovering)
                 .contentShape(Capsule())
         }
-        .buttonStyle(PressScaleStyle())
+        .buttonStyle(NotchPressStyle(scale: 0.94))
+        .notchHoverLift(isHovering)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
         .help("Uruchom minutnik: \(help)")
     }
@@ -1275,21 +1256,19 @@ private struct LengthPicker: View {
                         .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                         .foregroundStyle(selection == minutes ? .white : .white.opacity(0.5))
                         .frame(width: 26, height: 21)
-                        .background {
-                            if selection == minutes {
-                                Capsule()
-                                    .fill(settings.accentColor.opacity(0.35))
-                                    .matchedGeometryEffect(id: "length", in: highlight)
-                            }
-                        }
                         .contentShape(Capsule())
+                        .notchSelection(
+                            selection == minutes, id: "length", in: highlight,
+                            shape: Capsule(), tint: settings.accentColor
+                        )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle(scale: 0.95))
                 .help(Polish.count(minutes, "minuta", "minuty", "minut"))
             }
         }
         .padding(2)
-        .background(Capsule().fill(Color.white.opacity(0.06)))
+        .notchGlass(in: Capsule(), subtle: true)
+        .animation(NotchGlassMotion.select, value: selection)
         .fixedSize()
     }
 }
@@ -1315,17 +1294,18 @@ private struct ToggleChip: View {
             .foregroundStyle(isOn ? settings.accentColor : .white.opacity(isHovering ? 0.75 : 0.45))
             .padding(.horizontal, 8)
             .frame(height: 19)
-            .background(
-                Capsule().fill(isOn ? settings.accentColor.opacity(0.16) : Color.white.opacity(isHovering ? 0.1 : 0.05))
-            )
-            .overlay(
-                Capsule().strokeBorder(isOn ? settings.accentColor.opacity(0.35) : Color.clear, lineWidth: 1)
+            .notchGlass(
+                in: Capsule(),
+                tint: isOn ? settings.accentColor : nil,
+                lit: isHovering || isOn,
+                subtle: !isOn && !isHovering
             )
             .contentShape(Capsule())
         }
-        .buttonStyle(PressScaleStyle())
+        .buttonStyle(NotchPressStyle(scale: 0.94))
+        .notchHoverLift(isHovering)
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
+            withAnimation(NotchGlassMotion.hover) { isHovering = hovering }
         }
         .help(help)
         .fixedSize()

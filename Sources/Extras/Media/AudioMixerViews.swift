@@ -135,7 +135,7 @@ struct AudioMixerPanel: View {
         }
         .padding(.vertical, 3)
         .padding(.horizontal, 6)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.05)))
+        .notchCard(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func appIcon(_ app: MixerApp) -> some View {
@@ -195,8 +195,11 @@ struct AudioMixerPanel: View {
                 Text("Przy pierwszej zmianie macOS zapyta o zgodę na nagrywanie dźwięku systemu.")
                 Spacer(minLength: 0)
                 Button("Zezwól teraz") { mixer.requestPermission() }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .buttonStyle(NotchPressStyle())
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .notchControl(in: Capsule(), resting: true)
             }
             .font(.system(size: 9))
             .foregroundStyle(.white.opacity(0.4))
@@ -220,12 +223,12 @@ struct AudioMixerPanel: View {
                 .multilineTextAlignment(.center)
             if let button {
                 Button(button.title, action: button.action)
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchPressStyle())
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.white.opacity(0.14)))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 5)
+                    .notchControl(in: Capsule(), resting: true)
                     .padding(.top, 2)
             }
         }

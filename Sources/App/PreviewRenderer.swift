@@ -601,6 +601,16 @@ enum PreviewRenderer {
                 return AnyView(SettingsView().environmentObject(Settings.shared))
             }))
         }
+        // The "Wygląd" section of Dodatki alone: on the full page it sits below
+        // the fold of a snapshot window.
+        jobs.append(("settings-decor", CGSize(width: 760, height: 1500), false, {
+            AnyView(
+                DecorSettings()
+                    .padding(24)
+                    .frame(width: 760, height: 1500, alignment: .topLeading)
+                    .background(Color(nsColor: .windowBackgroundColor))
+            )
+        }))
         for tab in CustomizeTab.allCases {
             jobs.append(("customize-\(tab.rawValue)", CGSize(width: 1010, height: 720), true, {
                 CustomizeNavigation.shared.tab = tab

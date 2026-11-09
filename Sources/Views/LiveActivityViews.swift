@@ -204,12 +204,12 @@ private struct IslandBanner: View {
     private func trailing(_ island: Island) -> some View {
         if let action = island.action {
             Button(action.title) { action.perform() }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchPressStyle())
                 .font(.system(size: 10.5, weight: .semibold))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 8)
+                .foregroundStyle(island.tint)
+                .padding(.horizontal, 9)
                 .padding(.vertical, 3)
-                .background(Capsule().fill(island.tint))
+                .notchControl(in: Capsule(), tint: island.tint, active: true)
                 .lineLimit(1)
                 .fixedSize()
         } else if let value = island.trailing {
