@@ -140,11 +140,17 @@ private struct DayCell: View {
         .buttonStyle(.plain)
     }
 
-    private var weekdaySymbol: String {
+    /// One formatter for every cell: building a `DateFormatter` costs far more
+    /// than formatting with it, and each cell's body ran it on every redraw.
+    private static let weekdayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Polish.locale
         formatter.dateFormat = "EEEEE"
-        return formatter.string(from: date)
+        return formatter
+    }()
+
+    private var weekdaySymbol: String {
+        Self.weekdayFormatter.string(from: date)
     }
 
     private var dayNumber: String {

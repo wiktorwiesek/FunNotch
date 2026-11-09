@@ -90,12 +90,20 @@ final class MusicManager: ObservableObject {
     var isPlaying: Bool { track.isPlaying }
 
     /// Icon of the app the music is coming from, for the live activity.
+    ///
+    /// Read from the body of every view that shows it, which is every time the
+    /// manager publishes; the workspace lookup (a Launch Services query and an
+    /// icon render) showed up in the hang reports, so each app's is kept.
     var sourceAppIcon: NSImage? {
-        guard let identifier = track.bundleIdentifier,
-              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier)
-        else { return nil }
-        return NSWorkspace.shared.icon(forFile: url.path)
+        guard let identifier = track.bundleIdentifier else { return nil }
+        if let cached = Self.iconCache[identifier] { return cached }
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: identifier) else { return nil }
+        let icon = NSWorkspace.shared.icon(forFile: url.path)
+        Self.iconCache[identifier] = icon
+        return icon
     }
+
+    private static var iconCache: [String: NSImage] = [:]
 
     func start() {
         NotificationCenter.default.publisher(for: .mediaControllerChanged)

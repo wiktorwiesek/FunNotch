@@ -97,9 +97,10 @@ struct IntroTimeline<Content: View>: View {
 struct ClaudeSpinner: View {
     var size: CGFloat = 13
     var tint: Color = AgentPalette.claude
+    @Environment(\.decorAnimationsPaused) private var paused
 
-    private static let frames = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"]
-    private static let interval = 0.12
+    static let frames = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"]
+    static let interval = 0.12
 
     var body: some View {
         if let film = Motion.filmTime {
@@ -107,10 +108,13 @@ struct ClaudeSpinner: View {
         } else if Motion.snapshotMode {
             glyph(Self.frames[4])
         } else {
-            TimelineView(.periodic(from: .now, by: Self.interval)) { context in
-                let index = Int(context.date.timeIntervalSinceReferenceDate / Self.interval) % Self.frames.count
-                glyph(Self.frames[index])
-            }
+            // Flipped by Core Animation in the render server. The SwiftUI
+            // version, a `TimelineView` ticking every 0.12 s, made the notch
+            // re-lay-out its whole window about sixty times a second for each
+            // working Claude session (measured: 120 layouts a second and a fifth
+            // of a core with two of them), for as long as the notch was open.
+            LayerClaudeGlyph(size: size, tint: NSColor(tint), paused: paused)
+                .frame(width: size * 1.3, height: size * 1.3)
         }
     }
 
@@ -421,6 +425,103 @@ private final class WaitingLayerView: AgentLayerView {
             wave.isRemovedOnCompletion = false
             wave.preferredFrameRateRange = Self.frameRate(20)
             hand.add(wave, forKey: "wave")
+        }
+    }
+}
+
+private struct LayerClaudeGlyph: NSViewRepresentable {
+    let size: CGFloat
+    let tint: NSColor
+    let paused: Bool
+
+    func makeNSView(context: Context) -> ClaudeGlyphLayerView { ClaudeGlyphLayerView() }
+
+    func updateNSView(_ view: ClaudeGlyphLayerView, context: Context) {
+        view.configure(size: size, tint: tint, paused: paused)
+    }
+}
+
+/// `ClaudeSpinner`'s glyphs as one layer whose contents Core Animation steps
+/// through. Each distinct glyph is drawn once, with the glow the drawn version
+/// has, into an image padded enough for the glow not to be cut off.
+private final class ClaudeGlyphLayerView: AgentLayerView {
+    private let glyph = CALayer()
+    private var size: CGFloat = 0
+    private var tint = NSColor.clear
+    private var paused = false
+    /// What the layer was last drawn for, so a redraw only follows a change.
+    private var drawnFor: (size: CGFloat, tint: NSColor, scale: CGFloat)?
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        glyph.contentsGravity = .center
+        canvas.addSublayer(glyph)
+    }
+
+    func configure(size: CGFloat, tint: NSColor, paused: Bool) {
+        if size != self.size || tint != self.tint {
+            self.size = size
+            self.tint = tint
+            needsLayout = true
+        }
+        self.paused = paused
+        updateAnimation()
+    }
+
+    override func layoutCanvas() {
+        let bounds = canvas.bounds
+        // The glow reaches past the box the glyph is laid out in.
+        let margin = size * 0.9
+        glyph.frame = bounds.insetBy(dx: -margin, dy: -margin)
+        glyph.contentsScale = scale
+
+        if let drawnFor, drawnFor.size == size, drawnFor.tint == tint, drawnFor.scale == scale { return }
+        drawnFor = (size, tint, scale)
+        // The frames run symmetrically through six glyphs; draw each once.
+        var images: [String: Any] = [:]
+        for character in ClaudeSpinner.frames where images[character] == nil {
+            images[character] = glyphImage(character, in: glyph.bounds.size)?.layerContents(forContentsScale: scale)
+        }
+        let frames = ClaudeSpinner.frames.compactMap { images[$0] }
+        glyph.contents = frames.first
+        glyph.removeAnimation(forKey: "step")
+        glyphFrames = frames
+        updateAnimation()
+    }
+
+    private var glyphFrames: [Any] = []
+
+    private func glyphImage(_ character: String, in canvasSize: CGSize) -> NSImage? {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return nil }
+        let shadow = NSShadow()
+        shadow.shadowColor = tint.withAlphaComponent(0.6)
+        shadow.shadowBlurRadius = size * 0.3
+        shadow.shadowOffset = .zero
+        let text = NSAttributedString(string: character, attributes: [
+            .font: NSFont.systemFont(ofSize: size, weight: .heavy),
+            .foregroundColor: tint,
+            .shadow: shadow,
+        ])
+        return NSImage(size: canvasSize, flipped: false) { rect in
+            let measured = text.size()
+            text.draw(at: NSPoint(x: (rect.width - measured.width) / 2, y: (rect.height - measured.height) / 2))
+            return true
+        }
+    }
+
+    private func updateAnimation() {
+        let key = "step"
+        if paused || glyphFrames.count < 2 {
+            glyph.removeAnimation(forKey: key)
+        } else if glyph.animation(forKey: key) == nil {
+            let step = CAKeyframeAnimation(keyPath: "contents")
+            step.values = glyphFrames
+            step.calculationMode = .discrete
+            step.duration = ClaudeSpinner.interval * Double(glyphFrames.count)
+            step.repeatCount = .infinity
+            step.isRemovedOnCompletion = false
+            step.preferredFrameRateRange = Self.frameRate(15)
+            glyph.add(step, forKey: key)
         }
     }
 }

@@ -194,6 +194,12 @@ final class AudioPropertyObserver {
 
 /// Opens a small `NSMenu` at the pointer, because the notch panel is not a
 /// place SwiftUI's own `Menu` behaves well.
+///
+/// `NSMenu.popUp` does not return until the menu closes: it runs its own event
+/// loop. Called from a button's action, that loop would start inside SwiftUI's
+/// event dispatch and graph transaction, with every run-loop observer (SwiftUI's
+/// transaction flush among them) still firing around it. So the menu is only
+/// built here and shown a turn later, once the action has returned.
 @MainActor
 enum PointerMenu {
     private final class Target: NSObject {
@@ -212,8 +218,14 @@ enum PointerMenu {
 
     /// The targets must outlive the menu, which only retains them weakly.
     private static var targets: [Target] = []
+    /// A menu is queued or open; a second click on the button meanwhile must
+    /// not stack another one behind it.
+    private static var isPresenting = false
 
     static func show(_ items: [Item]) {
+        guard !isPresenting else { return }
+        isPresenting = true
+
         let menu = NSMenu()
         menu.autoenablesItems = false
         targets = []
@@ -229,6 +241,12 @@ enum PointerMenu {
             }
             menu.addItem(menuItem)
         }
-        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+
+        // Where the pointer is now, not where it will be a turn later.
+        let location = NSEvent.mouseLocation
+        DispatchQueue.main.async {
+            menu.popUp(positioning: nil, at: location, in: nil)
+            isPresenting = false
+        }
     }
 }

@@ -42,6 +42,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        // Hang harness hosts the open notch offscreen and measures the main
+        // thread (see HangHarness.swift). Refuses to run on the real app.
+        if HangHarness.isRequested {
+            HangHarness.run()
+            return
+        }
+
         if let path = SelfTest.fileToCheck {
             SelfTest.checkFile(path)
             return

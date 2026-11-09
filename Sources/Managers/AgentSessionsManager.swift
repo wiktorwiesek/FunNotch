@@ -103,6 +103,8 @@ final class AgentSessionsManager: ObservableObject {
         /// The tool running right now, when the agent reports it (omp does).
         var activity: String? = nil
         var usage: Usage? = nil
+        /// Subagents still working in the background (omp reports it).
+        var backgroundAgents: Int = 0
 
         var waitingReason: String? {
             if case let .waiting(reason) = status { return reason }
@@ -255,7 +257,8 @@ final class AgentSessionsManager: ObservableObject {
                     pid: entry.pid,
                     host: entry.entrypoint == "claude-desktop" ? .claudeApp : .process,
                     activity: entry.activity,
-                    usage: entry.usage
+                    usage: entry.usage,
+                    backgroundAgents: entry.backgroundAgents
                 )
                 for event in Self.transition(from: previous[session.id], to: &session) {
                     events.append((session, event))
@@ -556,6 +559,7 @@ final class AgentSessionsManager: ObservableObject {
         let startedAt: Date
         let entrypoint: String
         let activity: String?
+        let backgroundAgents: Int
         let usage: Usage?
     }
 
@@ -622,6 +626,7 @@ final class AgentSessionsManager: ObservableObject {
                 startedAt: date(fromMilliseconds: object["startedAt"]) ?? Date(),
                 entrypoint: object["entrypoint"] as? String ?? "",
                 activity: object["activity"] as? String,
+                backgroundAgents: (object["backgroundAgents"] as? NSNumber)?.intValue ?? 0,
                 usage: (object["tokens"] as? NSNumber).map { tokens in
                     Usage(
                         tokens: tokens.intValue,

@@ -298,8 +298,35 @@ struct PlayerControls: View {
 
     private enum ScrubberStyle { case stacked, inline, none }
 
-    /// Gap between rows. Tight on purpose: the tile is about 100 points tall.
-    private static let rowSpacing: CGFloat = 2
+    /// The heights and widths the rows are built with. The ladder adds them up
+    /// to choose a rung, so every row below is framed to exactly these numbers.
+    fileprivate enum Metrics {
+        /// Gap between rows. Tight on purpose: the tile is about 100 points tall.
+        static let rowSpacing: CGFloat = 2
+        static let title: CGFloat = 17
+        static let artist: CGFloat = 16
+        /// The bar, and the times under it when they have a row of their own.
+        static let slider: CGFloat = 12
+        static let times: CGFloat = 11
+        static let inlineScrubber: CGFloat = 12
+        static let hint: CGFloat = 14
+        static let transport: CGFloat = 24
+
+        /// Glyph size and padding of the transport buttons; a button is
+        /// `glyph + 2 * padding` wide.
+        static let padding: CGFloat = 4
+        static let smallGlyph: CGFloat = 11
+        static let skipGlyph: CGFloat = 13
+        static let playGlyph: CGFloat = 16
+        static func width(glyph: CGFloat) -> CGFloat { glyph + 2 * padding }
+    }
+
+    /// Richest first. When there are no lyrics the first four collapse into
+    /// the last three, which is harmless: the first that fits is used.
+    private static let ladder: [(rows: LyricsPlayerBlock.Rows?, scrubber: ScrubberStyle)] = [
+        (.two, .stacked), (.two, .inline), (.one, .stacked), (.one, .inline),
+        (nil, .stacked), (nil, .inline), (nil, .none),
+    ]
 
     var body: some View {
         // A clear base takes exactly the size the row offers, and the content
@@ -316,37 +343,64 @@ struct PlayerControls: View {
 
     // MARK: Ladder
 
+    /// Only the rung that fits is ever built.
+    ///
+    /// This used to be a `ViewThatFits` over seven complete columns, each with
+    /// its own transport row inside another `ViewThatFits`. SwiftUI keeps every
+    /// rung alive to measure it, so the open notch carried seven copies of the
+    /// player — about 150 buttons, 14 marquees, 18 scrubber views — and each
+    /// change to the track or lyrics rebuilt all of them, 400 ms at a time and
+    /// with a storm of `onDisappear`s. Every row has a fixed height and every
+    /// button a fixed width, so the choice is arithmetic on the size the clear
+    /// base was offered, which does not depend on what is drawn over it.
     private var player: some View {
-        // Richest first. When there are no lyrics the first four collapse into
-        // the last three, which is harmless: the first that fits is used.
-        ViewThatFits(in: .vertical) {
-            column(rows: .two, scrubber: .stacked)
-            column(rows: .two, scrubber: .inline)
-            column(rows: .one, scrubber: .stacked)
-            column(rows: .one, scrubber: .inline)
-            column(rows: nil, scrubber: .stacked)
-            column(rows: nil, scrubber: .inline)
-            column(rows: nil, scrubber: .none)
+        GeometryReader { proxy in
+            let chosen = rung(fittingHeight: proxy.size.height)
+            column(rows: chosen.rows, scrubber: chosen.scrubber, width: proxy.size.width)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// One rung. `rows` is what the caller would like; what the lyrics can
-    /// actually give (nothing while loading, one line for unsynced text) caps it.
-    private func column(rows requested: LyricsPlayerBlock.Rows?, scrubber: ScrubberStyle) -> some View {
-        let rows = LyricsPlayerBlock.rows(
-            requested: requested, state: lyrics.state, enabled: lyricsEnabled, inPlayer: lyricsInPlayer
-        )
-        return VStack(alignment: .leading, spacing: Self.rowSpacing) {
-            MarqueeText(text: music.track.title, font: .system(size: 14, weight: .semibold), lineHeight: 17)
+    /// The first rung whose rows fit in `height`; the last always does.
+    private func rung(fittingHeight height: CGFloat) -> (rows: LyricsPlayerBlock.Rows?, scrubber: ScrubberStyle) {
+        for candidate in Self.ladder {
+            let rows = LyricsPlayerBlock.rows(
+                requested: candidate.rows, state: lyrics.state, enabled: lyricsEnabled, inPlayer: lyricsInPlayer
+            )
+            if columnHeight(rows: rows, scrubber: candidate.scrubber) <= height + 0.01 {
+                return (rows, candidate.scrubber)
+            }
+        }
+        return (nil, .none)
+    }
+
+    private func columnHeight(rows: LyricsPlayerBlock.Rows?, scrubber: ScrubberStyle) -> CGFloat {
+        var heights: [CGFloat] = [Metrics.title, Metrics.artist]
+        if let rows {
+            heights.append(rows == .two ? LyricsPlayerBlock.twoHeight : LyricsPlayerBlock.oneHeight)
+        }
+        switch (music.track.hasTiming, scrubber) {
+        case (_, .none): break
+        case (false, _): heights.append(Metrics.hint)
+        case (true, .stacked): heights.append(Metrics.slider + Metrics.times)
+        case (true, .inline): heights.append(Metrics.inlineScrubber)
+        }
+        heights.append(Metrics.transport)
+        return heights.reduce(0, +) + Metrics.rowSpacing * CGFloat(heights.count - 1)
+    }
+
+    /// One column. `rows` is what the lyrics can actually give (nothing while
+    /// loading, one line for unsynced text), already capped by the rung.
+    private func column(rows: LyricsPlayerBlock.Rows?, scrubber: ScrubberStyle, width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: Metrics.rowSpacing) {
+            MarqueeText(text: music.track.title, font: .system(size: 14, weight: .semibold), lineHeight: Metrics.title)
                 .foregroundStyle(.white)
 
             HStack(spacing: 4) {
-                MarqueeText(text: music.track.artist, font: .system(size: 12), lineHeight: 16)
+                MarqueeText(text: music.track.artist, font: .system(size: 12), lineHeight: Metrics.artist)
                     .foregroundStyle(.white.opacity(0.6))
                 MediaPlayerButtons()
             }
-            .frame(height: 16)
+            .frame(height: Metrics.artist)
 
             if let rows {
                 LyricsPlayerBlock(rows: rows)
@@ -363,7 +417,7 @@ struct PlayerControls: View {
                 inlineScrubber
             }
 
-            transport
+            transport(fittingWidth: width)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
@@ -400,7 +454,7 @@ struct PlayerControls: View {
         if !settings.showPageAccessHint {
             // Switched off in settings: leave the space blank rather than
             // repeating something the user has already said they know about.
-            Color.clear.frame(height: 14)
+            Color.clear.frame(height: Metrics.hint)
         } else if music.activeControllerType == .browser {
             Button {
                 SettingsWindowController.shared.show(tab: .media)
@@ -414,14 +468,14 @@ struct PlayerControls: View {
                 }
                 .font(.system(size: 9))
                 .foregroundStyle(.white.opacity(0.4))
-                .frame(height: 14)
+                .frame(height: Metrics.hint)
             }
             .buttonStyle(.plain)
         } else {
             Text("Brak informacji o pozycji")
                 .font(.system(size: 9))
                 .foregroundStyle(.white.opacity(0.4))
-                .frame(height: 14)
+                .frame(height: Metrics.hint)
         }
     }
 
@@ -449,7 +503,7 @@ struct PlayerControls: View {
             .font(.system(size: 9))
             .monospacedDigit()
             .foregroundStyle(.white.opacity(0.45))
-            .frame(height: 11)
+            .frame(height: Metrics.times)
         }
     }
 
@@ -465,7 +519,7 @@ struct PlayerControls: View {
         .font(.system(size: 9))
         .monospacedDigit()
         .foregroundStyle(.white.opacity(0.45))
-        .frame(height: 12)
+        .frame(height: Metrics.inlineScrubber)
     }
 
     private var sliderColor: Color {
@@ -478,13 +532,20 @@ struct PlayerControls: View {
     /// seven buttons only just fit; narrower still and the extras go first —
     /// shuffle and repeat, then the thumbs — so play, previous and next are
     /// never the ones to be cut.
-    private var transport: some View {
-        ViewThatFits(in: .horizontal) {
-            transportRow(shuffleAndRepeat: true, likes: true)
-            transportRow(shuffleAndRepeat: false, likes: true)
-            transportRow(shuffleAndRepeat: false, likes: false)
-        }
-        .frame(height: 24)
+    private func transport(fittingWidth width: CGFloat) -> some View {
+        let variants: [(shuffleAndRepeat: Bool, likes: Bool)] = [(true, true), (false, true), (false, false)]
+        let chosen = variants.first { transportWidth(shuffleAndRepeat: $0.shuffleAndRepeat, likes: $0.likes) <= width + 0.01 }
+            ?? (shuffleAndRepeat: false, likes: false)
+        return transportRow(shuffleAndRepeat: chosen.shuffleAndRepeat, likes: chosen.likes)
+            .frame(height: Metrics.transport)
+    }
+
+    /// What `transportRow` needs at its narrowest, with its spacers at zero.
+    private func transportWidth(shuffleAndRepeat: Bool, likes: Bool) -> CGFloat {
+        var width = Metrics.width(glyph: Metrics.skipGlyph) * 2 + Metrics.width(glyph: Metrics.playGlyph)
+        if likes, music.track.likeStatus != nil { width += Metrics.width(glyph: Metrics.smallGlyph) * 2 }
+        if shuffleAndRepeat, settings.showShuffleAndRepeat { width += Metrics.width(glyph: Metrics.smallGlyph) * 2 }
+        return width
     }
 
     private func transportRow(shuffleAndRepeat: Bool, likes: Bool) -> some View {
@@ -494,8 +555,8 @@ struct PlayerControls: View {
             if let likeStatus {
                 HoverButton(
                     systemName: likeStatus == .liked ? "hand.thumbsup.fill" : "hand.thumbsup",
-                    size: 11,
-                    padding: 4,
+                    size: Metrics.smallGlyph,
+                    padding: Metrics.padding,
                     isActive: likeStatus == .liked,
                     tint: settings.accentColor
                 ) { music.toggleLike() }
@@ -503,8 +564,8 @@ struct PlayerControls: View {
             if extras {
                 HoverButton(
                     systemName: "shuffle",
-                    size: 11,
-                    padding: 4,
+                    size: Metrics.smallGlyph,
+                    padding: Metrics.padding,
                     isActive: music.track.isShuffled,
                     tint: settings.accentColor
                 ) { music.toggleShuffle() }
@@ -512,17 +573,17 @@ struct PlayerControls: View {
 
             Spacer(minLength: 0)
 
-            HoverButton(systemName: "backward.fill", size: 13, padding: 4) {
+            HoverButton(systemName: "backward.fill", size: Metrics.skipGlyph, padding: Metrics.padding) {
                 music.previousTrack()
             }
 
             HoverButton(
                 systemName: music.isPlaying ? "pause.fill" : "play.fill",
-                size: 16,
-                padding: 4
+                size: Metrics.playGlyph,
+                padding: Metrics.padding
             ) { music.togglePlayPause() }
 
-            HoverButton(systemName: "forward.fill", size: 13, padding: 4) {
+            HoverButton(systemName: "forward.fill", size: Metrics.skipGlyph, padding: Metrics.padding) {
                 music.nextTrack()
             }
 
@@ -531,8 +592,8 @@ struct PlayerControls: View {
             if extras {
                 HoverButton(
                     systemName: music.track.repeatMode.symbol,
-                    size: 11,
-                    padding: 4,
+                    size: Metrics.smallGlyph,
+                    padding: Metrics.padding,
                     isActive: music.track.repeatMode != .off,
                     tint: settings.accentColor,
                     badge: music.track.repeatMode.badge
@@ -542,8 +603,8 @@ struct PlayerControls: View {
             if let likeStatus {
                 HoverButton(
                     systemName: likeStatus == .disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
-                    size: 11,
-                    padding: 4,
+                    size: Metrics.smallGlyph,
+                    padding: Metrics.padding,
                     isActive: likeStatus == .disliked,
                     tint: settings.accentColor
                 ) { music.toggleDislike() }
@@ -574,11 +635,13 @@ private struct PlaybackSlider: View {
                 }
             }
         )
-        .frame(height: 12)
-        // The slider can leave mid-drag (the layout ladder changes rung, the
-        // source changes to one without timing); its drag then never ends,
-        // and a stuck flag would freeze the playhead and lyrics.
-        .onDisappear { music.isScrubbing = false }
+        .frame(height: PlayerControls.Metrics.slider)
+        // The slider can leave mid-drag (the source changes to one without
+        // timing, the player is replaced by the empty state); its drag then
+        // never ends, and a stuck flag would freeze the playhead and lyrics.
+        // Only written when set: an assignment publishes whether or not the
+        // value changed, and this runs for every slider that goes away.
+        .onDisappear { if music.isScrubbing { music.isScrubbing = false } }
     }
 }
 

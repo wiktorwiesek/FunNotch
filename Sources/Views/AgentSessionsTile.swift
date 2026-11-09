@@ -202,6 +202,9 @@ private struct AgentRow: View {
         case .working:
             if let activity = session.activity {
                 status = activity
+            } else if session.backgroundAgents > 0 {
+                // The lead has yielded; only its subagents are still at work.
+                status = "W tle: " + Polish.count(session.backgroundAgents, "agent", "agenty", "agentów")
             } else {
                 status = session.name == session.project ? "Pracuje" : "Pracuje · \(session.project)"
             }

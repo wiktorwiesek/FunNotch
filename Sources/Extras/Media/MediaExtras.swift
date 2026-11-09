@@ -108,7 +108,7 @@ private struct MediaOverlayHost: View {
             // The panels are for this opening only; the next one starts clean.
             Color.clear
                 .allowsHitTesting(false)
-                .onDisappear { MediaOverlayState.shared.mode = .none }
+                .onDisappear { if MediaOverlayState.shared.mode != .none { MediaOverlayState.shared.mode = .none } }
             switch state.mode {
             case .none:
                 EmptyView()

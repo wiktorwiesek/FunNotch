@@ -26,6 +26,8 @@ interface Entry {
 	waitingFor?: string;
 	/** The tool running right now, e.g. "bash" or "task ×3". */
 	activity?: string;
+	/** Subagents still running in the background for this session. */
+	backgroundAgents?: number;
 	/** Tokens of every assistant reply in this session, cache reads included. */
 	tokens: number;
 	/** USD, as the provider or omp's price table reports it; 0 on subscriptions. */
@@ -118,6 +120,15 @@ export default function (pi: ExtensionAPI): void {
 	let cost = 0;
 	// Tools running right now, by call id; the newest one is what the notch shows.
 	const activeTools = new Map<string, string>();
+	// Subagents started with `task` that are still running in the background,
+	// by run id, with when each was last heard of. The lead session can be idle
+	// (it yielded) while they work.
+	const background = new Map<string, number>();
+	// An entry nobody has mentioned for this long is assumed lost (a missed
+	// completion event), so a session can never stay "busy" forever.
+	const BACKGROUND_STALE_MS = 30 * 60 * 1000;
+	// The last context seen, so subagent events (which carry none) can republish.
+	let lastCtx: ExtensionContext | null = null;
 
 	function remove(): void {
 		if (!file) return;
@@ -152,7 +163,6 @@ export default function (pi: ExtensionAPI): void {
 			if (file && file !== target) remove();
 
 			const now = Date.now();
-			const changed = !record || record.status !== status || record.waitingFor !== waitingFor;
 			let name = "";
 			try {
 				name = pi.getSessionName() ?? "";
@@ -165,20 +175,40 @@ export default function (pi: ExtensionAPI): void {
 				contextWindow = typeof usage?.contextWindow === "number" ? usage.contextWindow : ctx.model?.contextWindow;
 			} catch {}
 			const activity = [...activeTools.values()].at(-1);
+			// The async-job snapshot is authoritative when available; the event
+			// set covers runtimes that do not expose it.
+			try {
+				const running = ctx.getAsyncJobSnapshot()?.running;
+				if (Array.isArray(running)) {
+					background.clear();
+					for (const job of running as unknown[]) {
+						if (!job || typeof job !== "object") continue;
+						const entry = job as Record<string, unknown>;
+						if (entry.type !== "task") continue;
+						const id = typeof entry.agentId === "string" ? entry.agentId : typeof entry.id === "string" ? entry.id : "";
+						if (id) background.set(id, now);
+					}
+				} else {
+					for (const [id, seen] of background) if (now - seen > BACKGROUND_STALE_MS) background.delete(id);
+				}
+			} catch {}
+			// An idle lead with subagents still at work is still working.
+			const shown: Status = status === "idle" && background.size > 0 ? "busy" : status;
 
 			const next: Entry = {
 				pid: process.pid,
 				sessionId,
 				cwd: ctx.cwd || process.cwd(),
 				name,
-				status,
+				status: shown,
 				...(waitingFor ? { waitingFor } : {}),
 				...(activity ? { activity } : {}),
+				...(background.size > 0 ? { backgroundAgents: background.size } : {}),
 				tokens,
 				cost,
 				...(contextTokens !== undefined ? { contextTokens } : {}),
 				...(contextWindow !== undefined ? { contextWindow } : {}),
-				statusUpdatedAt: changed || !record ? now : record.statusUpdatedAt,
+				statusUpdatedAt: !record || record.status !== shown || record.waitingFor !== waitingFor ? now : record.statusUpdatedAt,
 				startedAt: record ? record.startedAt : now,
 				procStart: PROC_START,
 				entrypoint: "omp",
@@ -191,11 +221,13 @@ export default function (pi: ExtensionAPI): void {
 			owned.add(target);
 			file = target;
 			record = next;
+			lastCtx = ctx;
 		} catch {}
 	}
 
 	// Writes the latest activity or usage without changing the status.
-	const republish = (ctx: ExtensionContext) => publish(ctx, record?.status ?? "idle", record?.waitingFor);
+	const republish = (ctx: ExtensionContext) =>
+		publish(ctx, running ? (record?.status === "waiting" ? "waiting" : "busy") : "idle", record?.waitingFor);
 	const settled = (ctx: ExtensionContext) => publish(ctx, running ? "busy" : "idle");
 
 	pi.on("session_start", (_event, ctx) => {
@@ -205,6 +237,7 @@ export default function (pi: ExtensionAPI): void {
 	pi.on("session_switch", (_event, ctx) => {
 		running = false;
 		activeTools.clear();
+		background.clear();
 		recount(ctx);
 		publish(ctx, "idle");
 	});
@@ -213,6 +246,25 @@ export default function (pi: ExtensionAPI): void {
 		settled(ctx);
 	});
 	pi.on("session_shutdown", () => remove());
+
+	// Subagent lifecycle arrives on the parent's event bus without a context.
+	const bus = Reflect.get(pi, "events") as
+		| { on?: (name: string, handler: (event: unknown) => void) => void }
+		| undefined;
+	const onSubagent = (event: unknown, forced?: "started" | "completed") => {
+		if (!event || typeof event !== "object") return;
+		const entry = event as Record<string, unknown>;
+		const id = typeof entry.id === "string" && entry.id ? entry.id : typeof entry.runId === "string" ? entry.runId : "";
+		const status = forced ?? entry.status;
+		if (!id) return;
+		if (status === "started") background.set(id, Date.now());
+		else if (status === "completed" || status === "failed" || status === "aborted") background.delete(id);
+		else return;
+		if (lastCtx) republish(lastCtx);
+	};
+	bus?.on?.("task:subagent:lifecycle", (event) => onSubagent(event));
+	bus?.on?.("subagent:async-started", (event) => onSubagent(event, "started"));
+	bus?.on?.("subagent:async-complete", (event) => onSubagent(event, "completed"));
 
 	pi.on("agent_start", (_event, ctx) => {
 		running = true;

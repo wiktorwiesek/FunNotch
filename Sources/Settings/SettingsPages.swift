@@ -446,6 +446,9 @@ private struct SettingsAgentRow: View {
         if let usage = session.usage { place += " · \(usage.summary)" }
         switch session.status {
         case .working:
+            if session.activity == nil, session.backgroundAgents > 0 {
+                return "W tle: \(Polish.count(session.backgroundAgents, "agent", "agenty", "agentów")) — \(place)"
+            }
             return "\(session.activity.map { "Uruchamia \($0)" } ?? "Pracuje") — \(place)"
         case let .waiting(reason): return "\(AgentSessionsManager.waitingText(reason)) — \(place)"
         case .idle:

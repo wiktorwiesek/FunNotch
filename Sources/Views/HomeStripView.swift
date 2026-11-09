@@ -378,45 +378,104 @@ private struct BatteryMeter: View {
 
 /// A highlight sweeping along the charge, then a beat of stillness. A shimmer
 /// that never stops reads as a loading bar rather than a battery filling.
-private struct ChargingSheen: View {
+///
+/// Played by Core Animation in the render server. As a 30 fps `TimelineView`
+/// it made the notch re-lay-out its whole window about sixty times a second
+/// for as long as the notch was open on a charging Mac.
+private struct ChargingSheen: NSViewRepresentable {
     let width: CGFloat
     let height: CGFloat
 
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-            let t: Double = context.date.timeIntervalSinceReferenceDate
-            let cycle: Double = t.truncatingRemainder(dividingBy: 2.2) / 1.25
-            let progress: Double = min(cycle, 1.0)
-            let band: CGFloat = max(width * 0.4, 12)
-            let x: CGFloat = -band + CGFloat(progress) * (width + band * 2)
+    func makeNSView(context: Context) -> SheenLayerView { SheenLayerView() }
 
-            LinearGradient(
-                stops: [
-                    .init(color: .white.opacity(0), location: 0),
-                    .init(color: .white.opacity(cycle > 1 ? 0 : 0.5), location: 0.5),
-                    .init(color: .white.opacity(0), location: 1)
-                ],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .frame(width: band, height: height)
-            .offset(x: x)
-            .frame(width: width, height: height, alignment: .leading)
-        }
+    func updateNSView(_ view: SheenLayerView, context: Context) {
+        view.configure(width: width, height: height)
     }
 }
 
-/// Slow breathing on a critical charge. Urgent without strobing.
-private struct CriticalPulse: View {
+private final class SheenLayerView: NSView {
+    private let band = CAGradientLayer()
+    private var width: CGFloat = 0
+    private var height: CGFloat = 0
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.masksToBounds = true
+        band.colors = [
+            NSColor.white.withAlphaComponent(0).cgColor,
+            NSColor.white.withAlphaComponent(0.5).cgColor,
+            NSColor.white.withAlphaComponent(0).cgColor,
+        ]
+        band.startPoint = CGPoint(x: 0, y: 0.5)
+        band.endPoint = CGPoint(x: 1, y: 0.5)
+        layer?.addSublayer(band)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func configure(width: CGFloat, height: CGFloat) {
+        guard width != self.width || height != self.height else { return }
+        self.width = width
+        self.height = height
+
+        let bandWidth = max(width * 0.4, 12)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        band.frame = CGRect(x: 0, y: 0, width: bandWidth, height: height)
+        CATransaction.commit()
+
+        // 1.25 s across, from just off the left edge to just off the right,
+        // then still until the 2.2 s cycle is up.
+        let sweep = CAKeyframeAnimation(keyPath: "transform.translation.x")
+        sweep.values = [-bandWidth, width, width]
+        sweep.keyTimes = [0, NSNumber(value: 1.25 / 2.2), 1]
+        sweep.duration = 2.2
+        sweep.repeatCount = .infinity
+        sweep.isRemovedOnCompletion = false
+        sweep.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+        band.removeAllAnimations()
+        band.add(sweep, forKey: "sweep")
+    }
+}
+
+/// Slow breathing on a critical charge. Urgent without strobing. Also played
+/// by Core Animation (see `ChargingSheen`).
+private struct CriticalPulse: NSViewRepresentable {
     let tint: Color
 
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { context in
-            let t: Double = context.date.timeIntervalSinceReferenceDate
-            let amount: Double = (sin(t * 2.6) + 1) / 2
-            Color.white.opacity(0.10 + amount * 0.28)
-        }
+    func makeNSView(context: Context) -> PulseLayerView { PulseLayerView() }
+
+    func updateNSView(_ view: PulseLayerView, context: Context) {}
+}
+
+private final class PulseLayerView: NSView {
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.white.cgColor
+        layer?.opacity = 0.10
+
+        let breathe = CABasicAnimation(keyPath: "opacity")
+        breathe.fromValue = 0.10
+        breathe.toValue = 0.38
+        // sin(2.6 t) has a period of about 2.4 s: 1.2 s up, 1.2 s down.
+        breathe.duration = 1.2
+        breathe.autoreverses = true
+        breathe.repeatCount = .infinity
+        breathe.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        breathe.isRemovedOnCompletion = false
+        breathe.preferredFrameRateRange = CAFrameRateRange(minimum: 10, maximum: 20, preferred: 20)
+        layer?.add(breathe, forKey: "breathe")
     }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
 // MARK: - Bluetooth device batteries
