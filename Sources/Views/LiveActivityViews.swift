@@ -162,9 +162,62 @@ struct LiveActivityBanner: View {
                 FocusBanner(activity: activity, geometry: geometry)
             case .agent:
                 AgentBanner(geometry: geometry)
+            case .island:
+                IslandBanner(geometry: geometry)
             default:
                 EmptyView()
             }
+        }
+    }
+}
+
+// MARK: - Island
+
+/// Whatever was posted through `IslandCenter`: a glyph, one line, and either
+/// a short value or one button in the right wing.
+private struct IslandBanner: View {
+    let geometry: BannerGeometry
+
+    @ObservedObject private var center = IslandCenter.shared
+
+    var body: some View {
+        if let island = center.current {
+            IntroTimeline(duration: 1.2) { time in
+                BannerLayout(geometry: geometry) {
+                    Image(systemName: island.symbol)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(island.tint)
+                        .frame(width: 24, height: 24)
+                        .modifier(WingPop(time: time))
+                } trailing: {
+                    trailing(island)
+                        .modifier(WingSlide(time: time, delay: 0.2))
+                } chin: {
+                    ChinLine(time: time, text: headline(island.title, island.detail))
+                }
+            }
+            .id(island.id)
+        }
+    }
+
+    @ViewBuilder
+    private func trailing(_ island: Island) -> some View {
+        if let action = island.action {
+            Button(action.title) { action.perform() }
+                .buttonStyle(.plain)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(island.tint))
+                .lineLimit(1)
+                .fixedSize()
+        } else if let value = island.trailing {
+            Text(value)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(island.tint)
+                .lineLimit(1)
         }
     }
 }

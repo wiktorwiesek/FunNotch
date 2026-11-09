@@ -25,6 +25,8 @@ enum SneakContentType {
     case hud
     /// A Claude Code or Codex session starting, finishing or waiting for you.
     case agent
+    /// A general announcement posted through `IslandCenter`.
+    case island
     case none
 }
 
