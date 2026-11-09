@@ -48,12 +48,15 @@ struct HomeGridView: View {
     private static let rowWidth = openNotchSize.width - 44
 
     private func row(_ tiles: [HomeTile], spacing: CGFloat) -> some View {
-        let total = max(tiles.reduce(0) { $0 + CGFloat($1.span) }, 1)
         let available = Self.rowWidth - spacing * CGFloat(max(tiles.count - 1, 0))
+        let widths = HomeRowLayout.widths(for: tiles, available: available, floor: 24)
         return HStack(alignment: .top, spacing: spacing) {
-            ForEach(tiles) { tile in
+            ForEach(Array(tiles.enumerated()), id: \.element.id) { index, tile in
+                // Clipped so a tile squeezed below its content never draws
+                // over the one next to it.
                 HomeTileView(tile: tile)
-                    .frame(width: max(available * CGFloat(tile.span) / total, 24))
+                    .frame(width: widths[index])
+                    .clipped()
             }
         }
         .frame(width: Self.rowWidth, alignment: .leading)

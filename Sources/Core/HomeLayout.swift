@@ -127,6 +127,66 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
     /// Only "Open app" makes sense more than once, since each points somewhere
     /// different. The rest would simply say the same thing twice.
     var allowsDuplicates: Bool { self == .openApp }
+    /// Narrowest width, in points, at which the tile's content still fits in
+    /// the top row: the album art plus the transport, the seven-day strip.
+    /// Spans alone share the row out proportionally, and a fixed-width strip
+    /// in a share narrower than itself spills over its neighbour.
+    var minimumWidth: CGFloat {
+        switch self {
+        case .nowPlaying: return 254
+        case .calendar: return 184
+        case .weather, .agents: return 150
+        case .notes, .timer: return 140
+        case .mirror: return 60
+        default: return 24
+        }
+    }
+}
+
+/// How a row's width is shared between its tiles.
+enum HomeRowLayout {
+    /// Top-row tiles get at least their kind's minimum; whatever is left is
+    /// shared by span. Bottom-row tiles are compact and only get `floor`.
+    static func minimum(of tile: HomeTile, floor: CGFloat) -> CGFloat {
+        tile.row == 0 ? max(tile.kind.minimumWidth, floor) : floor
+    }
+
+    /// True when the minimums alone are wider than the row, so the tiles are
+    /// squeezed below what their content needs and get clipped.
+    static func overflows(_ tiles: [HomeTile], available: CGFloat, floor: CGFloat) -> Bool {
+        tiles.reduce(0) { $0 + minimum(of: $1, floor: floor) } > available + 0.5
+    }
+
+    static func widths(for tiles: [HomeTile], available: CGFloat, floor: CGFloat) -> [CGFloat] {
+        let minimums = tiles.map { minimum(of: $0, floor: floor) }
+        let minimumTotal = minimums.reduce(0, +)
+        guard minimumTotal < available else {
+            // Even the minimums do not fit: shrink everything alike.
+            let scale = minimumTotal > 0 ? available / minimumTotal : 0
+            return minimums.map { $0 * scale }
+        }
+        // Proportional by span, pinning any tile that would fall below its
+        // minimum and sharing what is left between the rest, until stable.
+        var pinned = Array(repeating: false, count: tiles.count)
+        var widths = minimums
+        while true {
+            let free = available - tiles.indices.filter { pinned[$0] }.reduce(0) { $0 + widths[$1] }
+            let spans = tiles.indices.filter { !pinned[$0] }.reduce(0) { $0 + CGFloat(tiles[$1].span) }
+            guard spans > 0 else { return widths }
+            var changed = false
+            for index in tiles.indices where !pinned[index] {
+                let share = free * CGFloat(tiles[index].span) / spans
+                if share < minimums[index] {
+                    pinned[index] = true
+                    widths[index] = minimums[index]
+                    changed = true
+                } else {
+                    widths[index] = share
+                }
+            }
+            if !changed { return widths }
+        }
+    }
 }
 
 /// A situation the notch can have its own layout for.

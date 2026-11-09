@@ -183,16 +183,17 @@ struct HomeLayoutEditor: View {
     private func stageRow(_ row: Int, height: CGFloat) -> some View {
         let rowTiles = tiles.filter { $0.row == row }
         let spacing: CGFloat = row == 0 ? 14 : 6
-        let total = max(rowTiles.reduce(0) { $0 + CGFloat($1.span) }, 1)
         let available = rowWidth - spacing * CGFloat(max(rowTiles.count - 1, 0))
+        let widths = HomeRowLayout.widths(for: rowTiles, available: available, floor: 40)
+        let crowded = HomeRowLayout.overflows(rowTiles, available: available, floor: 40)
 
         return HStack(spacing: spacing) {
             if rowTiles.isEmpty {
                 emptyRowHint(row)
             } else {
-                ForEach(rowTiles) { tile in
+                ForEach(Array(rowTiles.enumerated()), id: \.element.id) { index, tile in
                     tileChip(tile, height: height)
-                        .frame(width: max(available * CGFloat(tile.span) / total, 40))
+                        .frame(width: widths[index])
                         .transition(.scale(scale: 0.85).combined(with: .opacity))
                 }
             }
@@ -200,9 +201,23 @@ struct HomeLayoutEditor: View {
         .frame(width: rowWidth, height: height, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.accentColor.opacity(dropTargetRow == row ? 0.9 : 0), lineWidth: 1.5)
+                .strokeBorder(
+                    dropTargetRow == row ? Color.accentColor.opacity(0.9) : Color.red.opacity(crowded ? 0.8 : 0),
+                    lineWidth: 1.5
+                )
                 .padding(-4)
         )
+        .overlay(alignment: .bottom) {
+            if crowded {
+                Text("Za dużo w rzędzie: usuń kafelek albo przenieś go niżej")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.red.opacity(0.85)))
+                    .offset(y: 10)
+            }
+        }
         .animation(.spring(response: 0.38, dampingFraction: 0.8), value: rowTiles.map(\.id))
         .animation(.spring(response: 0.38, dampingFraction: 0.8), value: rowTiles.map(\.span))
         .dropDestination(for: String.self) { items, _ in
