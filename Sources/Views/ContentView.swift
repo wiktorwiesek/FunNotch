@@ -13,13 +13,14 @@ struct ContentView: View {
     @EnvironmentObject private var viewModel: NotchViewModel
     @EnvironmentObject private var settings: Settings
     @ObservedObject private var music = MusicManager.shared
+    @ObservedObject private var decor = DecorStore.shared
 
     var body: some View {
         let size = viewModel.contentSize
 
         ZStack(alignment: .top) {
             ZStack(alignment: .top) {
-                Color.black
+                DecorBackdrop()
                 if settings.notchTintIntensity > 0 {
                     settings.notchTintColor.opacity(settings.notchTintIntensity * 0.5)
                 }
@@ -121,6 +122,7 @@ struct ClosedNotchView: View {
     @EnvironmentObject private var viewModel: NotchViewModel
     @EnvironmentObject private var settings: Settings
     @ObservedObject private var music = MusicManager.shared
+    @ObservedObject private var decor = DecorStore.shared
 
     var body: some View {
         Group {
@@ -220,6 +222,8 @@ struct ClosedNotchView: View {
             ClosedAlbumArt()
         } else if viewModel.showsFocusActivity {
             DropZoneGlyph(systemName: "cup.and.saucer.fill")
+        } else if viewModel.decorIdleWings?.leading == true {
+            DecorIdleView()
         } else {
             EmptyView()
         }
@@ -244,6 +248,8 @@ struct ClosedNotchView: View {
             NotchWidgetStack(widgets: viewModel.activeWidgets.trailing, side: .trailing)
         } else if showsSideActivity {
             ClosedVisualizer()
+        } else if viewModel.decorIdleWings?.trailing == true {
+            DecorIdleView()
         } else {
             EmptyView()
         }
@@ -253,14 +259,23 @@ struct ClosedNotchView: View {
 /// Countdown shown beside the cutout while a focus session runs.
 private struct ClosedFocusCountdown: View {
     @ObservedObject private var focus = FocusManager.shared
+    @ObservedObject private var decor = DecorStore.shared
     @EnvironmentObject private var settings: Settings
 
     var body: some View {
-        Text(focus.compactRemainingText)
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
-            .monospacedDigit()
-            .foregroundStyle(settings.accentColor)
-            .frame(maxWidth: .infinity, alignment: .center)
+        HStack(spacing: 8) {
+            // The mascot rides a track beside the numbers; the closed notch
+            // widens by `decorMascotTrackWidth` to make room for it.
+            if decor.mascot != .none {
+                DecorMascotTrack(mascot: decor.mascot, progress: focus.progress, tint: settings.accentColor)
+            }
+            Text(focus.compactRemainingText)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(settings.accentColor)
+                .frame(maxWidth: decor.mascot == .none ? .infinity : nil, alignment: .center)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 }
 

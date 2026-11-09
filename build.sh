@@ -180,6 +180,9 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
     <!-- Menu bar only: no Dock icon, no app switcher entry. -->
     <key>LSUIElement</key><true/>
 
+    <!-- Core Audio process taps: the real spectrum and the per-app mixer. -->
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>Fun Notch używa dźwięku systemu do spektrum muzyki i miksera głośności aplikacji.</string>
     <key>NSCameraUsageDescription</key>
     <string>The mirror shows a live preview of your camera inside the notch.</string>
     <key>NSCalendarsUsageDescription</key>

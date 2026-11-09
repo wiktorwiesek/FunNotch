@@ -49,6 +49,8 @@ struct ClipboardEntry: Identifiable, Equatable {
     var symbol: String {
         switch payload {
         case let .text(value):
+            let smart = ClipboardSmart.kind(for: value)
+            if smart != .plain { return smart.symbol }
             if value.hasPrefix("http://") || value.hasPrefix("https://") { return "link" }
             return "text.alignleft"
         case .image: return "photo"
@@ -65,7 +67,12 @@ struct ClipboardEntry: Identifiable, Equatable {
 final class ClipboardManager: ObservableObject {
     static let shared = ClipboardManager()
 
-    @Published private(set) var entries: [ClipboardEntry] = []
+    @Published private(set) var entries: [ClipboardEntry] = [] {
+        didSet {
+            // Recognised image text must not outlive its history entry.
+            ClipboardOCRIndex.shared.prune(keeping: Set(entries.map(\.id)))
+        }
+    }
 
     private var timer: Timer?
     /// Sweeps expired entries while the app sits idle, so a history left alone
@@ -188,6 +195,9 @@ final class ClipboardManager: ObservableObject {
 
         expireOldEntries()
 
+        // Images are read for text in the background so search can find them.
+        if let recorded = entries.first { ClipboardOCRIndex.shared.index(recorded) }
+
         // Pinned entries do not count against the limit and are never dropped.
         let limit = max(Settings.shared.clipboardHistoryLimit, 1)
         var unpinned = entries.filter { !$0.isPinned }
@@ -214,6 +224,16 @@ final class ClipboardManager: ObservableObject {
             pasteboard.writeObjects(urls as [NSURL])
         }
 
+        ownChangeCount = pasteboard.changeCount
+        lastChangeCount = pasteboard.changeCount
+    }
+
+    /// Writes plain text produced by a smart action (a colour as HEX, a bare
+    /// NIP) without the history recording it as something the user copied.
+    func copyText(_ value: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(value, forType: .string)
         ownChangeCount = pasteboard.changeCount
         lastChangeCount = pasteboard.changeCount
     }
@@ -272,10 +292,17 @@ final class ClipboardManager: ObservableObject {
 
     /// Entries matching a search, pinned first.
     func filtered(by query: String) -> [ClipboardEntry] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Case and diacritics are ignored so "zolty" finds "żółty", which
+        // matters most for text read out of screenshots.
+        func contains(_ haystack: String) -> Bool {
+            haystack.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
         let matches = trimmed.isEmpty
             ? entries
-            : entries.filter { $0.preview.lowercased().contains(trimmed) }
+            : entries.filter { entry in
+                contains(entry.preview) || (ClipboardOCRIndex.shared.text(for: entry.id).map(contains) ?? false)
+            }
         return matches.sorted { lhs, rhs in
             if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
             return lhs.copiedAt > rhs.copiedAt

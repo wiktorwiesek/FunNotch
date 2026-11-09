@@ -309,6 +309,53 @@ final class ShelfManager: NSObject, ObservableObject {
         return candidate
     }
 
+    // MARK: - Converted output
+
+    /// A private working folder for one conversion. Results are built here and
+    /// only moved onto the shelf when they are complete, so a failed or
+    /// cancelled job never leaves a half-written file on the shelf.
+    func makeStagingDirectory() -> URL {
+        let directory = temporaryDirectory.appendingPathComponent(".work-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    /// Removes working folders left behind by a conversion that was interrupted.
+    func purgeStaging() {
+        let contents = (try? FileManager.default.contentsOfDirectory(
+            at: temporaryDirectory,
+            includingPropertiesForKeys: nil,
+            options: []
+        )) ?? []
+        for url in contents where url.lastPathComponent.hasPrefix(".work-") {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    /// Moves finished files out of a staging folder into the shelf cache and
+    /// adds them. Returns the new items in the order given.
+    @discardableResult
+    func addConverted(_ urls: [URL]) -> [ShelfItem] {
+        var added: [ShelfItem] = []
+        // `add` puts each item first, so go backwards to leave page 1 leftmost.
+        for url in urls.reversed() {
+            let destination = uniqueURL(for: url.lastPathComponent)
+            do {
+                try FileManager.default.moveItem(at: url, to: destination)
+            } catch {
+                DiagnosticLog.write("shelf", "could not move converted file: \(error.localizedDescription)")
+                continue
+            }
+            if add(url: destination, isTemporary: true),
+               let item = items.first(where: { $0.url == destination }) {
+                added.insert(item, at: 0)
+            } else {
+                try? FileManager.default.removeItem(at: destination)
+            }
+        }
+        return added
+    }
+
     /// Takes everything usable off a dropped pasteboard. Reading the pasteboard
     /// directly (rather than going through `NSItemProvider`) is what makes
     /// Finder drags land reliably.

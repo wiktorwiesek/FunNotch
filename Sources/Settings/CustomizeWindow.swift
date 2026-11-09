@@ -391,6 +391,9 @@ extension HomeTileKind {
         case .devices, .recentShelf, .wifi: return SettingsStyle.blue
         case .clipboard: return SettingsStyle.purple
         case .openApp, .diskSpace: return Color(red: 0.62, green: 0.64, blue: 0.7)
+        case .github: return Color(red: 0.62, green: 0.4, blue: 0.95)
+        case .aiUsage: return SettingsStyle.orange
+        case .launcher: return SettingsStyle.teal
         }
     }
 
@@ -415,6 +418,9 @@ extension HomeTileKind {
         case .mediaScrubber: return "Przewijanie utworu"
         case .nextEvent: return "Następne wydarzenie"
         case .diskSpace: return "Wolne miejsce"
+        case .github: return "CI i pull requesty z GitHuba"
+        case .aiUsage: return "Dzisiejszy koszt i tokeny"
+        case .launcher: return "Przypięte aplikacje do uruchomienia"
         }
     }
 }
@@ -433,6 +439,10 @@ extension NotchWidget {
         case .wifi, .shelfCount: return SettingsStyle.blue
         case .moonPhase: return SettingsStyle.yellow
         case .unread: return SettingsStyle.red
+        case .keepAwake: return SettingsStyle.orange
+        case .micMute: return SettingsStyle.red
+        case .privacy: return SettingsStyle.green
+        case .audioOutput: return SettingsStyle.purple
         }
     }
 }

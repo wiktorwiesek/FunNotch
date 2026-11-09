@@ -346,8 +346,14 @@ final class NotchViewModel: ObservableObject {
         agentActivity.active > 1 ? Self.agentPipWidthWithCount : Self.agentPipWidth
     }
 
-    /// Space taken beside the cutout by the live activities, left and right.
+    /// Space taken beside the cutout by the live activities, left and right,
+    /// plus whatever the decorations (timer mascot, idle animation) add.
     var closedActivityInsets: (leading: CGFloat, trailing: CGFloat) {
+        decorAdjustedInsets(baseClosedActivityInsets)
+    }
+
+    /// The live activities' own space, before any decoration.
+    var baseClosedActivityInsets: (leading: CGFloat, trailing: CGFloat) {
         if isShowingDropZone { return (110, 110) }
 
         var leading: CGFloat = 0

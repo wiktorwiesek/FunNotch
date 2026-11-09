@@ -141,6 +141,7 @@ private struct QuickActionsPanel: View {
                 FocusTabState.shared.mode = .timer
                 viewModel.currentTab = .focus
             }
+            SystemQuickActionButtons()
         }
     }
 

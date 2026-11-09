@@ -38,6 +38,11 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
     case nextEvent = "Next event"
     case diskSpace = "Disk space"
 
+    // Developer tiles (Fun Notch extras).
+    case github = "GitHub"
+    case aiUsage = "AI usage"
+    case launcher = "App launcher"
+
     var id: String { rawValue }
 
     var title: String {
@@ -61,6 +66,9 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
         case .mediaScrubber: return "Pasek odtwarzania"
         case .nextEvent: return "Następne wydarzenie"
         case .diskSpace: return "Miejsce na dysku"
+        case .github: return "GitHub"
+        case .aiUsage: return "Zużycie AI"
+        case .launcher: return "Launcher aplikacji"
         }
     }
 
@@ -85,6 +93,9 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
         case .mediaScrubber: return "waveform"
         case .nextEvent:    return "calendar.badge.clock"
         case .diskSpace:    return "internaldrive"
+        case .github:       return "chevron.left.forwardslash.chevron.right"
+        case .aiUsage:      return "sparkles"
+        case .launcher:     return "square.grid.2x2.fill"
         }
     }
 
@@ -111,6 +122,7 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
         case .openApp:      return 1
         case .mediaScrubber: return 3
         case .nextEvent:    return 2
+        case .github, .aiUsage, .launcher: return 3
         default:            return 2
         }
     }
@@ -138,6 +150,8 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
         case .weather, .agents: return 150
         case .notes, .timer: return 140
         case .mirror: return 60
+        case .github, .aiUsage: return 150
+        case .launcher: return 110
         default: return 24
         }
     }

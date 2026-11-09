@@ -38,6 +38,8 @@ enum NotchTab: String, CaseIterable, Identifiable {
     /// Focus sessions, the countdown timer and the stopwatch, together.
     case focus = "Focus"
     case notes = "Notes"
+    /// Recent notifications, from the banners seen and the Notification Center database.
+    case notifications = "Notifications"
     case game = "Game"
 
     var id: String { rawValue }
@@ -49,6 +51,7 @@ enum NotchTab: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.clipboard.fill"
         case .focus: return "timer"
         case .notes: return "note.text"
+        case .notifications: return "bell.fill"
         case .game: return "gamecontroller.fill"
         }
     }
@@ -61,6 +64,7 @@ enum NotchTab: String, CaseIterable, Identifiable {
         case .clipboard: return "Schowek"
         case .focus: return "Skupienie i minutnik"
         case .notes: return "Notatki"
+        case .notifications: return "Powiadomienia"
         case .game: return "Gry"
         }
     }
@@ -222,6 +226,10 @@ enum NotchWidget: String, CaseIterable, Identifiable {
     case moonPhase = "Moon phase"
     case shelfCount = "Shelf count"
     case unread = "Unread"
+    case keepAwake = "Keep awake"
+    case micMute = "Mic mute"
+    case privacy = "Privacy"
+    case audioOutput = "Audio output"
 
     var id: String { rawValue }
 
@@ -241,6 +249,10 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .moonPhase: return "Faza księżyca"
         case .shelfCount: return "Liczba elementów na Półce"
         case .unread: return "Nieprzeczytane"
+        case .keepAwake: return "Nie usypiaj"
+        case .micMute: return "Wyciszenie mikrofonu"
+        case .privacy: return "Wskaźnik prywatności"
+        case .audioOutput: return "Wyjście dźwięku"
         }
     }
 
@@ -252,6 +264,9 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .clock, .focusTimer, .moonPhase, .shelfCount, .unread: return 54
         case .date, .wifi: return 82
         case .nextEvent, .nowPlaying: return 132
+        case .keepAwake: return 54
+        case .micMute, .audioOutput: return 24
+        case .privacy: return 32
         }
     }
 
@@ -271,6 +286,10 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .moonPhase: return "moonphase.waxing.crescent"
         case .shelfCount: return "tray.full"
         case .unread: return "bubble.left.and.bubble.right"
+        case .keepAwake: return "cup.and.saucer.fill"
+        case .micMute: return "mic.fill"
+        case .privacy: return "lock.shield"
+        case .audioOutput: return "speaker.wave.2.fill"
         }
     }
 
@@ -289,6 +308,10 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .moonPhase: return nil
         case .shelfCount: return .shelfTab
         case .unread: return .unreadApp
+        case .keepAwake: return .toggleKeepAwake
+        case .micMute: return .toggleMicMute
+        case .privacy: return .settingsPane("com.apple.settings.PrivacySecurity.extension")
+        case .audioOutput: return .audioOutputMenu
         }
     }
 }
@@ -398,6 +421,11 @@ enum WidgetClickTarget: Equatable {
     /// The first chat app with something unread.
     case unreadApp
     case locationAccess
+    /// Switches "Nie usypiaj" on or off.
+    case toggleKeepAwake
+    case toggleMicMute
+    /// A pop-up list of sound outputs at the pointer.
+    case audioOutputMenu
 }
 
 /// Playback repeat mode reported by the active media controller.

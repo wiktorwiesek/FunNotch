@@ -21,6 +21,7 @@ struct ShelfView: View {
                 emptyState
             } else {
                 toolbar
+                ShelfConversionStrip()
                 itemGrid
                 folderTargets
             }
@@ -70,6 +71,11 @@ struct ShelfView: View {
 
             Spacer()
 
+            if shelf.selection.count > 1 {
+                ShelfToolbarButton(systemName: "doc.zipper", label: "Spakuj") {
+                    ShelfConverter.shared.run(.zip, on: shelf.items.filter { shelf.selection.contains($0.id) })
+                }
+            }
             ShelfToolbarButton(systemName: "square.and.arrow.up", label: "Udostępnij") {
                 ShareAnchor.share(urls: shelf.shareURLs)
             }
@@ -189,6 +195,29 @@ private struct ShelfItemTile: View {
         shelf.rename(id: item.id, to: field.stringValue)
     }
 
+    /// Convert, remove background, zip and unzip. With several items selected
+    /// these apply to all of them that support the action.
+    @ViewBuilder
+    private var conversionMenu: some View {
+        let converter = ShelfConverter.shared
+        let targets = converter.targets(for: item)
+        let options = converter.options(for: item)
+        Divider()
+        if !options.isEmpty {
+            Menu(targets.count > 1 ? "Konwertuj zaznaczone" : "Konwertuj") {
+                ForEach(options, id: \.self) { option in
+                    Button(option.menuTitle) { converter.run(option, on: targets) }
+                }
+            }
+        }
+        Button(targets.count > 1 ? "Spakuj zaznaczone do ZIP" : "Spakuj do ZIP") {
+            converter.run(.zip, on: targets)
+        }
+        if converter.canUnzip(item) {
+            Button("Rozpakuj") { converter.run(.unzip, on: targets) }
+        }
+    }
+
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
@@ -280,6 +309,7 @@ private struct ShelfItemTile: View {
                     shelf.copyTextFromImage(item) { _ in }
                 }
             }
+            conversionMenu
             Divider()
             Button("Usuń z półki") { shelf.remove(id: item.id) }
         }

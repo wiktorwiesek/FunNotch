@@ -10,6 +10,8 @@ import SwiftUI
 
 struct ClipboardView: View {
     @ObservedObject private var clipboard = ClipboardManager.shared
+    /// Observed so the search results grow as image text is recognised.
+    @ObservedObject private var ocr = ClipboardOCRIndex.shared
     @EnvironmentObject private var settings: Settings
 
     @State private var justCopied: UUID?
@@ -132,17 +134,44 @@ private struct ClipboardTile: View {
     let action: () -> Void
 
     @ObservedObject private var clipboard = ClipboardManager.shared
+    @ObservedObject private var ocr = ClipboardOCRIndex.shared
+    @ObservedObject private var linkTitles = LinkTitleStore.shared
     @EnvironmentObject private var settings: Settings
     @State private var isHovering = false
+    /// Confirms a smart action that copied something (the tile click has its own).
+    @State private var flashed = false
+
+    private var smartKind: ClipboardSmartKind {
+        if case let .text(value) = entry.payload { return ClipboardSmart.kind(for: value) }
+        return .plain
+    }
+
+    private var smartActions: [ClipboardSmartAction] {
+        var title: String?
+        if case let .url(url) = smartKind { title = linkTitles.title(for: url) }
+        return ClipboardSmart.actions(for: smartKind, linkTitle: title)
+    }
+
+    private func run(_ smart: ClipboardSmartAction) {
+        smart.perform()
+        if smart.copies { flash() }
+    }
+
+    private func flash() {
+        withAnimation(.easeOut(duration: 0.15)) { flashed = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeOut(duration: 0.2)) { flashed = false }
+        }
+    }
 
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Image(systemName: justCopied ? "checkmark" : (entry.isPinned ? "pin.fill" : entry.symbol))
+                    Image(systemName: justCopied || flashed ? "checkmark" : (entry.isPinned ? "pin.fill" : entry.symbol))
                         .font(.system(size: 9, weight: .medium))
                         .foregroundStyle(
-                            justCopied || entry.isPinned
+                            justCopied || flashed || entry.isPinned
                                 ? settings.accentColor
                                 : .white.opacity(0.5)
                         )
@@ -166,20 +195,51 @@ private struct ClipboardTile: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(
-                        justCopied || entry.isPinned
-                            ? settings.accentColor.opacity(justCopied ? 1 : 0.5)
+                        justCopied || flashed || entry.isPinned
+                            ? settings.accentColor.opacity(justCopied || flashed ? 1 : 0.5)
                             : Color.white.opacity(0.08),
                         lineWidth: 1
                     )
             )
         }
         .buttonStyle(.plain)
+        .overlay(alignment: .bottom) {
+            // Outside the tile's own button, so these are real buttons of
+            // their own rather than part of "copy this entry".
+            if isHovering, !smartActions.isEmpty {
+                HStack(spacing: 4) {
+                    ForEach(smartActions.prefix(3)) { action in
+                        Button { run(action) } label: {
+                            Image(systemName: action.symbol)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.white)
+                                .frame(width: 24, height: 18)
+                                .background(Capsule().fill(Color.white.opacity(0.2)))
+                        }
+                        .buttonStyle(.plain)
+                        .help(action.title)
+                    }
+                }
+                .padding(.bottom, 5)
+                .transition(.opacity)
+            }
+        }
         .scaleEffect(isHovering ? 1.03 : 1)
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
         }
         .contextMenu {
+            ForEach(smartActions) { action in
+                Button(action.title) { run(action) }
+            }
+            if !smartActions.isEmpty { Divider() }
             Button("Kopiuj") { clipboard.copyBack(entry) }
+            if let recognised = ocr.text(for: entry.id) {
+                Button("Kopiuj rozpoznany tekst") {
+                    clipboard.copyText(recognised)
+                    flash()
+                }
+            }
             Button(entry.isPinned ? "Odepnij" : "Przypnij") { clipboard.togglePin(entry) }
             Button("Wyślij na półkę") { clipboard.sendToShelf(entry) }
             Divider()
@@ -198,6 +258,19 @@ private struct ClipboardTile: View {
                 .frame(height: 58)
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
+                .overlay(alignment: .bottomTrailing) {
+                    if ocr.text(for: entry.id) != nil {
+                        Image(systemName: "text.viewfinder")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.white)
+                            .padding(3)
+                            .background(Circle().fill(Color.black.opacity(0.55)))
+                            .padding(3)
+                            .help("W obrazie rozpoznano tekst")
+                    }
+                }
+        case .text:
+            ClipboardSmartContent(kind: smartKind, text: entry.preview)
         default:
             Text(entry.preview)
                 .font(.system(size: 10))

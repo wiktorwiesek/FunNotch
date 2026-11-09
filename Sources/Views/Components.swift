@@ -37,12 +37,20 @@ struct MusicVisualizer: View {
             }
         }
         .animation(.easeOut(duration: 0.25), value: isPlaying)
+        // The analyzer runs only while some visualiser is on screen.
+        .onAppear { if Motion.filmSpectrum == nil { SpectrumAnalyzer.shared.acquire() } }
+        .onDisappear { if Motion.filmSpectrum == nil { SpectrumAnalyzer.shared.release() } }
     }
 
     private func barHeight(index: Int, time: Double, maximum: CGFloat) -> CGFloat {
         guard isPlaying else { return max(maximum * 0.18, 2) }
         if let levels = Motion.filmSpectrum, index < levels.count {
             return max(maximum * (0.2 + 0.8 * CGFloat(levels[index])), 2)
+        }
+        // Real levels from the system output when the tap is up and hearing
+        // something; otherwise the animation below.
+        if let level = SpectrumAnalyzer.shared.level(index) {
+            return max(maximum * (0.2 + 0.8 * CGFloat(level)), 2)
         }
         let wave = sin(time * rates[index] + phases[index])
         let secondary = sin(time * rates[index] * 0.53 + phases[index] * 1.7)

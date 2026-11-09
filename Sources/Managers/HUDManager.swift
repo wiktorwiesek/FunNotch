@@ -292,8 +292,9 @@ final class HUDManager: ObservableObject {
         if showing != kind { showing = kind }
 
         // Reuse the notch's own announcement strip rather than inventing a
-        // second one.
-        if Self.isEnabled(kind) {
+        // second one — unless the user picked the edge bar or the ring, which
+        // draw the level themselves.
+        if Self.isEnabled(kind), !DecorHUDOverlay.shared.present(kind: kind, value: value, muted: muted) {
             let icon = muted && kind == .volume ? kind.mutedSymbol : kind.symbol
             NotchWindowManager.shared.broadcast { model in
                 model.showExpandingView(

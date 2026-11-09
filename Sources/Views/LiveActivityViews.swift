@@ -756,6 +756,7 @@ struct MusicPeekBanner: View {
     let geometry: BannerGeometry
 
     @ObservedObject private var music = MusicManager.shared
+    @ObservedObject private var lyrics = LyricsManager.shared
     @EnvironmentObject private var settings: Settings
 
     var body: some View {
@@ -775,12 +776,20 @@ struct MusicPeekBanner: View {
                 .frame(width: 17, height: 13)
                 .modifier(WingSlide(time: time))
             } chin: {
-                ChinLine(time: time, text: headline(
-                    music.track.title,
-                    music.track.artist.isEmpty ? "" : " — \(music.track.artist)"
-                ))
+                ChinLine(time: time, text: chinText)
             }
         }
+    }
+
+    /// The line being sung while closed-notch lyrics are on, else the track.
+    private var chinText: Text {
+        if MediaExtrasDefaults.lyricsInClosedNotch, let line = lyrics.currentText {
+            return Text(line).fontWeight(.medium)
+        }
+        return headline(
+            music.track.title,
+            music.track.artist.isEmpty ? "" : " — \(music.track.artist)"
+        )
     }
 
     private var artwork: some View {

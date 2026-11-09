@@ -90,6 +90,12 @@ struct HomeTileView: View {
             NotesView()
         case .timer:
             FocusView(isTile: true)
+        case .github:
+            HomePanelChrome { GitHubTile(compact: tile.row == 1) }
+        case .aiUsage:
+            HomePanelChrome { AIUsageTile(compact: tile.row == 1) }
+        case .launcher:
+            HomePanelChrome { LauncherTile(compact: tile.row == 1) }
         default:
             HomePanelChrome {
                 HomeStripPanel(tile: tile)

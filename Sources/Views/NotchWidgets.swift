@@ -97,6 +97,10 @@ private struct NotchWidgetButton: View {
         case .moonPhase: MoonWidget()
         case .shelfCount: ShelfCountWidget()
         case .unread: UnreadWidget()
+        case .keepAwake: KeepAwakeWidget()
+        case .micMute: MicMuteWidget()
+        case .privacy: PrivacyWidget()
+        case .audioOutput: AudioOutputWidget()
         }
     }
 
@@ -136,6 +140,12 @@ private struct NotchWidgetButton: View {
             } else {
                 WeatherManager.shared.requestAccess()
             }
+        case .toggleKeepAwake:
+            KeepAwakeManager.shared.toggle()
+        case .toggleMicMute:
+            MicMuteManager.shared.toggle()
+        case .audioOutputMenu:
+            AudioOutputManager.shared.showMenu()
         }
     }
 }
@@ -191,6 +201,7 @@ private struct FocusTimerWidget: View {
     @ObservedObject private var focus = FocusManager.shared
     @ObservedObject private var timer = TimerManager.shared
     @EnvironmentObject private var settings: Settings
+    @ObservedObject private var decor = DecorStore.shared
 
     var body: some View {
         HStack(spacing: 4) {
@@ -199,6 +210,17 @@ private struct FocusTimerWidget: View {
             Text(text)
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+            // A mascot rides a track beside the numbers while a countdown
+            // is counting; a stopwatch has no end to ride towards.
+            if decor.mascot != .none, focus.isActive || showsTimer {
+                DecorMascotTrack(
+                    mascot: decor.mascot,
+                    progress: focus.isActive ? focus.progress : timer.progress,
+                    tint: colour,
+                    isMoving: focus.isActive || timer.isCountdownRunning
+                )
+                .padding(.leading, 4)
+            }
         }
         .foregroundStyle(colour)
         .fixedSize()

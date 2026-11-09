@@ -30,6 +30,8 @@ struct OpenNotchView: View {
                     FocusView()
                 case .notes:
                     NotesView()
+                case .notifications:
+                    NotificationsTabView()
                 case .game:
                     // Belt and braces: the tab is already gone from the header
                     // during a session, but nothing should be able to land here
@@ -42,6 +44,7 @@ struct OpenNotchView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .mediaExtrasOverlay()
             .transition(.opacity)
         }
         // Generous insets so nothing runs into the rounded corners.
@@ -86,6 +89,7 @@ struct NotchHeader: View {
     @EnvironmentObject private var settings: Settings
     @ObservedObject private var calendar = CalendarManager.shared
     @ObservedObject private var focus = FocusManager.shared
+    @ObservedObject private var notify = NotifyCenter.shared
 
     var body: some View {
         HStack(spacing: 0) {
@@ -158,6 +162,7 @@ struct NotchHeader: View {
             case .shelf: return settings.shelfEnabled
             case .clipboard: return settings.clipboardHistoryEnabled
             case .notes: return settings.showNotes
+            case .notifications: return notify.showsTab
             // A focus session is a promise not to get distracted, and a game in
             // the notch is the most distracting thing in here.
             case .game: return !FocusManager.shared.isActive
@@ -284,8 +289,13 @@ struct PlayerControls: View {
                 MarqueeText(text: music.track.title, font: .system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
 
-                MarqueeText(text: music.track.artist, font: .system(size: 12))
-                    .foregroundStyle(.white.opacity(0.6))
+                HStack(spacing: 4) {
+                    MarqueeText(text: music.track.artist, font: .system(size: 12))
+                        .foregroundStyle(.white.opacity(0.6))
+                    MediaPlayerButtons()
+                }
+
+                LyricsPlayerBlock()
 
                 if music.track.hasTiming {
                     scrubber
@@ -307,6 +317,7 @@ struct PlayerControls: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.5))
                 .fixedSize(horizontal: false, vertical: true)
+            MediaPlayerButtons()
         }
         .frame(maxHeight: .infinity, alignment: .center)
     }

@@ -20,6 +20,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
     case shelf
     case focus
     case calendar
+    case extras
     case about
 
     var id: String { rawValue }
@@ -33,6 +34,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .shelf: return "Półka i schowek"
         case .focus: return "Skupienie"
         case .calendar: return "Kalendarz"
+        case .extras: return "Dodatki"
         case .about: return "Informacje"
         }
     }
@@ -46,6 +48,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .shelf: return "tray.full.fill"
         case .focus: return "cup.and.saucer.fill"
         case .calendar: return "calendar"
+        case .extras: return "puzzlepiece.extension.fill"
         case .about: return "info"
         }
     }
@@ -59,6 +62,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         case .shelf: return SettingsStyle.blue
         case .focus: return SettingsStyle.indigo
         case .calendar: return SettingsStyle.red
+        case .extras: return SettingsStyle.teal
         case .about: return SettingsStyle.gray
         }
     }
@@ -109,6 +113,7 @@ struct SettingsView: View {
         case .shelf: ShelfClipboardPage()
         case .focus: FocusPage()
         case .calendar: CalendarPage()
+        case .extras: ExtrasPage()
         case .about: AboutPage()
         }
     }
@@ -142,7 +147,7 @@ private struct SettingsSidebar: View {
             .padding(.bottom, 16)
 
             VStack(spacing: 2) {
-                ForEach([SettingsTab.general, .activities, .agents, .media, .shelf, .focus, .calendar]) { tab in
+                ForEach([SettingsTab.general, .activities, .agents, .media, .shelf, .focus, .calendar, .extras]) { tab in
                     SidebarItem(tab: tab, isSelected: selection == tab) { selection = tab }
                 }
             }
