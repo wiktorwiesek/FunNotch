@@ -240,12 +240,27 @@ if [ -n "$SIGN_IDENTITY" ]; then
     "$APP_DIR"
   codesign --verify --deep --strict --verbose=1 "$APP_DIR"
 else
-  echo "==> Signing (ad-hoc)"
-  codesign --force --deep --sign - \
-    --options runtime \
-    --entitlements FunNotch.entitlements \
-    "$APP_DIR" 2>/dev/null \
-    || codesign --force --deep --sign - "$APP_DIR"
+  # Local builds: sign with this Mac's Apple Development certificate when
+  # there is one. Its designated requirement stays the same from build to
+  # build, so macOS keeps the Location, Calendar, Camera and Automation grants
+  # instead of asking again after every rebuild, as it does for ad-hoc.
+  LOCAL_IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null \
+    | sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' | head -1)
+  if [ -n "$LOCAL_IDENTITY" ]; then
+    echo "==> Signing as $LOCAL_IDENTITY (local)"
+    codesign --force --deep --sign "$LOCAL_IDENTITY" \
+      --options runtime \
+      --entitlements FunNotch.entitlements \
+      "$APP_DIR"
+    codesign --verify --deep --strict --verbose=1 "$APP_DIR"
+  else
+    echo "==> Signing (ad-hoc)"
+    codesign --force --deep --sign - \
+      --options runtime \
+      --entitlements FunNotch.entitlements \
+      "$APP_DIR" 2>/dev/null \
+      || codesign --force --deep --sign - "$APP_DIR"
+  fi
 fi
 
 echo "==> Built $APP_DIR"
