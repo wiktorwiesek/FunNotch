@@ -167,23 +167,23 @@ struct NotesView: View {
 enum NotePrompts {
     static let all = [
         "Zapisz to. Pamięć kłamie, choć w dobrej wierze.",
-        "Najsłabszy ołówek jest lepszy od najlepszej pamięci.",
-        "Nic nie jest tak pilne, żeby nie dało się tego zapisać.",
-        "Notatka teraz oszczędzi kłótni później.",
-        "Przyszły Ty tego nie zapamięta. Zrób mu przysługę.",
+        "Najbledszy atrament bije najlepszą pamięć. Podobno.",
+        "Zapisz, a przekonasz się, że nic nie było aż tak pilne.",
+        "Notatka teraz to kłótnia uniknięta później.",
+        "Za tydzień nie będziesz tego pamiętać. Zrób sobie przysługę.",
         "Połowa myślenia to zapisanie myśli i przyjrzenie się jej.",
-        "Jeśli to ważne, warto poświęcić osiem sekund na wpisanie.",
+        "Jeśli to ważne, warto poświęcić osiem sekund na zapisanie.",
         "Dobre pomysły przychodzą w złych momentach. Złap je mimo to.",
-        "Tu trafiają myśli spod prysznica, żeby przetrwać.",
+        "Tu myśli spod prysznica mają szansę przeżyć.",
         "Wszystko, co dziś jest oczywiste, w czwartek będzie zagadką.",
-        "Najlepsza notatka to ta, którą naprawdę zrobisz.",
+        "Najlepsza notatka to ta, która naprawdę powstała.",
         "Powiedz to najpierw tutaj, a dopiero potem na spotkaniu.",
-        "Ten pomysł już Ci się zdarzał. Tym razem go zapisz.",
+        "Ten pomysł już kiedyś przyszedł Ci do głowy. Tym razem go zapisz.",
         "Kartka nigdy nie przerywa.",
         "Gdzieś między planem a bałaganem. Może być.",
         "Nikt tego nie ocenia.",
         "Pisz niechlujnie. Popraw później. Albo wcale.",
-        "Szybka notatka bije dopracowane zamiary."
+        "Robocza notatka bije dopracowane zamiary."
     ]
 
     static func random() -> String {

@@ -46,7 +46,7 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
         case .weather: return "Pogoda"
         case .calendar: return "Kalendarz"
         case .mirror: return "Lusterko"
-        case .agents: return "Sesje agentów"
+        case .agents: return "Agenci AI"
         case .notes: return "Notatka"
         case .timer: return "Minutnik"
         case .quickActions: return "Szybkie akcje"
@@ -166,11 +166,11 @@ enum LayoutCase: String, CaseIterable, Identifiable {
 
     var explanation: String {
         switch self {
-        case .standard:     return "Gdy nie pasuje nic bardziej szczegółowego."
-        case .meetingSoon:  return "Na dziesięć minut przed wydarzeniem z linkiem do wideorozmowy i w jego trakcie."
+        case .standard:     return "Gdy nie obowiązuje żaden bardziej szczegółowy układ."
+        case .meetingSoon:  return "Na dziesięć minut przed wydarzeniem z linkiem do rozmowy wideo i w jego trakcie."
         case .mediaPlaying: return "Gdy coś jest odtwarzane."
         case .focusActive:  return "Podczas sesji skupienia."
-        case .charging:     return "Gdy komputer jest podłączony do zasilania."
+        case .charging:     return "Gdy Mac jest podłączony do zasilania."
         }
     }
 

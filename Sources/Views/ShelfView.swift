@@ -39,7 +39,7 @@ struct ShelfView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.65))
 
-            Text("Zostaną na półce, dopóki ich stąd nie wyciągniesz")
+            Text("Zostają na Półce, dopóki ich stąd nie wyciągniesz")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
         }
@@ -64,7 +64,7 @@ struct ShelfView: View {
                 Label("Brakuje: \(shelf.missingOnRestore.count)", systemImage: "questionmark.folder")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.orange.opacity(0.85))
-                    .help("Te pliki były na półce, ale zostały przeniesione lub usunięte:\n" +
+                    .help("Te pliki były na Półce, ale zostały przeniesione lub usunięte:\n" +
                           shelf.missingOnRestore.joined(separator: "\n"))
             }
 
@@ -176,7 +176,7 @@ private struct ShelfItemTile: View {
     private func promptRename() {
         let alert = NSAlert()
         alert.messageText = "Zmień nazwę elementu"
-        alert.informativeText = "Zmieniana jest nazwa samego pliku, więc nowa nazwa pozostanie z nim po przeciągnięciu go z powrotem."
+        alert.informativeText = "Zmiana dotyczy samego pliku, więc nowa nazwa zostanie z nim po wyciągnięciu z półki."
         alert.addButton(withTitle: "Zmień nazwę")
         alert.addButton(withTitle: "Anuluj")
 

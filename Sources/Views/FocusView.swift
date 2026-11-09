@@ -611,8 +611,8 @@ private struct FocusControls: View {
                     symbol: settings.focusBlockWebsites ? "hand.raised.fill" : "hand.raised.slash",
                     isOn: settings.focusBlockWebsites,
                     help: settings.focusBlockWebsites
-                        ? "Rozpraszające strony są przekierowywane na stronę blokady na czas skupienia"
-                        : "Włącz, aby rozpraszające strony nie przeszkadzały w skupieniu"
+                        ? "Rozpraszające strony będą przekierowywane na stronę blokady"
+                        : "Włącz, aby odciąć rozpraszające strony na czas sesji"
                 ) {
                     settings.focusBlockWebsites.toggle()
                 }
@@ -620,7 +620,7 @@ private struct FocusControls: View {
                     title: compact ? "Pomodoro" : "Pomodoro · przerwy \(settings.focusBreakMinutes) min",
                     symbol: "arrow.triangle.2.circlepath",
                     isOn: settings.focusPomodoro,
-                    help: "Na końcu przejdź w przerwę, a potem wróć do pracy"
+                    help: "Po sesji przerwa, potem powrót do pracy"
                 ) {
                     settings.focusPomodoro.toggle()
                 }
@@ -786,7 +786,7 @@ private struct TimerControls: View {
 
     private var runningDetail: String {
         if let end = timer.endDate {
-            return "\(TimerManager.shortLength(timer.duration)) · zadzwoni o \(FocusView.timeText(end))"
+            return "\(TimerManager.shortLength(timer.duration)) · dzwonek o \(FocusView.timeText(end))"
         }
         return "Zostało \(TimerManager.clock(timer.remaining)) z \(TimerManager.shortLength(timer.duration))"
     }
@@ -831,7 +831,7 @@ private struct StopwatchControls: View {
                 if timer.isStopwatchRunning {
                     ClockButton(title: "Okrążenie", symbol: "flag.fill", style: .secondary) { timer.lap() }
                 } else if timer.elapsed > 0 {
-                    ClockButton(title: "Zeruj", symbol: "arrow.counterclockwise", style: .secondary) {
+                    ClockButton(title: "Wyzeruj", symbol: "arrow.counterclockwise", style: .secondary) {
                         timer.resetStopwatch()
                     }
                 }
@@ -997,7 +997,7 @@ private struct RecentTimersPanel: View {
             PanelTitle(title: "Ostatnie")
 
             if recent.isEmpty {
-                Text("Uruchomione minutniki pojawią się tutaj i można je włączyć ponownie.")
+                Text("Tutaj pojawią się użyte minutniki, gotowe do ponownego uruchomienia.")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.4))
                     .fixedSize(horizontal: false, vertical: true)

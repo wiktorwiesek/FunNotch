@@ -162,10 +162,10 @@ struct HomeLayoutEditor: View {
             Image(systemName: editing.symbol)
                 .font(.system(size: 20))
                 .foregroundStyle(.white.opacity(0.4))
-            Text("\(editing.title): działa układ domyślny")
+            Text("\(editing.title): używany jest układ domyślny")
                 .font(.system(size: 12.5, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.85))
-            Text("Nadaj mu własny układ, a przejmie ekran, gdy ta sytuacja wystąpi.")
+            Text("Utwórz dla tej sytuacji własny układ, a będzie obowiązywał, gdy ona wystąpi.")
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.45))
             Button("Utwórz własny układ") {
@@ -320,7 +320,7 @@ struct HomeLayoutEditor: View {
                 }
                 .buttonStyle(.borderless)
                 .background(Capsule().fill(Color.white.opacity(0.08)))
-                Button(tile.row == 0 ? "Przenieś do paska" : "Przenieś do głównego rzędu") {
+                Button(tile.row == 0 ? "Przenieś na pasek" : "Przenieś do głównego rzędu") {
                     move(tile, to: tile.row == 0 ? 1 : 0)
                 }
                 .controlSize(.small)
@@ -332,13 +332,13 @@ struct HomeLayoutEditor: View {
             } else {
                 Image(systemName: "hand.point.up.left.fill")
                     .foregroundStyle(.white.opacity(0.4))
-                Text("Przeciągnij widżety na notch. Kliknij widżet, aby zmienić jego rozmiar, albo przeciągnij go, aby go przenieść.")
+                Text("Przeciągnij widżety na notch. Kliknij widżet, aby zmienić jego rozmiar, albo przeciągnij go w inne miejsce.")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.white.opacity(0.5))
                 Spacer(minLength: 8)
                 slotMenu
                 if editing != .standard, layouts[editing] != nil {
-                    Button("Użyj domyślnego") {
+                    Button("Użyj układu domyślnego") {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                             layouts[editing] = nil
                             Settings.shared.clearHomeTiles(for: editing)
@@ -347,7 +347,7 @@ struct HomeLayoutEditor: View {
                     }
                     .controlSize(.small)
                 }
-                Button("Przywróć") {
+                Button("Przywróć domyślne") {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                         tiles = editing == .standard ? HomeLayout.default : HomeLayout.starter(for: editing)
                         selection = nil

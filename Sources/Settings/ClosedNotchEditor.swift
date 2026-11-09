@@ -69,7 +69,7 @@ struct ClosedNotchEditor: View {
         let targeted = targetedSide == side
         return CustomizePanel(
             title: side == .leading ? "Po lewej od kamery" : "Po prawej od kamery",
-            subtitle: side == .leading ? "Ostatni leży najbliżej kamery." : "Pierwszy leży najbliżej kamery."
+            subtitle: side == .leading ? "Ostatni jest najbliżej kamery." : "Pierwszy jest najbliżej kamery."
         ) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
@@ -290,7 +290,7 @@ struct ClosedNotchEditor: View {
             VStack(alignment: .leading, spacing: 11) {
                 Toggle("Widżety", isOn: $settings.idleWidgetsEnabled)
                 Toggle("Pracujący agenci AI", isOn: $settings.agentActivityEnabled)
-                Toggle("Odliczanie Skupienia", isOn: $settings.focusShowInClosedNotch)
+                Toggle("Odliczanie skupienia", isOn: $settings.focusShowInClosedNotch)
                 Toggle("Spektrum muzyki", isOn: $settings.useMusicVisualizer)
 
                 Divider().overlay(Color.white.opacity(0.08))

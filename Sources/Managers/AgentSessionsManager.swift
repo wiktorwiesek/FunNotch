@@ -741,10 +741,10 @@ final class AgentSessionsManager: ObservableObject {
     /// What a waiting session is waiting for, in plain words.
     nonisolated static func waitingText(_ reason: String) -> String {
         switch reason {
-        case "permission prompt": return "Potrzebuje Twojej zgody"
+        case "permission prompt": return "Potrzebuje zgody"
         case "sandbox request": return "Potrzebuje dostępu do piaskownicy"
-        case "dialog open": return "Czeka na okno dialogowe"
-        default: return "Czeka na Twoją odpowiedź"
+        case "dialog open": return "Czeka w oknie dialogowym"
+        default: return "Czeka na Ciebie"
         }
     }
 }

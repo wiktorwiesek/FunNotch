@@ -74,9 +74,9 @@ enum WindowHeightMode: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .matchMenuBar: return "Jak wysokość paska menu"
-        case .matchRealNotchSize: return "Jak rzeczywisty notch"
-        case .custom: return "Własna wysokość"
+        case .matchMenuBar: return "Jak pasek menu"
+        case .matchRealNotchSize: return "Jak fizyczny notch"
+        case .custom: return "Własna"
         }
     }
 }
@@ -90,7 +90,7 @@ enum MirrorShapeEnum: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .circle: return "Koło"
-        case .rectangle: return "Prostokąt"
+        case .rectangle: return "Zaokrąglone"
         }
     }
 }
@@ -105,8 +105,8 @@ enum SliderColorEnum: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .white: return "Biały"
-        case .albumArt: return "Jak okładka albumu"
-        case .accent: return "Kolor akcentu"
+        case .albumArt: return "Okładka"
+        case .accent: return "Akcent"
         }
     }
 }
@@ -356,8 +356,8 @@ enum BorderColorSource: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .white: return "Biały"
-        case .accent: return "Kolor akcentu"
-        case .albumArt: return "Jak okładka albumu"
+        case .accent: return "Akcent"
+        case .albumArt: return "Okładka"
         }
     }
 }

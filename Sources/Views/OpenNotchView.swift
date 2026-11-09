@@ -313,7 +313,7 @@ struct PlayerControls: View {
 
     private var hintText: String {
         if music.isNowPlayingDeprecated, settings.mediaController == .nowPlaying {
-            return "macOS nie udostępnia już ogólnosystemowego „Teraz odtwarzane”. Wybierz Muzykę lub Spotify w Ustawieniach."
+            return "macOS nie udostępnia już systemowych informacji „Teraz odtwarzane”. Wybierz Muzykę lub Spotify w Ustawieniach."
         }
         return "Zacznij coś odtwarzać. Źródło: \(settings.mediaController.title)."
     }
@@ -334,7 +334,7 @@ struct PlayerControls: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "info.circle")
-                    Text("Włącz dostęp do strony, aby widzieć postęp")
+                    Text("Włącz dostęp do stron, aby zobaczyć postęp")
                     Image(systemName: "chevron.right")
                         .font(.system(size: 7, weight: .bold))
                 }

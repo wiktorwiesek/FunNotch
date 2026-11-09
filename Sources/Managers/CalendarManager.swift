@@ -61,7 +61,7 @@ struct AgendaItem: Identifiable, Equatable {
         let seconds = start.timeIntervalSince(Motion.filmDate ?? Date())
         guard seconds > 0, seconds < 6 * 3600 else { return nil }
         let minutes = Int(seconds / 60)
-        if minutes < 1 { return "za mniej niż minutę" }
+        if minutes < 1 { return "za chwilę" }
         if minutes < 60 { return "za \(minutes) min" }
         // "za 2 godz.", not "za 2 godz. 0 min".
         if minutes % 60 == 0 { return "za \(minutes / 60) godz." }

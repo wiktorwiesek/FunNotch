@@ -907,7 +907,7 @@ final class DinoGame {
                 graceLeft = 1.1
                 smash(at: index)
                 sound.play(.shieldPop)
-                popup("Tarcza uratowała", at: CGPoint(x: Self.dinoX + 10, y: feet - 42), color: PowerKind.shield.tint)
+                popup("Uratowała Cię tarcza", at: CGPoint(x: Self.dinoX + 10, y: feet - 42), color: PowerKind.shield.tint)
                 return
             }
             let obstacle = obstacles[index]
@@ -1149,7 +1149,7 @@ final class DinoGame {
     var overlaySubtitle: String {
         if isPaused { return "Kliknij lub naciśnij spację, aby kontynuować" }
         switch phase {
-        case .ready: return "Kliknij lub naciśnij spację, aby skoczyć · przytrzymaj, aby wyżej · ↓ aby się schylić"
+        case .ready: return "Kliknij lub spacja: skok · przytrzymaj: wyżej · ↓: schylenie"
         case .over:
             var parts = ["\(score.formatted()) \(Polish.plural(score, "punkt", "punkty", "punktów"))"]
             if gemsThisRun > 0 { parts.append(Polish.count(gemsThisRun, "klejnot", "klejnoty", "klejnotów")) }

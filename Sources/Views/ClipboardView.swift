@@ -37,7 +37,7 @@ struct ClipboardView: View {
             Text("Historia schowka jest wyłączona")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.65))
-            Text("Włączysz ją w Ustawieniach → Półka i schowek")
+            Text("Włącz ją w Ustawieniach → Półka i schowek")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
         }
@@ -52,7 +52,7 @@ struct ClipboardView: View {
             Text("Nic jeszcze nie skopiowano")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.65))
-            Text("Skopiowane rzeczy pojawią się tutaj")
+            Text("Tutaj pojawi się to, co skopiujesz")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
         }

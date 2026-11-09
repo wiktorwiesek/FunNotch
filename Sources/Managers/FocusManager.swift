@@ -446,7 +446,7 @@ final class FocusManager: ObservableObject {
         </style>
         <div class="card">
           <h1>Nie teraz</h1>
-          <p>Ta strona jest na Twojej liście blokowanych, dopóki trwa Skupienie.</p>
+          <p>Ta strona jest zablokowana, dopóki trwa sesja skupienia.</p>
           <div class="until">do \(until)</div>
           <p class="hint">Zatrzymaj sesję w notchu, aby odblokować.</p>
         </div>

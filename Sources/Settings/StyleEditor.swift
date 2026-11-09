@@ -229,7 +229,7 @@ struct StyleEditor: View {
     private var outlinePanel: some View {
         CustomizePanel(
             title: "Obrys",
-            subtitle: "Cienka linia wokół notcha, rysowana wewnątrz jego krawędzi.",
+            subtitle: "Cienka linia wokół notcha, rysowana wewnątrz krawędzi.",
             trailing: AnyView(
                 Toggle("", isOn: $settings.notchBorderEnabled)
                     .toggleStyle(.switch)

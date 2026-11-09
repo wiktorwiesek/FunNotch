@@ -75,7 +75,7 @@ final class HUDManager: ObservableObject {
             // system's own HUD quietly coming back.
             if lastError == nil { DiagnosticLog.write("hud", "waiting for Accessibility access") }
             isIntercepting = false
-            lastError = "Brak zgody na dostęp do Dostępności"
+            lastError = "Brak uprawnienia Dostępność"
             return
         }
         guard tap == nil else { return }
@@ -264,7 +264,7 @@ final class HUDManager: ObservableObject {
 
     private func adjustBrightness(by delta: Float) -> Bool {
         guard let current = DisplayBrightness.value else {
-            lastError = "Nie można odczytać jasności wyświetlacza na tym Macu"
+            lastError = "Nie można odczytać jasności ekranu na tym Macu"
             return false
         }
         let next = min(max(current + delta, 0), 1)

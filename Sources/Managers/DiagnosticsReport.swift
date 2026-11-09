@@ -128,8 +128,8 @@ final class DiagnosticsReport: ObservableObject {
         if let active, active != chosen {
             rows.append(Row(
                 label: "Źródło",
-                verdict: .unknown("ustawione: \(chosen.title), faktycznie odczyt z: \(active.title)"),
-                remedy: "\(chosen.title) nic nie zgłosiło, więc Fun Notch przełączył się na źródło, które coś zgłosiło."
+                verdict: .unknown("wybrano: \(chosen.title), używane: \(active.title)"),
+                remedy: "Źródło „\(chosen.title)” nic nie zwróciło, więc Fun Notch użył źródła, które zwróciło dane."
             ))
         } else {
             rows.append(Row(label: "Źródło", verdict: .good((active ?? chosen).title)))
@@ -139,18 +139,18 @@ final class DiagnosticsReport: ObservableObject {
         rows.append(Row(
             label: "Teraz odtwarzane",
             verdict: track.isEmpty
-                ? .unknown("nic")
+                ? .unknown("brak")
                 : .good("\(track.title)\(track.artist.isEmpty ? "" : " — \(track.artist)")")
         ))
 
         rows.append(Row(
             label: "Pozycja odtwarzania",
             verdict: track.isEmpty
-                ? .unknown("nic nie jest odtwarzane")
+                ? .unknown("nic nie gra")
                 : (track.hasTiming ? .good("znana") : .missing("brak danych")),
             remedy: track.isEmpty || track.hasTiming
                 ? nil
-                : "Wymaga opcji przeglądarki „Allow JavaScript from Apple Events”; zobacz kartę Multimedia."
+                : "Wymaga opcji „Allow JavaScript from Apple Events” w przeglądarce — zobacz kartę Multimedia."
         ))
 
         for browser in BrowserMediaController.scriptableBrowsers {
@@ -200,8 +200,8 @@ final class DiagnosticsReport: ObservableObject {
             verdict: {
                 switch camera {
                 case .authorized: return .good("lusterko działa")
-                case .notDetermined: return .unknown("jeszcze nie zapytano — potrzebna tylko do lusterka")
-                default: return .missing("odmowa — lusterko nie może działać")
+                case .notDetermined: return .unknown("jeszcze nie poproszono o zgodę — potrzebna tylko do lusterka")
+                default: return .missing("brak zgody — lusterko nie może działać")
                 }
             }(),
             remedy: camera == .denied ? "Prywatność i ochrona → Kamera" : nil
@@ -212,27 +212,27 @@ final class DiagnosticsReport: ObservableObject {
             label: "Lokalizacja",
             verdict: {
                 switch location {
-                case .authorized, .authorizedAlways: return .good("pogoda i nazwa sieci Wi‑Fi działają")
-                case .notDetermined: return .unknown("jeszcze nie zapytano")
-                default: return .missing("odmowa — brak pogody i nazwy sieci Wi‑Fi")
+                case .authorized, .authorizedAlways: return .good("pogoda i nazwa sieci Wi-Fi działają")
+                case .notDetermined: return .unknown("jeszcze nie poproszono o zgodę")
+                default: return .missing("brak zgody — brak pogody i nazwy sieci Wi-Fi")
                 }
             }(),
-            remedy: "macOS ukrywa nazwę sieci Wi‑Fi także za dostępem do lokalizacji."
+            remedy: "macOS wymaga dostępu do lokalizacji także do odczytu nazwy sieci Wi-Fi."
         ))
 
         rows.append(Row(
             label: "Dostępność",
             verdict: AXIsProcessTrusted()
                 ? .good("przycisk „Włącz dostęp do stron” może działać")
-                : .unknown("brak zgody — potrzebna tylko do tego przycisku"),
+                : .unknown("nie przyznano — potrzebne tylko do tego przycisku"),
             remedy: "Prywatność i ochrona → Dostępność"
         ))
 
         rows.append(Row(
             label: "Automatyzacja",
             verdict: BrowserReadModes.modes.isEmpty && MusicManager.shared.track.isEmpty
-                ? .unknown("jeszcze nie sprawdzono — odtwórz coś, aby się przekonać")
-                : .good("Fun Notch może komunikować się z odtwarzaczem, z którego czyta"),
+                ? .unknown("jeszcze nie sprawdzono — odtwórz coś, aby sprawdzić")
+                : .good("Fun Notch komunikuje się z odtwarzaczem, z którego odczytuje dane"),
             remedy: "Prywatność i ochrona → Automatyzacja, jeśli odtwarzacz działa, ale nigdy się tu nie pojawia."
         ))
 
@@ -261,10 +261,10 @@ final class DiagnosticsReport: ObservableObject {
     private static func remedy(for message: String) -> String? {
         let lowered = message.lowercased()
         if lowered.contains("not allowed") || lowered.contains("-1743") {
-            return "Dostęp do automatyzacji. Prywatność i ochrona → Automatyzacja."
+            return "Brak zgody na automatyzację. Prywatność i ochrona → Automatyzacja."
         }
         if lowered.contains("-1728") || lowered.contains("can’t get") || lowered.contains("can't get") {
-            return "Aplikacja odpowiedziała, ale nie tym, o co pytano — zwykle chodzi o okno lub kartę, która została już zamknięta."
+            return "Aplikacja nie zwróciła tego, o co ją poproszono — zwykle okno lub karta zostały już zamknięte."
         }
         return nil
     }
@@ -274,11 +274,11 @@ final class DiagnosticsReport: ObservableObject {
             Row(
                 label: "Ekran",
                 verdict: SystemActivityMonitor.shared.isIdle
-                    ? .unknown("zablokowany lub uśpiony — odpytywanie zwolniło do co 30 s")
+                    ? .unknown("zablokowany lub uśpiony — odświeżanie co 30 s")
                     : .good("aktywny")
             ),
             Row(
-                label: "Sesja Skupienia",
+                label: "Sesja skupienia",
                 verdict: FocusManager.shared.isActive
                     ? .good("trwa — zostało \(FocusManager.shared.compactRemainingText), gra jest ukryta")
                     : .unknown("nie trwa")
@@ -292,14 +292,14 @@ final class DiagnosticsReport: ObservableObject {
                         : .missing(HUDManager.shared.lastError ?? "nie przechwytuje")
                 }(),
                 remedy: Settings.shared.hudEnabled && !HUDManager.shared.isIntercepting
-                    ? "Prywatność i ochrona → Dostępność, a potem włącz go ponownie w Ustawienia → Aktywności na żywo."
+                    ? "Prywatność i ochrona → Dostępność, a potem włącz go ponownie w Ustawieniach → Aktywności na żywo."
                     : nil
             ),
             Row(
                 label: "Sterowanie jasnością",
                 verdict: DisplayBrightness.isAvailable
                     ? .good("dostępne")
-                    : .missing("ten Mac go nie udostępnia")
+                    : .missing("niedostępne na tym Macu")
             ),
             Row(
                 label: "Podświetlenie klawiatury",
@@ -310,7 +310,7 @@ final class DiagnosticsReport: ObservableObject {
             Row(
                 label: "AirDrop",
                 verdict: ShelfManager.canAirDrop
-                    ? .good("dostępny z Półki")
+                    ? .good("dostępny z półki")
                     : .missing("macOS nie udostępnia usługi AirDrop")
             ),
             Row(label: "Plik dziennika", verdict: .good(DiagnosticLog.fileURL.path)),
@@ -322,9 +322,9 @@ final class DiagnosticsReport: ObservableObject {
     private static func verdict(for status: EKAuthorizationStatus, granted: String) -> Verdict {
         switch status {
         case .fullAccess, .authorized: return .good(granted)
-        case .writeOnly: return .missing("tylko zapis — Fun Notch nie może czytać Twoich wydarzeń")
-        case .notDetermined: return .unknown("jeszcze nie zapytano")
-        default: return .missing("odmowa")
+        case .writeOnly: return .missing("dostęp tylko do zapisu — Fun Notch nie może odczytać wydarzeń")
+        case .notDetermined: return .unknown("jeszcze nie poproszono o zgodę")
+        default: return .missing("brak zgody")
         }
     }
 

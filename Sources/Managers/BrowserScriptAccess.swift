@@ -43,10 +43,10 @@ final class BrowserScriptAccess: ObservableObject {
             case let .alreadyOn(name): return "\(name) już na to pozwala — postęp i okładka powinny działać."
             case let .turnedOn(name): return "Włączono w przeglądarce \(name). Postęp i okładka działają."
             case .needsAccessibility:
-                return "Najpierw zezwól Fun Notch na sterowanie innymi aplikacjami w Ustawienia systemowe → Prywatność i ochrona → Dostępność, a potem naciśnij to jeszcze raz."
+                return "Najpierw zezwól Fun Notch na sterowanie innymi aplikacjami: Ustawienia systemowe → Prywatność i ochrona → Dostępność. Potem naciśnij ponownie."
             case .needsSafariDevelopMenu:
-                return "Safari ukrywa ten przełącznik, dopóki nie ma menu Programowanie. Włącz w Safari → Ustawienia → Zaawansowane opcję „Pokaż funkcje dla twórców stron internetowych”, a potem naciśnij to jeszcze raz."
-            case .noBrowser: return "Nie działa żadna obsługiwana przeglądarka."
+                return "Safari ukrywa ten przełącznik, dopóki nie pojawi się menu Programowanie. Włącz w Safari → Ustawienia → Zaawansowane opcję „Pokaż funkcje dla twórców stron internetowych”, a potem naciśnij ponownie."
+            case .noBrowser: return "Żadna obsługiwana przeglądarka nie jest uruchomiona."
             case let .noWindows(name): return "Najpierw otwórz kartę w przeglądarce \(name)."
             case let .failed(reason): return reason
             }
@@ -190,7 +190,7 @@ final class BrowserScriptAccess: ObservableObject {
         if Self.isChecked(item) {
             // The menu says yes but scripts are still refused, which means the
             // block is somewhere else entirely; do not toggle it back off.
-            outcome = .failed("\(target.name) pokazuje, że opcja jest włączona, ale nadal odrzuca skrypty. Zamknij przeglądarkę i otwórz ją ponownie.")
+            outcome = .failed("\(target.name) zgłasza, że opcja jest włączona, ale nadal odrzuca skrypty. Zamknij przeglądarkę i otwórz ją ponownie.")
             return
         }
 
@@ -209,7 +209,7 @@ final class BrowserScriptAccess: ObservableObject {
                         MusicManager.shared.refreshNow()
                     } else {
                         self?.outcome = .failed(
-                            "Przełącznik w przeglądarce \(target.name) został kliknięty, ale skrypty są nadal odrzucane. Odśwież kartę i spróbuj ponownie."
+                            "Kliknięto przełącznik w przeglądarce \(target.name), ale skrypty nadal są odrzucane. Odśwież kartę i spróbuj ponownie."
                         )
                     }
                 }

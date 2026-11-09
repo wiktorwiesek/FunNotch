@@ -72,7 +72,7 @@ final class CustomizeWindowController: NSObject, NSWindowDelegate {
         // the bottom of a 13-inch screen.
         hosting.sizingOptions = [.minSize]
         let window = NSWindow(contentViewController: hosting)
-        window.title = "Dostosuj"
+        window.title = "Dostosuj notch"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
@@ -405,10 +405,10 @@ extension HomeTileKind {
         case .timer: return "Skupienie, minutniki i stoper"
         case .quickActions: return "Skróty jednym kliknięciem"
         case .systemStats: return "CPU i RAM"
-        case .battery: return "Poziom naładowania i czas do końca"
+        case .battery: return "Naładowanie i czas do końca"
         case .devices: return "AirPods i baterie innych urządzeń"
         case .focusStreak: return "Dni z rzędu"
-        case .recentShelf: return "Ostatnie pliki na półce"
+        case .recentShelf: return "Ostatnie pliki na Półce"
         case .clipboard: return "Ostatnio skopiowane"
         case .wifi: return "Sieć i siła sygnału"
         case .openApp: return "Uruchamia wybraną aplikację"

@@ -231,22 +231,24 @@ private struct BatteryPanel: View {
             // The real draw beats the adapter's rating: a 96 W brick topping up
             // a nearly full battery delivers a couple of watts.
             if let watts = battery.chargeWatts, watts >= 0.5 {
-                return String(format: "Ładowanie · %.0f W", watts)
+                return String(format: "Ładuje %.0f W", watts)
             }
             if let minutes = battery.timeRemaining, minutes > 0 {
-                return "\(minutes / 60) godz. \(minutes % 60) min do pełna"
+                return minutes >= 60
+                    ? String(format: "%d:%02d do pełna", minutes / 60, minutes % 60)
+                    : "\(minutes) min do pełna"
             }
             return "Ładowanie"
         }
         if battery.isCharged {
             return battery.adapterWatts.map { "Naładowana · \($0) W" } ?? "Naładowana"
         }
-        if battery.isLowPowerMode { return "Tryb niskiego zużycia energii" }
+        if battery.isLowPowerMode { return "Oszczędzanie" }
         if let minutes = battery.timeRemaining, minutes > 0 {
             let hours = minutes / 60
-            return hours > 0 ? "Zostało \(hours) godz. \(minutes % 60) min" : "Zostało \(minutes) min"
+            return hours > 0 ? String(format: "Zostało %d:%02d", hours, minutes % 60) : "Zostało \(minutes) min"
         }
-        return battery.isPluggedIn ? "Podłączona do zasilania" : "Na baterii"
+        return battery.isPluggedIn ? "Na zasilaniu" : "Na baterii"
     }
 
     var body: some View {
@@ -530,7 +532,7 @@ private struct ClipboardPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            PanelLabel(text: "Ostatnio skopiowane")
+            PanelLabel(text: "Skopiowane")
             if let entry = clipboard.entries.first {
                 Button {
                     clipboard.copyBack(entry)
@@ -595,7 +597,7 @@ private struct WiFiPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            PanelLabel(text: "Wi‑Fi")
+            PanelLabel(text: "Wi-Fi")
             HStack(spacing: 4) {
                 Image(systemName: weather.isWiFiConnected ? "wifi" : "wifi.slash")
                     .font(.system(size: 11))
@@ -748,7 +750,7 @@ struct DiskSpacePanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            PanelLabel(text: "Wolne na dysku")
+            PanelLabel(text: "Wolne miejsce")
             Text(freeText)
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .monospacedDigit()

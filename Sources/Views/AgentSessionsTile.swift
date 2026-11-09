@@ -150,7 +150,9 @@ struct AgentSessionsTile: View {
         let base = AgentRow.detail(for: session)
         guard others > 0 else { return base }
         let busyOthers = agents.activeCount - (session.status.isActive ? 1 : 0)
-        return busyOthers > 0 ? "\(base) · jeszcze \(busyOthers) aktywne" : "\(base) · jeszcze \(others)"
+        return busyOthers > 0
+            ? "\(base) · jeszcze \(busyOthers) \(Polish.plural(busyOthers, "aktywna", "aktywne", "aktywnych"))"
+            : "\(base) · jeszcze \(others)"
     }
 }
 

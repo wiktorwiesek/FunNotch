@@ -145,7 +145,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
 
-        let nowPlaying = NSMenuItem(title: "Nic nie jest odtwarzane", action: nil, keyEquivalent: "")
+        let nowPlaying = NSMenuItem(title: "Nic nie gra", action: nil, keyEquivalent: "")
         nowPlaying.tag = 100
         nowPlaying.isEnabled = false
         menu.addItem(nowPlaying)
@@ -160,7 +160,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         focus.tag = 102
         menu.addItem(focus)
 
-        let shelf = NSMenuItem(title: "Wyczyść Półkę", action: #selector(clearShelf), keyEquivalent: "")
+        let shelf = NSMenuItem(title: "Wyczyść półkę", action: #selector(clearShelf), keyEquivalent: "")
         shelf.target = self
         shelf.tag = 101
         menu.addItem(shelf)
@@ -185,7 +185,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         let track = MusicManager.shared.track
         if let item = menu.item(withTag: 100) {
             if track.isEmpty {
-                item.title = "Nic nie jest odtwarzane"
+                item.title = "Nic nie gra"
             } else {
                 let symbol = track.isPlaying ? "▶︎" : "❚❚"
                 item.title = "\(symbol)  \(track.title) — \(track.artist)"
@@ -193,7 +193,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         }
         if let item = menu.item(withTag: 101) {
             let count = ShelfManager.shared.items.count
-            item.title = count == 0 ? "Półka jest pusta" : "Wyczyść Półkę (\(count))"
+            item.title = count == 0 ? "Półka jest pusta" : "Wyczyść półkę (\(count))"
             item.isEnabled = count > 0
         }
         if let item = menu.item(withTag: 102) {

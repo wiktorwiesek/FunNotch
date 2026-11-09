@@ -116,7 +116,7 @@ struct GeneralPage: View {
                     subtitle: "Notch otwiera się też po najechaniu tuż pod nim.",
                     isOn: $settings.extendHoverArea
                 )
-                SettingsToggle(title: "Odpowiedź haptyczna", isOn: $settings.enableHaptics)
+                SettingsToggle(title: "Reakcje haptyczne", isOn: $settings.enableHaptics)
             }
 
             SettingsCard(title: "Ekrany") {
@@ -255,7 +255,7 @@ struct LiveActivitiesPage: View {
                 )
                 SettingsToggle(
                     title: "Pobrane",
-                    subtitle: "Gdy pobieranie się zakończy.",
+                    subtitle: "Po zakończeniu pobierania.",
                     symbol: "arrow.down.circle.fill",
                     tint: SettingsStyle.teal,
                     isOn: $settings.catchDownloads,
@@ -274,7 +274,7 @@ struct LiveActivitiesPage: View {
             SettingsCard {
                 SettingsRow(
                     title: "Agenci AI",
-                    subtitle: "Początek i koniec sesji Claude Code oraz chwile, gdy czeka na Ciebie.",
+                    subtitle: "Początek i koniec sesji Claude Code oraz moment, gdy sesja czeka na Ciebie.",
                     symbol: SettingsTab.agents.symbol,
                     tint: SettingsTab.agents.tint
                 ) {
@@ -311,7 +311,7 @@ private struct HUDStatusLine: View {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
-                Text(hud.lastError ?? "Do przechwytywania klawiszy potrzebny jest dostęp w Dostępności.")
+                Text(hud.lastError ?? "Do przechwytywania klawiszy potrzebne jest uprawnienie Dostępność.")
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 8)
                 Button("Zezwól…") { HUDManager.shared.requestAccessAndStart() }
@@ -340,7 +340,7 @@ struct AgentsPage: View {
 
             SettingsCard(
                 title: "W notchu",
-                footer: "Fun Notch odczytuje listę uruchomionych sesji, którą Claude Code prowadzi dla siebie w ~/.claude/sessions, oraz listę z rozszerzenia funnotch-sessions w omp, zapisywaną w ~/.omp/notch-sessions. Twoje rozmowy nigdy nie są otwierane."
+                footer: "Fun Notch czyta listę uruchomionych sesji, którą Claude Code zapisuje w ~/.claude/sessions, oraz listę z rozszerzenia funnotch-sessions dla omp w ~/.omp/notch-sessions. Treść rozmów nigdy nie jest otwierana."
             ) {
                 SettingsToggle(
                     title: "Pokazuj pracujące sesje",
@@ -482,21 +482,21 @@ struct MediaPage: View {
             tint: SettingsTab.media.tint
         ) {
             SettingsCard(title: "Źródło") {
-                SettingsPicker(title: "Odczytuj odtwarzanie z", selection: $settings.mediaController) {
+                SettingsPicker(title: "Odczytuj dane z", selection: $settings.mediaController) {
                     ForEach(MediaControllerType.allCases) { type in
                         Text(type.title).tag(type)
                     }
                 }
                 if music.isNowPlayingDeprecated, settings.mediaController == .nowPlaying {
                     SettingsStatus(
-                        text: "macOS nie udostępnia już innym aplikacjom ogólnosystemowych informacji o odtwarzaniu, więc używany jest dowolny uruchomiony odtwarzacz.",
+                        text: "macOS nie udostępnia już aplikacjom systemowych informacji „Teraz odtwarzane”, więc Fun Notch korzysta z dowolnego uruchomionego odtwarzacza.",
                         symbol: "info.circle.fill",
                         tint: .secondary
                     )
                 }
                 if let active = music.activeControllerType, active != settings.mediaController {
                     SettingsStatus(
-                        text: "Aktualnie odczyt z: \(active.title).",
+                        text: "Obecne źródło: \(active.title).",
                         symbol: "arrow.triangle.branch",
                         tint: .secondary
                     )
@@ -511,8 +511,8 @@ struct MediaPage: View {
             }
 
             SettingsCard(title: "Odtwarzacz") {
-                SettingsToggle(title: "Koloruj odtwarzacz według okładki albumu", isOn: $settings.playerColorTinting)
-                SettingsToggle(title: "Przyciski losowej kolejności i powtarzania", isOn: $settings.showShuffleAndRepeat)
+                SettingsToggle(title: "Dopasuj kolory odtwarzacza do okładki", isOn: $settings.playerColorTinting)
+                SettingsToggle(title: "Przyciski losowego odtwarzania i powtarzania", isOn: $settings.showShuffleAndRepeat)
                 SettingsToggle(
                     title: "Spektrum obok notcha",
                     subtitle: "Animowane słupki podczas odtwarzania.",
@@ -533,7 +533,7 @@ private struct BrowserPageAccessHelp: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("YouTube, Spotify, SoundCloud i inne odtwarzacze w przeglądarce od razu pokazują tytuł. Okładka, wykonawca i pasek postępu wymagają, aby przeglądarka zezwoliła na mały skrypt.")
+            Text("YouTube, Spotify, SoundCloud i inne odtwarzacze w przeglądarce pokazują tytuł od razu. Okładka, wykonawca i pasek postępu wymagają zgody przeglądarki na mały skrypt.")
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
@@ -590,7 +590,7 @@ struct ShelfClipboardPage: View {
 
     var body: some View {
         SettingsPage(
-            title: "Półka i Schowek",
+            title: "Półka i schowek",
             subtitle: "Miejsce na pliki i historia tego, co kopiujesz.",
             symbol: SettingsTab.shelf.symbol,
             tint: SettingsTab.shelf.tint
@@ -602,7 +602,7 @@ struct ShelfClipboardPage: View {
                     isOn: $settings.shelfEnabled
                 )
                 if settings.shelfEnabled {
-                    SettingsToggle(title: "Otwieraj półkę, gdy zaczyna się przeciąganie", isOn: $settings.openShelfByDefault)
+                    SettingsToggle(title: "Otwieraj półkę po rozpoczęciu przeciągania", isOn: $settings.openShelfByDefault)
                     SettingsToggle(title: "Wykrywaj przeciąganie z dowolnego miejsca na ekranie", isOn: $settings.expandedDragDetection)
                     SettingsToggle(
                         title: "Kopiuj zamiast przenosić",
@@ -610,7 +610,7 @@ struct ShelfClipboardPage: View {
                         isOn: $settings.copyOnDrag
                     )
                     if !settings.copyOnDrag {
-                        SettingsToggle(title: "Usuwaj elementy po przeciągnięciu na zewnątrz", isOn: $settings.autoRemoveShelfItems)
+                        SettingsToggle(title: "Usuwaj elementy po wyciągnięciu z półki", isOn: $settings.autoRemoveShelfItems)
                     }
                     SettingsPicker(title: "Usuwaj elementy", selection: $settings.shelfExpiryHours) {
                         Text("Nigdy").tag(0)
@@ -634,7 +634,7 @@ struct ShelfClipboardPage: View {
 
                 SettingsCard(
                     title: "Foldery docelowe",
-                    footer: "Każdy folder staje się na półce miejscem docelowym dostępnym jednym kliknięciem."
+                    footer: "Każdy folder staje się na Półce celem dostępnym jednym kliknięciem."
                 ) {
                     ForEach(settings.shelfFolderTargets, id: \.self) { path in
                         SettingsRow(title: (path as NSString).lastPathComponent, subtitle: (path as NSString).deletingLastPathComponent) {
@@ -654,7 +654,7 @@ struct ShelfClipboardPage: View {
 
             SettingsCard(
                 title: "Schowek",
-                footer: "Hasła i wszystko, co oznaczono jako prywatne, nigdy nie jest zapisywane. Po ponownym uruchomieniu zostaje tylko tekst."
+                footer: "Hasła i treści oznaczone jako prywatne nigdy nie są zapisywane. Po ponownym uruchomieniu zachowywany jest tylko tekst."
             ) {
                 SettingsToggle(title: "Zapamiętuj to, co kopiuję", isOn: $settings.clipboardHistoryEnabled)
                 if settings.clipboardHistoryEnabled {
@@ -766,14 +766,14 @@ struct FocusPage: View {
 
             SettingsCard(
                 title: "Skróty",
-                footer: "Nazwy muszą odpowiadać skrótom w aplikacji Skróty — to praktyczny sposób na włączenie trybu Skupienia."
+                footer: "Nazwy muszą pasować do skrótów w aplikacji Skróty — to najprostszy sposób na włączenie trybu Skupienia w macOS."
             ) {
-                SettingsRow(title: "Uruchom na początku") {
+                SettingsRow(title: "Uruchom na początku sesji") {
                     TextField("", text: $settings.focusStartShortcut, prompt: Text("Nazwa skrótu"))
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 190)
                 }
-                SettingsRow(title: "Uruchom na końcu") {
+                SettingsRow(title: "Uruchom na końcu sesji") {
                     TextField("", text: $settings.focusEndShortcut, prompt: Text("Nazwa skrótu"))
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 190)
@@ -785,7 +785,7 @@ struct FocusPage: View {
                     title: Polish.count(settings.focusSessionsCompleted, "sesja", "sesje", "sesji"),
                     subtitle: "Czas skupienia: \(focusedTime)"
                 ) {
-                    Button("Zeruj") {
+                    Button("Wyzeruj") {
                         settings.focusSessionsCompleted = 0
                         settings.focusMinutesTotal = 0
                     }
@@ -944,7 +944,7 @@ struct CalendarPage: View {
     var body: some View {
         SettingsPage(
             title: "Kalendarz",
-            subtitle: "Co pokazuje agenda na ekranie Start.",
+            subtitle: "Co pokazuje agenda na ekranie startowym.",
             symbol: SettingsTab.calendar.symbol,
             tint: SettingsTab.calendar.tint
         ) {
@@ -957,7 +957,7 @@ struct CalendarPage: View {
                 }
                 SettingsToggle(
                     title: "Wypełniaj pusty dzień przykładami",
-                    subtitle: "Oznaczone jako przykład i nigdy nie liczone jako Twoje następne wydarzenie.",
+                    subtitle: "Oznaczone jako „Przykład”, nigdy nie liczą się jako następne wydarzenie.",
                     isOn: $settings.showSampleAgenda
                 )
             }
@@ -967,7 +967,7 @@ struct CalendarPage: View {
                 footer: manager.hasEventAccess ? "Wyłącz wszystkie, aby uwzględnić każdy kalendarz." : nil
             ) {
                 if !manager.hasEventAccess {
-                    SettingsRow(title: "Dostęp do kalendarza", subtitle: "Potrzebny do wyświetlania Twoich wydarzeń.") {
+                    SettingsRow(title: "Dostęp do kalendarza", subtitle: "Potrzebny do pokazywania wydarzeń.") {
                         Button("Zezwól…") { manager.requestAccess() }
                     }
                 } else if manager.calendars.isEmpty {
@@ -1076,7 +1076,7 @@ struct AboutPage: View {
                 SettingsRow(title: "Uruchom ponownie Fun Notch") {
                     Button("Uruchom ponownie") { LoginItemManager.relaunch() }
                 }
-                SettingsRow(title: "Zresetuj wszystkie ustawienia", subtitle: "Każde ustawienie wraca do wartości fabrycznej.") {
+                SettingsRow(title: "Zresetuj wszystkie ustawienia", subtitle: "Wszystkie ustawienia wrócą do wartości domyślnych.") {
                     Button("Resetuj…") { confirmingReset = true }
                 }
                 SettingsRow(title: "Zakończ Fun Notch") {
@@ -1107,7 +1107,7 @@ private struct HealthCheckCard: View {
     }
 
     var body: some View {
-        SettingsCard(title: "Kontrola stanu") {
+        SettingsCard(title: "Diagnostyka") {
             if problems.isEmpty {
                 SettingsStatus(
                     text: "Wszystko, czego potrzebuje Fun Notch, działa.",
@@ -1155,7 +1155,7 @@ private struct DiagnosticsReportView: View {
                     }
 
                     if !report.recentLog.isEmpty {
-                        DisclosureGroup("Ostatni dziennik", isExpanded: $showingLog) {
+                        DisclosureGroup("Ostatnie wpisy dziennika", isExpanded: $showingLog) {
                             Text(report.recentLog.joined(separator: "\n"))
                                 .font(.system(size: 10, design: .monospaced))
                                 .textSelection(.enabled)

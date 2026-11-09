@@ -88,13 +88,13 @@ final class BreakoutGame {
 
         var name: String {
             switch self {
-            case .wide: return "Szeroka"
+            case .wide: return "Szeroka paletka"
             case .multiball: return "Wiele piłek"
-            case .slow: return "Zwolnienie"
+            case .slow: return "Spowolnienie"
             case .fireball: return "Ognista kula"
             case .laser: return "Lasery"
             case .shield: return "Tarcza"
-            case .shrink: return "Zmniejszona"
+            case .shrink: return "Wąska paletka"
             }
         }
 
@@ -1020,7 +1020,7 @@ final class BreakoutGame {
         buildLevel()
         popups.append(Popup(
             position: CGPoint(x: boardSize.width / 2, y: boardSize.height * 0.78),
-            text: "Plansza wyczyszczona +\(bonus)", color: Color(red: 0.5, green: 1, blue: 0.6),
+            text: "Plansza zaliczona +\(bonus)", color: Color(red: 0.5, green: 1, blue: 0.6),
             life: 1.6, maxLife: 1.6
         ))
     }

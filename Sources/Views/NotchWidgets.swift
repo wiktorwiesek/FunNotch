@@ -408,14 +408,14 @@ private struct WiFiWidget: View {
     // hand over the network name without location access.
     private var label: String {
         if let network = weather.wifiNetwork, !network.isEmpty { return network }
-        if !weather.isLocationAuthorized { return "Zezwól na lokalizację" }
+        if !weather.isLocationAuthorized { return "Włącz lokalizację" }
         return weather.isWiFiConnected ? "Połączono" : "Brak sieci"
     }
 
     private var helpText: String {
         weather.isLocationAuthorized
-            ? "Sieć Wi‑Fi"
-            : "macOS podaje nazwę sieci tylko aplikacjom z dostępem do lokalizacji — kliknij, aby go przyznać"
+            ? "Sieć Wi-Fi"
+            : "macOS podaje nazwę sieci tylko aplikacjom z dostępem do lokalizacji — kliknij, aby przyznać dostęp"
     }
 }
 
@@ -459,7 +459,7 @@ private struct ShelfCountWidget: View {
         .fixedSize()
         .help(shelf.items.isEmpty
               ? "Półka jest pusta"
-              : "\(Polish.count(shelf.items.count, "element", "elementy", "elementów")) na półce")
+              : "\(Polish.count(shelf.items.count, "element", "elementy", "elementów")) na Półce")
     }
 }
 
