@@ -399,7 +399,19 @@ enum HangHarness {
             viewModel.previewOpen()
         }
         let idle = ProcessInfo.processInfo.environment["FUNNOTCH_HARNESS_IDLE"].flatMap(Double.init) ?? 5
-        await measure("open idle \(Int(idle))s", seconds: idle)
+        // FUNNOTCH_HARNESS_TIMER=1 runs a real countdown and stopwatch during
+        // the idle window: both publish their time many times a second, so a
+        // view that observes them too broadly shows up as constant layout.
+        let withTimer = ProcessInfo.processInfo.environment["FUNNOTCH_HARNESS_TIMER"] == "1"
+        if withTimer {
+            TimerManager.shared.start(seconds: 600)
+            TimerManager.shared.startStopwatch()
+        }
+        await measure("open idle \(Int(idle))s\(withTimer ? " (timer running)" : "")", seconds: idle)
+        if withTimer {
+            TimerManager.shared.resetCountdown()
+            TimerManager.shared.resetStopwatch()
+        }
         if let path = ProcessInfo.processInfo.environment["FUNNOTCH_HARNESS_SHOT"], let hosting,
            let representation = hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds) {
             hosting.cacheDisplay(in: hosting.bounds, to: representation)

@@ -11,6 +11,7 @@
 //  battery percentage.
 //
 
+import Combine
 import SwiftUI
 
 /// Dispatches a compact tile to its panel. The grid owns placement now; these
@@ -112,8 +113,11 @@ struct PixelSparkline: View {
 private struct QuickActionsPanel: View {
     @EnvironmentObject private var viewModel: NotchViewModel
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var focus = FocusManager.shared
-    @ObservedObject private var timer = TimerManager.shared
+    // Focus and the timer publish their remaining time many times a second;
+    // observing them would rebuild the whole strip at that rate. Only whether
+    // they are running matters here.
+    @State private var focusActive = FocusManager.shared.isActive
+    @State private var timerActive = TimerManager.shared.isActive
     @ObservedObject private var keepAwake = KeepAwakeManager.shared
     @ObservedObject private var mic = MicMuteManager.shared
     @ObservedObject private var output = AudioOutputManager.shared
@@ -121,27 +125,46 @@ private struct QuickActionsPanel: View {
     @AppStorage("extras.system.quickActions.mic") private var showMic = true
     @AppStorage("extras.system.quickActions.output") private var showOutput = true
 
+    private static var timerActivity: AnyPublisher<Bool, Never> {
+        let timer = TimerManager.shared
+        let countdown = Publishers.CombineLatest3(
+            timer.$isCountdownRunning,
+            timer.$remaining.map { $0 > 0 }.removeDuplicates(),
+            timer.$finished
+        ).map { $0 || $1 || $2 }
+        let stopwatch = Publishers.CombineLatest(
+            timer.$isStopwatchRunning,
+            timer.$elapsed.map { $0 > 0 }.removeDuplicates()
+        ).map { $0 || $1 }
+        return Publishers.CombineLatest(countdown, stopwatch)
+            .map { $0 || $1 }
+            .removeDuplicates()
+            .eraseToAnyPublisher()
+    }
+
     var body: some View {
         QuickActionStrip(items: items)
             .padding(4)
             .onAppear { SystemExtras.start() }
+            .onReceive(FocusManager.shared.$isActive.removeDuplicates()) { focusActive = $0 }
+            .onReceive(Self.timerActivity) { timerActive = $0 }
     }
 
     private var items: [QuickActionItem] {
         var list: [QuickActionItem] = [
             QuickActionItem(
                 id: "focus",
-                symbol: focus.isActive ? "stop.fill" : "cup.and.saucer.fill",
-                label: focus.isActive ? "Zakończ skupienie" : "Skupienie",
-                activeTint: focus.isActive ? .orange : nil,
-                help: focus.isActive ? "Zakończ skupienie" : "Rozpocznij \(settings.focusDefaultMinutes)-minutowe skupienie",
-                menu: focus.isActive ? [] : [15, 25, 45, 60].map { minutes in
+                symbol: focusActive ? "stop.fill" : "cup.and.saucer.fill",
+                label: focusActive ? "Zakończ skupienie" : "Skupienie",
+                activeTint: focusActive ? .orange : nil,
+                help: focusActive ? "Zakończ skupienie" : "Rozpocznij \(settings.focusDefaultMinutes)-minutowe skupienie",
+                menu: focusActive ? [] : [15, 25, 45, 60].map { minutes in
                     PointerMenu.Item(title: "\(minutes) min", isChecked: minutes == settings.focusDefaultMinutes) {
                         FocusManager.shared.start(minutes: minutes)
                     }
                 }
             ) {
-                if focus.isActive {
+                if FocusManager.shared.isActive {
                     FocusManager.shared.stop()
                 } else {
                     FocusManager.shared.start(minutes: settings.focusDefaultMinutes)
@@ -161,7 +184,7 @@ private struct QuickActionsPanel: View {
             },
             QuickActionItem(
                 id: "timer", symbol: "timer", label: "Minutnik",
-                activeTint: timer.isActive ? .green : nil, help: "Otwórz minutnik"
+                activeTint: timerActive ? .green : nil, help: "Otwórz minutnik"
             ) {
                 FocusTabState.shared.mode = .timer
                 viewModel.currentTab = .focus
