@@ -671,7 +671,7 @@ private struct AgentBanner: View {
                 .monospacedDigit()
                 .foregroundStyle(AgentPalette.done)
         case .started:
-            Text(announcement.session.agent == .claude ? "Claude" : "Codex")
+            Text(announcement.session.agent.shortName)
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(announcement.session.agent.tint)
         case .needsInput:

@@ -152,6 +152,7 @@ struct AgentWorkingGlyph: View {
         switch agent {
         case .claude: ClaudeSpinner(size: size)
         case .codex: OrbitSpinner(size: size * 0.95)
+        case .omp: OrbitSpinner(size: size * 0.95, tint: AgentPalette.omp)
         }
     }
 }

@@ -97,7 +97,7 @@ struct AgentSessionsTile: View {
             Text("No agents running")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
-            Text("Claude Code sessions show up here")
+            Text("Claude Code and omp sessions show up here")
                 .font(.system(size: 9.5))
                 .foregroundStyle(.white.opacity(0.38))
         }

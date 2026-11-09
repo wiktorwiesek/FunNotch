@@ -332,7 +332,7 @@ struct AgentsPage: View {
     var body: some View {
         SettingsPage(
             title: "AI Agents",
-            subtitle: "Claude Code and Codex sessions, live in the notch.",
+            subtitle: "Claude Code, Codex and omp sessions, live in the notch.",
             symbol: SettingsTab.agents.symbol,
             tint: SettingsTab.agents.tint
         ) {
@@ -340,7 +340,7 @@ struct AgentsPage: View {
 
             SettingsCard(
                 title: "In the notch",
-                footer: "Fun Notch reads the list of running sessions Claude Code keeps for itself, in ~/.claude/sessions. Your conversations are never opened."
+                footer: "Fun Notch reads the list of running sessions Claude Code keeps for itself, in ~/.claude/sessions, and the one omp's funnotch-sessions extension keeps, in ~/.omp/notch-sessions. Your conversations are never opened."
             ) {
                 SettingsToggle(
                     title: "Show working sessions",
@@ -378,7 +378,7 @@ private struct RunningAgentsCard: View {
             if agents.sessions.isEmpty {
                 SettingsStatus(
                     text: agents.hasScanned
-                        ? "No sessions running. Start Claude Code and it appears here straight away."
+                        ? "No sessions running. Start Claude Code or omp and it appears here straight away."
                         : "Looking…",
                     symbol: "sparkles",
                     tint: AgentPalette.claude

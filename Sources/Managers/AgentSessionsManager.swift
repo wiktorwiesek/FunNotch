@@ -2,7 +2,7 @@
 //  AgentSessionsManager.swift
 //  FunNotch
 //
-//  Knows which Claude Code and Codex sessions are running and what each one is
+//  Knows which Claude Code, Codex and omp sessions are running and what each one is
 //  doing, and announces the moments worth seeing: a session starting work,
 //  finishing, or stopping to ask you something.
 //
@@ -23,6 +23,11 @@
 //  Codex has no registry, so it keeps the old signal: its rollout file is
 //  written while it works, and one that has gone quiet has finished.
 //
+//  omp has no registry of its own either, so its `funnotch-sessions`
+//  extension writes one in the same shape to `~/.omp/notch-sessions/` — one
+//  file per session, named `<pid>-<sessionId>.json`, because one omp process
+//  (an ACP host such as Orca) can run several sessions at once.
+//
 
 import AppKit
 import Darwin
@@ -36,11 +41,22 @@ final class AgentSessionsManager: ObservableObject {
     enum Agent: String {
         case claude = "Claude Code"
         case codex = "Codex"
+        case omp = "omp"
 
         var tint: Color {
             switch self {
             case .claude: return AgentPalette.claude
             case .codex: return AgentPalette.codex
+            case .omp: return AgentPalette.omp
+            }
+        }
+
+        /// The name used where there is only room for one word.
+        var shortName: String {
+            switch self {
+            case .claude: return "Claude"
+            case .codex: return "Codex"
+            case .omp: return "omp"
             }
         }
     }
@@ -119,6 +135,8 @@ final class AgentSessionsManager: ObservableObject {
     private var isRunning = false
     private var timer: Timer?
     private var stream: FSEventStreamRef?
+    /// The registry folders `stream` watches. Either can appear after launch.
+    private var watchedPaths: [String] = []
     private var scanInFlight = false
     private var rescanRequested = false
     /// A finish is held back briefly: Claude Code can drop to idle between two
@@ -159,7 +177,10 @@ final class AgentSessionsManager: ObservableObject {
     }
 
     func refresh() {
-        if stream == nil, isRunning { startWatchingRegistry() }
+        if isRunning, stream == nil || watchedPaths != Self.existingRegistryPaths() {
+            stopWatchingRegistry()
+            startWatchingRegistry()
+        }
         guard !scanInFlight else {
             rescanRequested = true
             return
@@ -168,11 +189,12 @@ final class AgentSessionsManager: ObservableObject {
         let now = Date()
         DispatchQueue.global(qos: .utility).async {
             let claude = Self.readClaudeRegistry()
+            let omp = Self.readOmpRegistry()
             let codex = Self.readCodexRollouts(now: now)
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
                     self.scanInFlight = false
-                    self.apply(claude: claude, codex: codex, now: now)
+                    self.apply(claude: claude, omp: omp, codex: codex, now: now)
                     if self.rescanRequested {
                         self.rescanRequested = false
                         self.refresh()
@@ -184,35 +206,37 @@ final class AgentSessionsManager: ObservableObject {
 
     // MARK: - Merging a scan
 
-    private func apply(claude: [ClaudeEntry], codex: [CodexEntry], now: Date) {
+    private func apply(claude: [ClaudeEntry], omp: [ClaudeEntry], codex: [CodexEntry], now: Date) {
         let previous = Dictionary(sessions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var next: [Session] = []
         var events: [(Session, Event)] = []
 
-        for entry in claude {
-            let status: Status
-            switch entry.status {
-            case "busy": status = .working
-            case "waiting": status = .waiting(entry.waitingFor ?? "input needed")
-            default: status = .idle
+        for (agent, entries) in [(Agent.claude, claude), (Agent.omp, omp)] {
+            for entry in entries {
+                let status: Status
+                switch entry.status {
+                case "busy": status = .working
+                case "waiting": status = .waiting(entry.waitingFor ?? "input needed")
+                default: status = .idle
+                }
+                var session = Session(
+                    id: (agent == .omp ? "omp:" : "claude:") + entry.sessionID,
+                    agent: agent,
+                    name: entry.name,
+                    project: entry.project,
+                    status: status,
+                    statusSince: entry.statusUpdatedAt,
+                    turnStartedAt: nil,
+                    lastTurnDuration: nil,
+                    startedAt: entry.startedAt,
+                    pid: entry.pid,
+                    host: entry.entrypoint == "claude-desktop" ? .claudeApp : .process
+                )
+                for event in Self.transition(from: previous[session.id], to: &session) {
+                    events.append((session, event))
+                }
+                next.append(session)
             }
-            var session = Session(
-                id: "claude:" + entry.sessionID,
-                agent: .claude,
-                name: entry.name,
-                project: entry.project,
-                status: status,
-                statusSince: entry.statusUpdatedAt,
-                turnStartedAt: nil,
-                lastTurnDuration: nil,
-                startedAt: entry.startedAt,
-                pid: entry.pid,
-                host: entry.entrypoint == "claude-desktop" ? .claudeApp : .process
-            )
-            for event in Self.transition(from: previous[session.id], to: &session) {
-                events.append((session, event))
-            }
-            next.append(session)
         }
 
         for entry in codex {
@@ -446,10 +470,20 @@ final class AgentSessionsManager: ObservableObject {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/sessions", isDirectory: true)
     }
 
+    /// Written by omp's `funnotch-sessions` extension.
+    private nonisolated static var ompRegistryURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".omp/notch-sessions", isDirectory: true)
+    }
+
+    private nonisolated static func existingRegistryPaths() -> [String] {
+        [registryURL.path, ompRegistryURL.path].filter { FileManager.default.fileExists(atPath: $0) }
+    }
+
     private func startWatchingRegistry() {
         guard stream == nil else { return }
-        let path = Self.registryURL.path
-        guard FileManager.default.fileExists(atPath: path) else { return }
+        let paths = Self.existingRegistryPaths()
+        watchedPaths = paths
+        guard !paths.isEmpty else { return }
 
         var context = FSEventStreamContext(
             version: 0,
@@ -463,7 +497,7 @@ final class AgentSessionsManager: ObservableObject {
         }
         let flags = FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer)
         guard let created = FSEventStreamCreate(
-            kCFAllocatorDefault, callback, &context, [path] as CFArray,
+            kCFAllocatorDefault, callback, &context, paths as CFArray,
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 0.15, flags
         ) else { return }
         FSEventStreamSetDispatchQueue(created, DispatchQueue.main)
@@ -477,6 +511,7 @@ final class AgentSessionsManager: ObservableObject {
         FSEventStreamInvalidate(stream)
         FSEventStreamRelease(stream)
         self.stream = nil
+        watchedPaths = []
     }
 
     // MARK: - Reading
@@ -505,14 +540,21 @@ final class AgentSessionsManager: ObservableObject {
     }
 
     /// Reads every live session out of Claude Code's registry.
-    ///
+    nonisolated static func readClaudeRegistry() -> [ClaudeEntry] {
+        readRegistry(at: registryURL)
+    }
+
+    /// Reads every live session out of the registry omp's extension keeps.
+    nonisolated static func readOmpRegistry() -> [ClaudeEntry] {
+        readRegistry(at: ompRegistryURL)
+    }
+
     /// A file only counts while its process is alive *and is the same
     /// process* — a crash leaves the file behind, and its pid can be handed to
     /// something else entirely later on. Pre-warmed spare processes and parked
     /// jobs are not sessions anyone is using, so they are skipped the way
     /// Claude Code's own list skips them.
-    nonisolated static func readClaudeRegistry() -> [ClaudeEntry] {
-        let directory = registryURL
+    private nonisolated static func readRegistry(at directory: URL) -> [ClaudeEntry] {
         guard let files = try? FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil
         ) else { return [] }
@@ -669,6 +711,7 @@ enum AgentPalette {
     /// Claude's own terracotta.
     static let claude = Color(red: 0.851, green: 0.467, blue: 0.341)
     static let codex = Color(red: 0.45, green: 0.78, blue: 0.72)
+    static let omp = Color(red: 0.62, green: 0.55, blue: 0.98)
     static let done = Color(red: 0.30, green: 0.85, blue: 0.45)
     static let waiting = Color(red: 1.0, green: 0.62, blue: 0.20)
 }
