@@ -33,7 +33,7 @@ enum SystemExtras {
             id: "system.keepAwake.toggle",
             title: "Nie usypiaj Maca",
             subtitle: "Włącz lub wyłącz",
-            symbol: "cup.and.saucer.fill",
+            symbol: KeepAwakeManager.activeSymbol,
             keywords: ["caffeine", "kofeina", "sen", "uśpienie", "ekran", "awake", "keep awake"],
             perform: { KeepAwakeManager.shared.toggle() }
         ))
@@ -41,7 +41,7 @@ enum SystemExtras {
             registry.register(PaletteCommand(
                 id: "system.keepAwake.\(choice.minutes ?? 0)",
                 title: "Nie usypiaj Maca: \(choice.title.lowercased())",
-                symbol: "cup.and.saucer.fill",
+                symbol: KeepAwakeManager.activeSymbol,
                 keywords: ["caffeine", "kofeina", "sen", "awake"],
                 perform: { KeepAwakeManager.shared.activate(minutes: choice.minutes) }
             ))

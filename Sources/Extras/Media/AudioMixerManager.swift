@@ -85,6 +85,30 @@ final class AudioMixerManager: ObservableObject {
     /// When each tap last heard anything, for spotting a denied permission.
     private var lastHeardAt: [String: Date] = [:]
     private var terminationObserver: NSObjectProtocol?
+    /// Tap setup and teardown are round trips to the audio daemon; they run on
+    /// this serial queue so the main thread never waits on them, and a teardown
+    /// always finishes before a rebuild starts.
+    private nonisolated static let setupQueue = DispatchQueue(label: "pl.funnotch.mixer-setup", qos: .userInitiated)
+    /// Taps being built on `setupQueue`.
+    private var pendingTaps: Set<String> = []
+    /// Bumped when all taps are released, so builds still in flight are discarded.
+    private var tapEpoch = 0
+    /// The HAL's process list and each process's output state drive refreshes,
+    /// so nothing polls while the panel is closed.
+    private let processListObserver = AudioPropertyObserver()
+    private let processObserver = AudioPropertyObserver()
+    private var isListening = false
+    private var eventRefreshScheduled = false
+    private var activeObserver: NSObjectProtocol?
+    /// Apps that were producing audio at the last refresh, to stamp `lastPlayingAt`
+    /// when one stops: an event-driven refresh has no tick in between.
+    private var playingIDs: Set<String> = []
+    /// When the next deadline (idle grace, retry, silence check) falls, if any.
+    private var nextWake: Date?
+    /// Set when a tap was taken off for delivering only silence. Until the
+    /// permission status changes, rebuilding it would just cut the app's sound
+    /// again for a few seconds.
+    private var silenceBlockedStatus: AudioCapturePermission.Status?
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.storageKey),
@@ -115,10 +139,20 @@ final class AudioMixerManager: ObservableObject {
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.releaseAllTaps() }
+            MainActor.assumeIsolated { self?.releaseAllTaps(synchronously: true) }
         }
 
-        updateTimer()
+        // The permission is granted in System Settings; look again when the user comes back.
+        activeObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.silenceBlockedStatus != nil else { return }
+                self.refresh()
+            }
+        }
+
+        updateWatching()
         refresh()
     }
 
@@ -126,7 +160,7 @@ final class AudioMixerManager: ObservableObject {
     func setPanelVisible(_ visible: Bool) {
         guard isPanelVisible != visible else { return }
         isPanelVisible = visible
-        updateTimer()
+        updateWatching()
         if visible {
             permission = AudioCapturePermission.status
             refresh()
@@ -136,6 +170,7 @@ final class AudioMixerManager: ObservableObject {
     /// Asks for the permission when it has not been decided, otherwise opens
     /// the place where it can be changed.
     func requestPermission() {
+        silenceBlockedStatus = nil
         switch AudioCapturePermission.status {
         case .notDetermined, .unknown:
             AudioCapturePermission.request { [weak self] _ in
@@ -147,20 +182,75 @@ final class AudioMixerManager: ObservableObject {
         }
     }
 
-    private func updateTimer() {
+    /// With the panel open the list refreshes every second. Otherwise nothing
+    /// runs unless something has to be kept up (a tap, or saved levels waiting
+    /// for their app to play): the HAL's callbacks drive refreshes, and one
+    /// timer covers the next deadline.
+    private func updateWatching() {
         timer?.invalidate()
         timer = nil
-        guard started, availability != .unsupportedOS else { return }
-        // Needed in the background only while something has to be kept up:
-        // a tap running, or saved levels waiting for their app to play.
-        let needsBackground = !taps.isEmpty || !settings.isEmpty
-        guard isPanelVisible || needsBackground else { return }
-        let timer = Timer(timeInterval: isPanelVisible ? 1 : 3, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refresh() }
+        guard started, availability != .unsupportedOS else {
+            stopListening()
+            return
         }
-        timer.tolerance = 0.3
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        let needsBackground = !taps.isEmpty || !pendingTaps.isEmpty || !settings.isEmpty
+        if needsBackground { startListening() } else { stopListening() }
+
+        let next: Timer
+        if isPanelVisible {
+            next = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refresh() }
+            }
+        } else if needsBackground, let wake = nextWake {
+            // Never sooner than half a second, so a stale deadline cannot spin.
+            let fire = max(wake, Date().addingTimeInterval(0.5))
+            next = Timer(fire: fire, interval: 0, repeats: false) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refresh() }
+            }
+        } else {
+            return
+        }
+        next.tolerance = 0.3
+        RunLoop.main.add(next, forMode: .common)
+        timer = next
+    }
+
+    private func startListening() {
+        guard !isListening else { return }
+        isListening = true
+        processListObserver.add(AudioObjects.system, kAudioHardwarePropertyProcessObjectList) { [weak self] in
+            self?.rebuildProcessObservers()
+            self?.scheduleEventRefresh()
+        }
+        rebuildProcessObservers()
+    }
+
+    private func stopListening() {
+        guard isListening else { return }
+        isListening = false
+        processListObserver.removeAll()
+        processObserver.removeAll()
+    }
+
+    private func rebuildProcessObservers() {
+        processObserver.removeAll()
+        for object in AudioObjects.processObjects() {
+            processObserver.add(object, kAudioProcessPropertyIsRunningOutput) { [weak self] in
+                self?.scheduleEventRefresh()
+            }
+        }
+    }
+
+    /// A browser can flip several processes at once; one refresh covers them.
+    private func scheduleEventRefresh() {
+        guard !eventRefreshScheduled else { return }
+        eventRefreshScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            MainActor.assumeIsolated {
+                self?.eventRefreshScheduled = false
+                self?.refresh()
+            }
+        }
     }
 
     // MARK: Changing levels
@@ -189,7 +279,7 @@ final class AudioMixerManager: ObservableObject {
         } else {
             refresh()
         }
-        updateTimer()
+        updateWatching()
     }
 
     func reset(_ id: String) {
@@ -221,9 +311,11 @@ final class AudioMixerManager: ObservableObject {
         let groups = currentGroups()
         let now = Date()
 
-        for (id, group) in groups where group.isPlaying {
+        let nowPlaying = Set(groups.filter { $0.value.isPlaying }.keys)
+        for id in nowPlaying.union(playingIDs) {
             lastPlayingAt[id] = now
         }
+        playingIDs = nowPlaying
 
         // Apps that are playing, plus any that have a tap or saved levels, so a
         // paused app can still be turned back up or reset.
@@ -262,34 +354,104 @@ final class AudioMixerManager: ObservableObject {
                 && now.timeIntervalSince(lastPlayingAt[id] ?? .distantPast) < Self.idleGrace
             let changedProcesses = group.map { Set($0.processObjects) != Set(tap.processObjects) } ?? false
             if !wanted || changedProcesses {
-                tap.stop()
+                Self.discard(tap)
                 taps[id] = nil
                 lastHeardAt[id] = nil
             }
         }
 
-        guard permission != .denied else { return }
+        guard permission != .denied else {
+            nextWake = nil
+            updateWatching()
+            return
+        }
 
-        for (id, group) in groups {
-            guard let appSettings = settings[id], taps[id] == nil,
-                  now.timeIntervalSince(lastPlayingAt[id] ?? .distantPast) < Self.idleGrace
-            else { continue }
-            if let failure = failures[id], now.timeIntervalSince(failure.at) < Self.retryAfterFailure { continue }
+        if let blocked = silenceBlockedStatus, AudioCapturePermission.status != blocked {
+            silenceBlockedStatus = nil
+        }
 
-            do {
-                taps[id] = try MixerTap(processObjects: group.processObjects, settings: appSettings)
-                failures[id] = nil
-                lastHeardAt[id] = now
-                DiagnosticLog.write("mixer", "tap on \(group.name)")
-            } catch {
-                let message = (error as? AudioTapError)?.description ?? error.localizedDescription
-                failures[id] = (message, now)
-                DiagnosticLog.write("mixer", "tap on \(group.name) failed: \(message)")
+        if silenceBlockedStatus == nil {
+            for (id, group) in groups {
+                guard let appSettings = settings[id], taps[id] == nil, !pendingTaps.contains(id),
+                      now.timeIntervalSince(lastPlayingAt[id] ?? .distantPast) < Self.idleGrace
+                else { continue }
+                if let failure = failures[id], now.timeIntervalSince(failure.at) < Self.retryAfterFailure { continue }
+                buildTap(id: id, group: group, settings: appSettings)
             }
         }
 
         watchForSilence(groups: groups, now: now)
-        updateTimer()
+        nextWake = nextDeadline(groups: groups, now: now)
+        updateWatching()
+    }
+
+    @available(macOS 14.2, *)
+    private func buildTap(id: String, group: AudioGroup, settings appSettings: MixerAppSettings) {
+        pendingTaps.insert(id)
+        let ticket = tapEpoch
+        let objects = group.processObjects
+        let name = group.name
+        Self.setupQueue.async { [weak self] in
+            let result: Result<TapBox, Error>
+            do {
+                result = .success(TapBox(try MixerTap(processObjects: objects, settings: appSettings)))
+            } catch {
+                result = .failure(error)
+            }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.finishTap(id: id, name: name, result: result, ticket: ticket) }
+            }
+        }
+    }
+
+    @available(macOS 14.2, *)
+    private func finishTap(id: String, name: String, result: Result<TapBox, Error>, ticket: Int) {
+        guard ticket == tapEpoch else {
+            // Released while it was being built.
+            if case let .success(box) = result { Self.discard(box.tap) }
+            return
+        }
+        pendingTaps.remove(id)
+        let now = Date()
+        switch result {
+        case let .success(box):
+            taps[id] = box.tap
+            failures[id] = nil
+            lastHeardAt[id] = now
+            // A slider may have moved while the tap was being built.
+            if let current = settings[id] { box.tap.apply(current) }
+            DiagnosticLog.write("mixer", "tap on \(name)")
+        case let .failure(error):
+            let message = (error as? AudioTapError)?.description ?? error.localizedDescription
+            failures[id] = (message, now)
+            DiagnosticLog.write("mixer", "tap on \(name) failed: \(message)")
+        }
+        refresh()
+    }
+
+    @available(macOS 14.2, *)
+    private func nextDeadline(groups: [String: AudioGroup], now: Date) -> Date? {
+        var wake: Date?
+        func consider(_ date: Date) {
+            if let current = wake, current <= date { return }
+            wake = date
+        }
+        // A tap on an app that stopped is dropped once the grace has passed.
+        for id in taps.keys where groups[id]?.isPlaying != true {
+            consider((lastPlayingAt[id] ?? now).addingTimeInterval(Self.idleGrace))
+        }
+        // Without the permission a tap's peak has to be watched.
+        if !taps.isEmpty, AudioCapturePermission.status != .granted {
+            consider(now.addingTimeInterval(1))
+        }
+        // A failed build is retried while its app still plays.
+        if silenceBlockedStatus == nil {
+            for (id, failure) in failures where settings[id] != nil && groups[id]?.isPlaying == true {
+                let retryAt = failure.at.addingTimeInterval(Self.retryAfterFailure)
+                if retryAt > now { consider(retryAt) }
+            }
+        }
+        return wake
     }
 
     /// With the permission missing a tap can come up fine and deliver only
@@ -308,17 +470,35 @@ final class AudioMixerManager: ObservableObject {
             guard groups[id]?.isPlaying == true,
                   now.timeIntervalSince(lastHeardAt[id] ?? now) > 3
             else { continue }
-            tap.stop()
+            Self.discard(tap)
             taps[id] = nil
             failures[id] = ("Brak dźwięku z tapa. Sprawdź zgodę na nagrywanie dźwięku systemu.", now)
+            // Rebuilding before the permission changes would cut the sound again.
+            silenceBlockedStatus = AudioCapturePermission.status
             DiagnosticLog.write("mixer", "tap on \(id) heard nothing; released")
         }
     }
 
-    private func releaseAllTaps() {
+    @available(macOS 14.2, *)
+    private final class TapBox: @unchecked Sendable {
+        let tap: MixerTap
+        init(_ tap: MixerTap) { self.tap = tap }
+    }
+
+    @available(macOS 14.2, *)
+    private nonisolated static func discard(_ tap: MixerTap) {
+        let box = TapBox(tap)
+        setupQueue.async { box.tap.stop() }
+    }
+
+    /// `synchronously` is for quitting, when there is no later to tear down on.
+    private func releaseAllTaps(synchronously: Bool = false) {
         guard #available(macOS 14.2, *) else { return }
+        tapEpoch += 1
+        pendingTaps.removeAll()
         for object in taps.values {
-            (object as? MixerTap)?.stop()
+            guard let tap = object as? MixerTap else { continue }
+            if synchronously { tap.stop() } else { Self.discard(tap) }
         }
         taps.removeAll()
         lastHeardAt.removeAll()

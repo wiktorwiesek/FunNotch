@@ -578,6 +578,7 @@ enum PaletteTabs {
             case .clipboard: return settings.clipboardHistoryEnabled
             case .notes: return settings.showNotes
             case .game: return !FocusManager.shared.isActive
+            case .notifications: return NotifyCenter.shared.showsTab
             default: return true
             }
         }

@@ -141,6 +141,7 @@ enum ShelfConversionError: LocalizedError {
     case presetUnavailable
     case emptyArchive
     case tool(String)
+    case tooManyPages(Int)
 
     var errorDescription: String? {
         switch self {
@@ -152,6 +153,7 @@ enum ShelfConversionError: LocalizedError {
         case .presetUnavailable: return "Ten plik nie da się wyeksportować w tym formacie"
         case .emptyArchive: return "Archiwum jest puste"
         case let .tool(message): return message.isEmpty ? "Operacja się nie powiodła" : message
+        case let .tooManyPages(count): return "PDF ma \(count) stron; zamiana wszystkich naraz działa do 50"
         }
     }
 }
@@ -178,6 +180,18 @@ final class ShelfConverter: ObservableObject {
 
     private var tasks: [UUID: Task<Void, Never>] = [:]
 
+    /// Opening a PDF just to count pages is too slow to repeat on every
+    /// context-menu build, and the menu is built on main.
+    private var pdfPageCounts: [URL: Int] = [:]
+
+    private func pdfPageCount(of url: URL) -> Int {
+        if let cached = pdfPageCounts[url] { return cached }
+        let count = CGPDFDocument(url as CFURL)?.numberOfPages ?? 0
+        if pdfPageCounts.count > 200 { pdfPageCounts.removeAll() }
+        pdfPageCounts[url] = count
+        return count
+    }
+
     private init() {}
 
     // MARK: - What can be done to an item
@@ -190,7 +204,7 @@ final class ShelfConverter: ObservableObject {
         var result: [ShelfConversion] = []
         if type.conforms(to: .pdf) {
             result.append(.pdfFirstPage)
-            if (CGPDFDocument(item.url as CFURL)?.numberOfPages ?? 0) > 1 { result.append(.pdfAllPages) }
+            if pdfPageCount(of: item.url) > 1 { result.append(.pdfAllPages) }
         } else if type.conforms(to: .image), !type.conforms(to: .svg) {
             for format in ShelfConversion.ImageFormat.allCases
             where !format.extensions.contains(ext) && format.isEncodable {
@@ -517,6 +531,8 @@ enum ShelfConversionWork {
 
     // MARK: PDF
 
+    private static let maxPDFPages = 50
+
     private static func renderPDF(
         _ source: URL, allPages: Bool, base: String, staging: URL, report: Report
     ) throws -> [URL] {
@@ -525,6 +541,11 @@ enum ShelfConversionWork {
             throw ShelfConversionError.lockedPDF
         }
 
+        // Each page is a PNG that lands on the shelf as its own item; a very
+        // long PDF would flood the shelf and keep the converter busy for minutes.
+        if allPages, document.numberOfPages > maxPDFPages {
+            throw ShelfConversionError.tooManyPages(document.numberOfPages)
+        }
         let last = allPages ? document.numberOfPages : min(1, document.numberOfPages)
         guard last > 0 else { throw ShelfConversionError.unreadable }
 
@@ -666,12 +687,20 @@ enum ShelfConversionWork {
         private let lock = NSLock()
         private var process: Process?
         private var isCancelled = false
+        private var errorOutput = Data()
 
         func cancel() {
             lock.lock()
             defer { lock.unlock() }
             isCancelled = true
             if let process, process.isRunning { process.terminate() }
+        }
+
+        private func collect(_ data: Data) {
+            lock.lock()
+            defer { lock.unlock() }
+            // Only the start matters for the message; the rest just has to be drained.
+            if errorOutput.count < 8192 { errorOutput.append(data.prefix(8192 - errorOutput.count)) }
         }
 
         func run(_ arguments: [String]) async throws {
@@ -682,9 +711,20 @@ enum ShelfConversionWork {
                 let errors = Pipe()
                 process.standardError = errors
                 process.standardOutput = FileHandle.nullDevice
-                process.terminationHandler = { finished in
-                    let text = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                // Drained while ditto runs: a pipe holds about 64 KB, and a ditto
+                // that warns past that would block on write and never exit.
+                errors.fileHandleForReading.readabilityHandler = { [self] handle in
+                    let data = handle.availableData
+                    // Empty data is EOF; without clearing the handler it would spin.
+                    if data.isEmpty { handle.readabilityHandler = nil } else { collect(data) }
+                }
+                process.terminationHandler = { [self] finished in
+                    errors.fileHandleForReading.readabilityHandler = nil
+                    collect(errors.fileHandleForReading.readDataToEndOfFile())
+                    lock.lock()
+                    let text = String(decoding: errorOutput, as: UTF8.self)
                         .trimmingCharacters(in: .whitespacesAndNewlines)
+                    lock.unlock()
                     if finished.terminationStatus == 0 {
                         continuation.resume()
                     } else if finished.terminationReason == .uncaughtSignal {
@@ -697,6 +737,7 @@ enum ShelfConversionWork {
                 lock.lock()
                 defer { lock.unlock() }
                 if isCancelled {
+                    errors.fileHandleForReading.readabilityHandler = nil
                     continuation.resume(throwing: CancellationError())
                     return
                 }
@@ -704,6 +745,7 @@ enum ShelfConversionWork {
                     try process.run()
                     self.process = process
                 } catch {
+                    errors.fileHandleForReading.readabilityHandler = nil
                     process.terminationHandler = nil
                     continuation.resume(throwing: error)
                 }

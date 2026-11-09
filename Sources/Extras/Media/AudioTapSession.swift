@@ -147,7 +147,7 @@ final class AudioTapSession {
 
             let aggregate: [String: Any] = [
                 kAudioAggregateDeviceNameKey: "Fun Notch audio",
-                kAudioAggregateDeviceUIDKey: UUID().uuidString,
+                kAudioAggregateDeviceUIDKey: AudioObjects.ownAggregateUIDPrefix + UUID().uuidString,
                 kAudioAggregateDeviceMainSubDeviceKey: outputUID,
                 kAudioAggregateDeviceIsPrivateKey: true,
                 kAudioAggregateDeviceIsStackedKey: false,
@@ -168,7 +168,15 @@ final class AudioTapSession {
             let queue = DispatchQueue(label: "pl.funnotch.audio-tap", qos: .userInteractive)
             let block = Self.makeBlock(render)
             status = AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, queue, block)
-            guard status == noErr, procID != nil else { throw AudioTapError.createIOProc(status) }
+            guard status == noErr, let createdProc = procID else { throw AudioTapError.createIOProc(status) }
+
+            // Only the tap's streams are wanted. Leaving the output device's own
+            // microphone stream on would make macOS count Fun Notch as recording
+            // (and switch a Bluetooth headset to its call profile).
+            Self.disableInputStreams(
+                of: aggregateID, proc: createdProc,
+                total: Self.inputBufferCount(of: aggregateID), leading: leadingInputBuffers
+            )
 
         } catch {
             teardown()
@@ -223,6 +231,31 @@ final class AudioTapSession {
     private static func tapBufferCount(_ format: AudioStreamBasicDescription) -> Int {
         let planar = format.mFormatFlags & kAudioFormatFlagIsNonInterleaved != 0
         return planar ? max(Int(format.mChannelsPerFrame), 1) : 1
+    }
+
+    /// Turns off the first `leading` input streams of `proc` on `device`; the IO
+    /// proc then sees NULL buffers for them, which `gatherPlanes` already skips.
+    /// Best effort: a device that refuses just keeps the stream.
+    private static func disableInputStreams(
+        of device: AudioObjectID, proc: AudioDeviceIOProcID, total: Int, leading: Int
+    ) {
+        guard leading > 0, total >= leading else { return }
+        let flagsOffset = MemoryLayout<AudioHardwareIOProcStreamUsage>.offset(of: \.mStreamIsOn) ?? 12
+        let size = flagsOffset + total * MemoryLayout<UInt32>.size
+        let storage = UnsafeMutableRawPointer.allocate(byteCount: size, alignment: MemoryLayout<AudioHardwareIOProcStreamUsage>.alignment)
+        defer { storage.deallocate() }
+        storage.initializeMemory(as: UInt8.self, repeating: 0, count: size)
+        let usage = storage.assumingMemoryBound(to: AudioHardwareIOProcStreamUsage.self)
+        usage.pointee.mIOProc = unsafeBitCast(proc, to: UnsafeMutableRawPointer.self)
+        usage.pointee.mNumberStreams = UInt32(total)
+        let flags = (storage + flagsOffset).assumingMemoryBound(to: UInt32.self)
+        for index in 0..<total { flags[index] = index < leading ? 0 : 1 }
+
+        var address = AudioObjects.address(kAudioDevicePropertyIOProcStreamUsage, scope: kAudioObjectPropertyScopeInput)
+        let status = AudioObjectSetPropertyData(device, &address, 0, nil, UInt32(size), storage)
+        if status != noErr {
+            DiagnosticLog.write("audio", "could not disable microphone stream on tap device: \(status)")
+        }
     }
 
     private static func inputBufferCount(of device: AudioObjectID) -> Int {

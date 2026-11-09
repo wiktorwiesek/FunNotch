@@ -156,6 +156,9 @@ final class ModifierWindowDragger: ObservableObject {
             return passThrough
 
         case .leftMouseDown, .rightMouseDown:
+            // A new press of the gesture's own button means its release never
+            // reached the tap (session switch, screen lock); drop the stale gesture.
+            if gesture?.button == type { gesture = nil }
             guard gesture == nil,
                   event.flags.intersection(Self.relevantFlags) == modifier.flags
             else { return passThrough }

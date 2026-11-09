@@ -10,18 +10,19 @@ import SwiftUI
 import Vision
 
 /// Preferences for the extras. They live in UserDefaults under `extras.shelfclip.`
-/// and default to on, so a missing key means "enabled".
+/// and default to on, except link titles: that one sends a request for every
+/// copied link, so it is opt-in.
 enum ShelfClipPrefs {
     static let smartActionsKey = "extras.shelfclip.smartActions"
     static let linkTitlesKey = "extras.shelfclip.linkTitles"
     static let ocrKey = "extras.shelfclip.ocr"
 
-    static var smartActions: Bool { value(smartActionsKey) }
-    static var linkTitles: Bool { value(linkTitlesKey) }
-    static var ocr: Bool { value(ocrKey) }
+    static var smartActions: Bool { value(smartActionsKey, default: true) }
+    static var linkTitles: Bool { value(linkTitlesKey, default: false) }
+    static var ocr: Bool { value(ocrKey, default: true) }
 
-    private static func value(_ key: String) -> Bool {
-        UserDefaults.standard.object(forKey: key) as? Bool ?? true
+    private static func value(_ key: String, default fallback: Bool) -> Bool {
+        UserDefaults.standard.object(forKey: key) as? Bool ?? fallback
     }
 }
 
@@ -63,7 +64,7 @@ enum ShelfClipExtras {
 
 struct ShelfClipExtrasSettings: View {
     @AppStorage(ShelfClipPrefs.smartActionsKey) private var smartActions = true
-    @AppStorage(ShelfClipPrefs.linkTitlesKey) private var linkTitles = true
+    @AppStorage(ShelfClipPrefs.linkTitlesKey) private var linkTitles = false
     @AppStorage(ShelfClipPrefs.ocrKey) private var ocr = true
 
     @ObservedObject private var titles = LinkTitleStore.shared
@@ -90,7 +91,7 @@ struct ShelfClipExtrasSettings: View {
                 )
                 SettingsToggle(
                     title: "Tytuły stron przy linkach",
-                    subtitle: "Raz pobiera początek strony, żeby pokazać jej tytuł. Pomija linki wyglądające na jednorazowe.",
+                    subtitle: "Dla każdego skopiowanego linku wysyła zapytanie do strony i pokazuje jej tytuł. Pomija linki wyglądające na jednorazowe, adresy lokalne i niestandardowe porty.",
                     symbol: "link",
                     tint: SettingsStyle.blue,
                     isOn: $linkTitles

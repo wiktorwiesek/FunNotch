@@ -96,7 +96,9 @@ final class NotifyCenter: ObservableObject {
         codeDetection = bool("codes", true)
         showPreview = bool("preview", true)
         showsTab = bool("tab", true)
-        readsDatabase = bool("database", true)
+        // Reading the usernoted database needs Full Disk Access and copies a
+        // file on every change, so it stays opt-in.
+        readsDatabase = bool("database", false)
     }
 
     private func store(_ value: Any, _ key: String) {
@@ -345,21 +347,30 @@ final class NotifyCenter: ObservableObject {
 
     private func apply(_ snapshot: DatabaseSnapshot) {
         guard readsDatabase else { return }
+        // Assigning a @Published property republishes even for an equal value,
+        // so every write below is guarded: the 4 s poll must not redraw the tab.
+        func setState(_ state: DatabaseState) {
+            if databaseState != state { databaseState = state }
+        }
         switch snapshot.access {
         case .readable:
-            if databaseState != .active { databaseState = .active }
+            setState(.active)
         case .needsFullDiskAccess:
-            databaseState = .needsFullDiskAccess
-            databaseItems = []
-            rebuild()
+            setState(.needsFullDiskAccess)
+            if !databaseItems.isEmpty {
+                databaseItems = []
+                rebuild()
+            }
             return
         case .missing:
-            databaseState = .missing
-            databaseItems = []
-            rebuild()
+            setState(.missing)
+            if !databaseItems.isEmpty {
+                databaseItems = []
+                rebuild()
+            }
             return
         case let .failed(message):
-            databaseState = .failed(message)
+            setState(.failed(message))
             return
         }
 
@@ -396,7 +407,8 @@ final class NotifyCenter: ObservableObject {
             if !duplicate { merged.append(banner) }
         }
         merged.sort { $0.date > $1.date }
-        items = Array(merged.prefix(Self.limit))
+        let next = Array(merged.prefix(Self.limit))
+        if items != next { items = next }
     }
 
     // MARK: - Permission shortcuts

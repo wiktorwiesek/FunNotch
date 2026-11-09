@@ -137,7 +137,9 @@ private final class AIUsageScanner: @unchecked Sendable {
     private var offsets: [String: UInt64] = [:]
     /// day (start of day, epoch seconds) → provider → totals.
     private var totals: [Int: [String: Bucket]] = [:]
-    private var seenOmp = Set<String>()
+    /// Dedup key -> day, so keys can be dropped once their day leaves the week
+    /// (a bare set would grow for as long as the app runs).
+    private var seenOmp: [String: Int] = [:]
     private var seenClaude: [String: (day: Int, provider: String, bucket: Bucket)] = [:]
 
     func scan(completion: @escaping @Sendable (AIUsageSnapshot) -> Void) {
@@ -160,6 +162,7 @@ private final class AIUsageScanner: @unchecked Sendable {
         let cutoffKey = Int(cutoff.timeIntervalSince1970)
         totals = totals.filter { $0.key >= cutoffKey }
         seenClaude = seenClaude.filter { $0.value.day >= cutoffKey }
+        seenOmp = seenOmp.filter { $0.value >= cutoffKey }
 
         var days: [AIUsageDay] = []
         for offset in 0 ..< 7 {
@@ -251,7 +254,7 @@ private final class AIUsageScanner: @unchecked Sendable {
             let cost = usage.cost?.total ?? 0
             guard tokens > 0 || cost > 0 else { return }
             let key = "\(stamp)|\(model ?? "")|\(tokens)|\(cost)"
-            guard seenOmp.insert(key).inserted else { return }
+            guard seenOmp.updateValue(day, forKey: key) == nil else { return }
             add(Bucket(tokens: tokens, cost: cost), day: day, provider: provider ?? "inne")
 
         case .claude:
@@ -339,9 +342,11 @@ final class AIUsageManager: ObservableObject {
         UserDefaults.standard.double(forKey: Self.alertKey)
     }
 
-    /// Safe to call repeatedly: one timer.
+    /// Safe to call repeatedly: one timer. It only runs while something needs
+    /// it (a visible tile or an alert threshold), so an unused feature costs
+    /// no wakeups.
     func start() {
-        guard timer == nil else { return }
+        guard timer == nil, subscribers > 0 || alertThreshold > 0 else { return }
         let timer = Timer(timeInterval: 15, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
@@ -353,6 +358,13 @@ final class AIUsageManager: ObservableObject {
         if alertThreshold > 0 { refresh() }
     }
 
+    /// Drops the timer when neither a tile nor a threshold needs it.
+    func stopIfIdle() {
+        guard subscribers == 0, alertThreshold <= 0 else { return }
+        timer?.invalidate()
+        timer = nil
+    }
+
     func addSubscriber() {
         subscribers += 1
         start()
@@ -361,6 +373,7 @@ final class AIUsageManager: ObservableObject {
 
     func removeSubscriber() {
         subscribers = max(subscribers - 1, 0)
+        stopIfIdle()
     }
 
     /// Visible: look every 15 s. Not visible: only look every two minutes,

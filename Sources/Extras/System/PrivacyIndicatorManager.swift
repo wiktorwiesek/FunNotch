@@ -3,13 +3,14 @@
 //  FunNotch
 //
 //  Says when the camera or the microphone is in use by any app, the way the
-//  green and orange dots in the menu bar do. Both come from "is running
-//  somewhere" device properties, which need no permission to read and arrive
-//  as property callbacks, so nothing polls:
+//  green and orange dots in the menu bar do. Neither needs a permission and
+//  both arrive as property callbacks, so nothing polls:
 //    · camera     CoreMediaIO  kCMIODevicePropertyDeviceIsRunningSomewhere
-//    · microphone CoreAudio    kAudioDevicePropertyDeviceIsRunningSomewhere
-//  Devices come and go (a webcam is plugged in), so the device lists are
-//  watched too and the per-device listeners are rebuilt when they change.
+//    · microphone CoreAudio    kAudioProcessPropertyIsRunningInput, per client
+//                              process (not the device-level "running somewhere",
+//                              which a headset also reports while it only plays)
+//  Devices and audio clients come and go, so those lists are watched too and the
+//  per-object listeners are rebuilt when they change.
 //
 
 import AppKit
@@ -50,7 +51,9 @@ final class PrivacyIndicatorManager: ObservableObject {
         guard !started else { return }
         started = true
 
-        audioListObserver.add(AudioObjects.system, kAudioHardwarePropertyDevices) { [weak self] in
+        // Clients appear and disappear as apps open audio, so the per-process
+        // listeners follow the process list.
+        audioListObserver.add(AudioObjects.system, kAudioHardwarePropertyProcessObjectList) { [weak self] in
             self?.rebuildAudioListeners()
         }
         rebuildAudioListeners()
@@ -68,14 +71,10 @@ final class PrivacyIndicatorManager: ObservableObject {
 
     // MARK: Microphone
 
-    private var inputDevices: [AudioObjectID] {
-        AudioObjects.allDevices().filter { AudioObjects.hasStreams($0, scope: kAudioDevicePropertyScopeInput) }
-    }
-
     private func rebuildAudioListeners() {
         audioObserver.removeAll()
-        for device in inputDevices {
-            audioObserver.add(device, kAudioDevicePropertyDeviceIsRunningSomewhere) { [weak self] in
+        for process in AudioObjects.processObjects() {
+            audioObserver.add(process, kAudioProcessPropertyIsRunningInput) { [weak self] in
                 self?.refreshMicrophone()
             }
         }
@@ -83,10 +82,25 @@ final class PrivacyIndicatorManager: ObservableObject {
     }
 
     private func refreshMicrophone() {
-        let running = inputDevices.filter {
-            (AudioObjects.value($0, kAudioDevicePropertyDeviceIsRunningSomewhere, as: UInt32.self) ?? 0) != 0
+        // Our own tap aggregate reads as an input stream; it is not a microphone.
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        var active = false
+        var names: [String] = []
+        for process in AudioObjects.processObjects() {
+            guard (AudioObjects.value(process, kAudioProcessPropertyIsRunningInput, as: UInt32.self) ?? 0) != 0 else { continue }
+            if AudioObjects.value(process, kAudioProcessPropertyPID, as: pid_t.self) == ownPID { continue }
+            active = true
+            let devices = AudioObjects.objectIDs(process, kAudioProcessPropertyDevices, scope: kAudioDevicePropertyScopeInput)
+            for device in devices where !AudioObjects.isOwnAggregate(device)
+                && AudioObjects.hasStreams(device, scope: kAudioDevicePropertyScopeInput) {
+                let name = AudioObjects.name(of: device)
+                if !names.contains(name) { names.append(name) }
+            }
         }
-        update(microphone: !running.isEmpty, names: running.map { AudioObjects.name(of: $0) })
+        if active, names.isEmpty {
+            names = [AudioObjects.name(of: AudioObjects.defaultInput())]
+        }
+        update(microphone: active, names: names)
     }
 
     // MARK: Camera

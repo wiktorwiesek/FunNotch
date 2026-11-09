@@ -23,6 +23,10 @@ final class KeepAwakeManager: ObservableObject {
     static let defaultMinutesKey = "extras.system.keepAwake.defaultMinutes"
     static let announceKey = "extras.system.keepAwake.announce"
 
+    /// Not the cup: that is the Focus timer's icon, shown in the same row.
+    nonisolated static let symbol = "bolt.horizontal.circle"
+    nonisolated static let activeSymbol = "bolt.horizontal.circle.fill"
+
     @Published private(set) var isActive = false
     /// When keeping awake ends; nil while active means "until switched off".
     @Published private(set) var endDate: Date?
@@ -43,12 +47,13 @@ final class KeepAwakeManager: ObservableObject {
     /// Safe to call repeatedly: the wake observer is added once.
     func start() {
         guard wakeObserver == nil else { return }
-        // A timer that was due while the Mac slept (a lid close overrides the
-        // assertion) fires late; check the clock on wake instead of trusting it.
+        // A run-loop timer only counts time the Mac is awake, so a sleep in the
+        // middle of a session would push the end later. On wake, end it if it is
+        // due, otherwise set the timer again against the wall clock.
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.expireIfDue() }
+            MainActor.assumeIsolated { self?.handleWake() }
         }
     }
 
@@ -86,21 +91,14 @@ final class KeepAwakeManager: ObservableObject {
             isActive = false
             endDate = nil
             DiagnosticLog.write("keepawake", "could not create power assertion")
-            post(symbol: "cup.and.saucer", detail: " · nie udało się włączyć", tint: .orange)
+            post(symbol: Self.symbol, detail: " · nie udało się włączyć", tint: .orange)
             return
         }
 
         isActive = true
         endDate = date
-        if let date {
-            let timer = Timer(fire: date, interval: 0, repeats: false) { [weak self] _ in
-                MainActor.assumeIsolated { self?.expireIfDue() }
-            }
-            timer.tolerance = 1
-            RunLoop.main.add(timer, forMode: .common)
-            expiry = timer
-        }
-        post(symbol: "cup.and.saucer.fill", detail: Self.summary(until: date), tint: .orange)
+        scheduleExpiry(at: date)
+        post(symbol: Self.activeSymbol, detail: Self.summary(until: date), tint: .orange)
     }
 
     func deactivate() {
@@ -109,6 +107,27 @@ final class KeepAwakeManager: ObservableObject {
 
     func toggle() {
         if isActive { deactivate() } else { activateWithDefault() }
+    }
+
+    private func scheduleExpiry(at date: Date?) {
+        expiry?.invalidate()
+        expiry = nil
+        guard let date else { return }
+        let timer = Timer(fire: date, interval: 0, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated { self?.expireIfDue() }
+        }
+        timer.tolerance = 1
+        RunLoop.main.add(timer, forMode: .common)
+        expiry = timer
+    }
+
+    private func handleWake() {
+        guard isActive, let endDate else { return }
+        if Date() >= endDate {
+            expireIfDue()
+        } else {
+            scheduleExpiry(at: endDate)
+        }
     }
 
     private func expireIfDue() {
@@ -123,7 +142,7 @@ final class KeepAwakeManager: ObservableObject {
         releaseAssertions()
         isActive = false
         endDate = nil
-        post(symbol: "cup.and.saucer", detail: detail, tint: .white)
+        post(symbol: Self.symbol, detail: detail, tint: .white)
     }
 
     // MARK: Assertions

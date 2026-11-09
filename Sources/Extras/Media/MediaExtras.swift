@@ -32,7 +32,8 @@ enum MediaExtrasDefaults {
     /// The mixer button in the player. Saved per-app levels keep applying.
     static var mixerEnabled: Bool { bool(mixerEnabledKey, true) }
     /// Drive the spectrum bars from the system output instead of an animation.
-    static var realSpectrum: Bool { bool(realSpectrumKey, true) }
+    /// Opt-in: it makes macOS ask for permission to record system audio.
+    static var realSpectrum: Bool { bool(realSpectrumKey, false) }
 }
 
 @MainActor

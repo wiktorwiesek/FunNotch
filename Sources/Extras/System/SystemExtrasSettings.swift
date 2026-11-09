@@ -61,7 +61,7 @@ struct SystemExtrasSettings: View {
             footer: "Mac nie zaśnie z bezczynności, dopóki funkcja jest włączona. Zamknięcie aplikacji ją wyłącza."
         ) {
             SettingsRow(title: keepAwake.isActive ? "Włączone" : "Wyłączone", subtitle: keepAwakeSubtitle,
-                        symbol: "cup.and.saucer.fill", tint: SettingsStyle.orange) {
+                        symbol: KeepAwakeManager.activeSymbol, tint: SettingsStyle.orange) {
                 Button(keepAwake.isActive ? "Wyłącz" : "Włącz") { keepAwake.toggle() }
             }
             SettingsPicker(
@@ -238,7 +238,7 @@ struct SystemExtrasSettings: View {
             title: "Szybkie akcje na ekranie głównym",
             footer: "Przyciski dochodzą do rzędu „Szybkie akcje”. Prawy przycisk myszy na „Nie usypiaj” pokazuje wybór czasu."
         ) {
-            SettingsToggle(title: "Nie usypiaj", symbol: "cup.and.saucer.fill", tint: SettingsStyle.orange, isOn: $quickKeepAwake)
+            SettingsToggle(title: "Nie usypiaj", symbol: KeepAwakeManager.activeSymbol, tint: SettingsStyle.orange, isOn: $quickKeepAwake)
             SettingsToggle(title: "Wyciszenie mikrofonu", symbol: "mic.fill", tint: SettingsStyle.red, isOn: $quickMic)
             SettingsToggle(title: "Wyjście dźwięku", symbol: "speaker.wave.2.fill", tint: SettingsStyle.purple, isOn: $quickOutput)
         }

@@ -236,7 +236,7 @@ final class SpectrumAnalyzer {
 
         // The tap is bound to the output device it was built on.
         observer.add(AudioObjects.system, kAudioHardwarePropertyDefaultOutputDevice) { [weak self] in
-            guard let self, running else { return }
+            guard let self, running || starting else { return }
             stopTap()
             evaluate()
         }
@@ -277,8 +277,18 @@ final class SpectrumAnalyzer {
         }
     }
 
+    /// Creating and destroying a tap, its aggregate device and the IO proc are
+    /// round trips to the audio daemon, so they run on this queue and never
+    /// stall the main thread on every play and pause. It is serial, so a
+    /// teardown always finishes before the next build starts.
+    private nonisolated static let setupQueue = DispatchQueue(label: "pl.funnotch.spectrum-setup", qos: .userInitiated)
+
+    /// Bumped whenever a pending build stops being wanted; its result is then discarded.
+    private var generation = 0
+    private var starting = false
+
     private func startTap() {
-        guard #available(macOS 14.2, *) else { return }
+        guard #available(macOS 14.2, *), !starting else { return }
 
         // A refused permission would make the tap deliver zeros; do not even
         // try. The check is a cheap call, so a change in System Settings is
@@ -292,6 +302,27 @@ final class SpectrumAnalyzer {
         }
         loggedRefusal = false
 
+        starting = true
+        let ticket = generation
+        Self.setupQueue.async {
+            let built = Self.buildTap()
+            DispatchQueue.main.async { [weak self] in
+                MainActor.assumeIsolated { self?.finishStart(built, ticket: ticket) }
+            }
+        }
+    }
+
+    /// Result of building a tap on the setup queue.
+    private final class BuiltTap: @unchecked Sendable {
+        var session: AnyObject?
+        var state: SpectrumRenderState?
+        var failure: String?
+    }
+
+    /// Runs on `setupQueue`.
+    private nonisolated static func buildTap() -> BuiltTap {
+        let built = BuiltTap()
+        guard #available(macOS 14.2, *) else { return built }
         let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
         description.uuid = UUID()
         description.muteBehavior = .unmuted
@@ -303,24 +334,58 @@ final class SpectrumAnalyzer {
             }
             guard let state = SpectrumRenderState(sampleRate: created.sampleRate, skipInputBuffers: created.leadingInputBuffers) else {
                 created.stop()
-                return
+                return built
             }
             box.state = state
             try created.start()
-            session = created
-            renderState = state
-            running = true
+            built.session = created
+            built.state = state
         } catch {
-            DiagnosticLog.write("spectrum", "tap failed: \(error)")
+            built.failure = "\(error)"
         }
+        return built
+    }
+
+    private func finishStart(_ built: BuiltTap, ticket: Int) {
+        guard #available(macOS 14.2, *) else { return }
+        guard ticket == generation else {
+            // Stopped while it was being built: drop it, off the main thread.
+            Self.discard(built.session)
+            return
+        }
+        starting = false
+        if let failure = built.failure {
+            DiagnosticLog.write("spectrum", "tap failed: \(failure)")
+            return
+        }
+        guard let session = built.session, let state = built.state else { return }
+        self.session = session
+        renderState = state
+        running = true
+        // Playback may have paused while the tap was being built.
+        evaluate()
     }
 
     private func stopTap() {
         guard #available(macOS 14.2, *) else { return }
-        (session as? AudioTapSession)?.stop()
+        generation += 1
+        starting = false
+        let old = session
         session = nil
         renderState = nil
         running = false
+        Self.discard(old)
+    }
+
+    private nonisolated static func discard(_ session: AnyObject?) {
+        guard #available(macOS 14.2, *), let session = session as? AudioTapSession else { return }
+        let box = UncheckedBox(session)
+        setupQueue.async { box.value.stop() }
+    }
+
+    private final class UncheckedBox<T>: @unchecked Sendable {
+        let value: T
+        init(_ value: T) { self.value = value }
     }
 
     private final class RenderBox: @unchecked Sendable {

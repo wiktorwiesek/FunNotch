@@ -256,8 +256,10 @@ final class ShelfManager: NSObject, ObservableObject {
         )
     }
 
+    /// `persistNow: false` lets a batch caller save the bookmarks once at the
+    /// end; rebuilding one for every item per call is quadratic.
     @discardableResult
-    func add(url: URL, isTemporary: Bool = false) -> Bool {
+    func add(url: URL, isTemporary: Bool = false, persistNow: Bool = true) -> Bool {
         guard FileManager.default.fileExists(atPath: url.path) else {
             DiagnosticLog.write("shelf", "rejected, file does not exist (or is unreadable): \(url.path)")
             return false
@@ -273,7 +275,7 @@ final class ShelfManager: NSObject, ObservableObject {
 
         var item = makeItem(for: url, isTemporary: isTemporary)
         items.insert(item, at: 0)
-        persist()
+        if persistNow { persist() }
         DiagnosticLog.write("shelf", "added \(item.name), now holding \(items.count)")
 
         generateThumbnail(for: item) { [weak self] image in
@@ -346,13 +348,15 @@ final class ShelfManager: NSObject, ObservableObject {
                 DiagnosticLog.write("shelf", "could not move converted file: \(error.localizedDescription)")
                 continue
             }
-            if add(url: destination, isTemporary: true),
+            if add(url: destination, isTemporary: true, persistNow: false),
                let item = items.first(where: { $0.url == destination }) {
                 added.insert(item, at: 0)
             } else {
                 try? FileManager.default.removeItem(at: destination)
             }
         }
+        // One bookmark rebuild for the whole batch, not one per page.
+        persist()
         return added
     }
 

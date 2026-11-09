@@ -25,14 +25,19 @@ final class ClipboardOCRIndex: ObservableObject {
     /// One at a time: recognition is heavy and nothing here is urgent.
     private nonisolated static let queue = DispatchQueue(label: "com.funnotch.clipboard-ocr", qos: .utility)
 
-    private enum Source {
-        case image(CGImage)
+    /// NSImage is not Sendable, but this one is only read: it is handed to the
+    /// worker queue so the (possibly large) bitmap decode happens off main.
+    private struct ImageBox: @unchecked Sendable { let image: NSImage }
+
+    private enum Source: Sendable {
+        case image(ImageBox)
         case files([URL])
     }
 
     private init() {}
 
-    func text(for id: UUID) -> String? { texts[id] }
+    /// Nil while OCR search is off, so text recognised earlier stops matching too.
+    func text(for id: UUID) -> String? { ShelfClipPrefs.ocr ? texts[id] : nil }
 
     func index(_ entry: ClipboardEntry) {
         guard ShelfClipPrefs.ocr, !requested.contains(entry.id) else { return }
@@ -42,8 +47,7 @@ final class ClipboardOCRIndex: ObservableObject {
         case .text:
             return
         case let .image(image):
-            guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
-            source = .image(cgImage)
+            source = .image(ImageBox(image: image))
         case let .files(urls):
             let images = urls.filter(Self.isReadableImage).prefix(3)
             guard !images.isEmpty else { return }
@@ -85,7 +89,8 @@ final class ClipboardOCRIndex: ObservableObject {
 
     private nonisolated static func recognise(_ source: Source) -> String {
         switch source {
-        case let .image(image):
+        case let .image(box):
+            guard let image = box.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return "" }
             return recognise(image)
         case let .files(urls):
             return urls.compactMap { url -> String? in

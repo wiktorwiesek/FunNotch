@@ -121,6 +121,27 @@ enum AudioObjects {
         var size: UInt32 = 0
         return AudioObjectGetPropertyDataSize(device, &address, 0, nil, &size) == noErr && size > 0
     }
+
+    // MARK: Our own tap aggregates
+
+    /// UID prefix of the private aggregate devices `AudioTapSession` creates. They
+    /// are visible to this process in the device list, and the tap shows up as an
+    /// input stream on them, so anything that lists microphones or outputs has to
+    /// skip them or Fun Notch would report itself as "microphone in use".
+    static let ownAggregateUIDPrefix = "pl.funnotch.tap."
+
+    static func isOwnAggregate(_ device: AudioObjectID) -> Bool {
+        uid(of: device)?.hasPrefix(ownAggregateUIDPrefix) == true
+    }
+
+    // MARK: Processes
+
+    /// Audio client processes known to the HAL (macOS 14.0+). Unlike the device
+    /// property "running somewhere", they carry a direction, so a headset that is
+    /// only playing does not look like a recording microphone.
+    static func processObjects() -> [AudioObjectID] {
+        objectIDs(system, kAudioHardwarePropertyProcessObjectList)
+    }
 }
 
 /// Owns a set of CoreAudio property listeners and removes them together. The

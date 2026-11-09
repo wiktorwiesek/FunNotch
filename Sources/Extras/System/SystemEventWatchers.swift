@@ -41,7 +41,11 @@ final class CapsLockWatcher {
         // windows, which global monitors never see.
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             let on = event.modifierFlags.contains(.capsLock)
-            MainActor.assumeIsolated { self?.handle(on) }
+            MainActor.assumeIsolated {
+                // Global modifier events reach us, so the polling net is not needed.
+                self?.stopFallback()
+                self?.handle(on)
+            }
         }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             let on = event.modifierFlags.contains(.capsLock)
@@ -51,13 +55,27 @@ final class CapsLockWatcher {
         // Safety net for systems that withhold global modifier events without
         // permission: the session's flag word is readable by anyone. `handle`
         // ignores anything the monitors already reported, so it never doubles up.
+        // It is dropped on the first global event, and does not run at all while
+        // the announcement is off, so it never polls forever for nothing.
+        guard UserDefaults.standard.bool(forKey: Self.announceKey) else { return }
         let timer = Timer(timeInterval: 0.4, repeats: true) { [weak self] _ in
             let on = CGEventSource.flagsState(.combinedSessionState).contains(.maskAlphaShift)
-            MainActor.assumeIsolated { self?.handle(on) }
+            MainActor.assumeIsolated {
+                guard UserDefaults.standard.bool(forKey: Self.announceKey) else {
+                    self?.stopFallback()
+                    return
+                }
+                self?.handle(on)
+            }
         }
         timer.tolerance = 0.2
         RunLoop.main.add(timer, forMode: .common)
         fallbackTimer = timer
+    }
+
+    private func stopFallback() {
+        fallbackTimer?.invalidate()
+        fallbackTimer = nil
     }
 
     private func handle(_ on: Bool) {
@@ -235,7 +253,11 @@ final class VolumeMountWatcher {
         let protocolName = description[kDADiskDescriptionDeviceProtocolKey as String] as? String
         let ejectable = description[kDADiskDescriptionMediaEjectableKey as String] as? Bool ?? false
         let removable = description[kDADiskDescriptionMediaRemovableKey as String] as? Bool ?? false
-        if protocolName == "Virtual Interface" { return false }
+        // A mounted .dmg reports "Disk Image" (older systems: "Virtual Interface")
+        // and looks external and removable, and a network share has no internal
+        // flag at all, so both are filtered here.
+        if protocolName == "Virtual Interface" || protocolName == "Disk Image" { return false }
+        if description[kDADiskDescriptionVolumeNetworkKey as String] as? Bool == true { return false }
         // The startup disk is internal and neither removable nor ejectable; a
         // built-in SD card slot is internal but removable media.
         return !isInternal || ejectable || removable

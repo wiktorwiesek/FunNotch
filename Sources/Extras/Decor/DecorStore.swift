@@ -94,7 +94,10 @@ final class DecorStore: ObservableObject {
     // HUD
 
     @Published var hudStyle: DecorHUDStyle {
-        didSet { defaults.set(hudStyle.rawValue, forKey: Key.hudStyle) }
+        didSet {
+            defaults.set(hudStyle.rawValue, forKey: Key.hudStyle)
+            if hudStyle != .notch { DecorHUDOverlay.shared.prepare() }
+        }
     }
 
     /// 1 is the designed size; the edge bar and the ring both scale from it.
@@ -319,5 +322,6 @@ enum DecorExtras {
     static func start() {
         let store = DecorStore.shared
         if store.idleEnabled { store.loadIdleAnimationIfNeeded() }
+        if store.hudStyle != .notch { DecorHUDOverlay.shared.prepare() }
     }
 }

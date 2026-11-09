@@ -8,23 +8,37 @@
 
 import SwiftUI
 
-/// The current and next line, or a quiet note about why there are none. A
-/// button: it opens the full panel. Fixed height so the player below it never
-/// jumps when a track without lyrics comes on.
+/// The current and next line, or a short note that the text is unsynced. A
+/// button: it opens the full panel. It takes no room at all while there is
+/// nothing worth showing (no lyrics, still searching, switched off), because
+/// the home tile is tight and the transport row sits below it.
 struct LyricsPlayerBlock: View {
     @ObservedObject private var lyrics = LyricsManager.shared
     @AppStorage(MediaExtrasDefaults.lyricsEnabledKey) private var enabled = true
     @AppStorage(MediaExtrasDefaults.lyricsInPlayerKey) private var inPlayer = true
 
-    static let height: CGFloat = 30
+    /// Two lines of synced text.
+    static let syncedHeight: CGFloat = 30
+    /// A single quiet note.
+    static let noteHeight: CGFloat = 14
+
+    /// Height the block occupies for `state`, or nil when it is not shown.
+    static func height(for state: LyricsState, enabled: Bool, inPlayer: Bool) -> CGFloat? {
+        guard enabled, inPlayer else { return nil }
+        switch state {
+        case .synced: return syncedHeight
+        case .plain: return noteHeight
+        case .idle, .loading, .instrumental, .notFound, .unavailable: return nil
+        }
+    }
 
     var body: some View {
-        if enabled, inPlayer {
+        if let blockHeight = Self.height(for: lyrics.state, enabled: enabled, inPlayer: inPlayer) {
             Button {
                 withAnimation(.notchContent) { MediaOverlayState.shared.mode = .lyrics }
             } label: {
                 content
-                    .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, minHeight: blockHeight, maxHeight: blockHeight, alignment: .topLeading)
                     .clipped()
                     .contentShape(Rectangle())
             }
@@ -52,16 +66,8 @@ struct LyricsPlayerBlock: View {
             .animation(.easeOut(duration: 0.2), value: lyrics.currentIndex)
         case .plain:
             note("Tekst bez synchronizacji · kliknij, aby przeczytać")
-        case .loading:
-            note("Szukam tekstu…")
-        case .instrumental:
-            note("Utwór instrumentalny")
-        case .notFound:
-            note("Brak tekstu")
-        case .unavailable:
-            note("Nie udało się pobrać tekstu")
-        case .idle:
-            Color.clear
+        case .loading, .instrumental, .notFound, .unavailable, .idle:
+            EmptyView()
         }
     }
 

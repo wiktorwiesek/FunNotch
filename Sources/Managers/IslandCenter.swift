@@ -46,7 +46,8 @@ final class IslandCenter: ObservableObject {
     /// replaces one still on screen.
     func post(_ island: Island) {
         current = island
-        DiagnosticLog.write("island", island.title + island.detail)
+        // Only the symbol: island text can carry notification content and one-time codes.
+        DiagnosticLog.write("island", island.symbol)
         NotchWindowManager.shared.broadcast { viewModel in
             guard viewModel.notchState == .closed else { return }
             viewModel.showExpandingView(type: .island, value: 0, icon: island.symbol, duration: island.duration)

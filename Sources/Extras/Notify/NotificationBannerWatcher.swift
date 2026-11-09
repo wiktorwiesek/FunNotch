@@ -62,6 +62,18 @@ final class NotificationBannerWatcher: ObservableObject {
     private static let maxNodes = 600
     private static let maxDepth = 14
 
+    /// A messaging timeout set on one element covers only that element, so
+    /// every element the scan touches gets its own, and the whole scan has a
+    /// deadline: a Notification Center that hangs mid-scan (after sleep, on
+    /// the lock screen) must not freeze the notch for many default timeouts.
+    private static var scanDeadline = Date.distantFuture
+
+    private static func reachable(_ element: AXUIElement) -> Bool {
+        guard Date() < scanDeadline else { return false }
+        AXUIElementSetMessagingTimeout(element, 0.5)
+        return true
+    }
+
     private var running = false
     private var timer: Timer?
     private var observer: AXObserver?
@@ -244,6 +256,8 @@ final class NotificationBannerWatcher: ObservableObject {
 
     private func scan() {
         guard let applicationElement, observer != nil else { return }
+        Self.scanDeadline = Date().addingTimeInterval(1)
+        defer { Self.scanDeadline = .distantFuture }
         let windows = Self.attribute(applicationElement, kAXWindowsAttribute) as? [AXUIElement] ?? []
         var banners: [CapturedBanner] = []
         for window in windows {
@@ -281,12 +295,14 @@ final class NotificationBannerWatcher: ObservableObject {
     ]
 
     private static func attribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
+        guard reachable(element) else { return nil }
         var value: CFTypeRef?
         return AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success ? value : nil
     }
 
     private static func node(_ element: AXUIElement) -> Node {
         var node = Node(element: element)
+        guard reachable(element) else { return node }
         var values: CFArray?
         guard AXUIElementCopyMultipleAttributeValues(element, nodeAttributes as CFArray, [], &values) == .success,
               let list = values as? [CFTypeRef], list.count == nodeAttributes.count
@@ -376,6 +392,7 @@ final class NotificationBannerWatcher: ObservableObject {
     }
 
     private static func actionNames(of element: AXUIElement) -> [String] {
+        guard reachable(element) else { return [] }
         var names: CFArray?
         guard AXUIElementCopyActionNames(element, &names) == .success else { return [] }
         return names as? [String] ?? []

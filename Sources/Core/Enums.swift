@@ -286,7 +286,7 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .moonPhase: return "moonphase.waxing.crescent"
         case .shelfCount: return "tray.full"
         case .unread: return "bubble.left.and.bubble.right"
-        case .keepAwake: return "cup.and.saucer.fill"
+        case .keepAwake: return KeepAwakeManager.activeSymbol
         case .micMute: return "mic.fill"
         case .privacy: return "lock.shield"
         case .audioOutput: return "speaker.wave.2.fill"

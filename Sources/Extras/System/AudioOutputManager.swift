@@ -53,7 +53,8 @@ final class AudioOutputManager: ObservableObject {
 
     private func refresh() {
         let devices = AudioObjects.allDevices().compactMap { device -> Output? in
-            guard AudioObjects.hasStreams(device, scope: kAudioDevicePropertyScopeOutput),
+            guard !AudioObjects.isOwnAggregate(device),
+                  AudioObjects.hasStreams(device, scope: kAudioDevicePropertyScopeOutput),
                   // Hidden helpers such as multi-output aggregates created by
                   // other apps report that they cannot be the default.
                   (AudioObjects.value(

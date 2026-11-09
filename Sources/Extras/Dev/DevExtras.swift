@@ -244,6 +244,7 @@ struct DevExtrasSettings: View {
             )
             .onChange(of: alertUSD) { _, _ in
                 AIUsageManager.shared.start()
+                AIUsageManager.shared.stopIfIdle()
                 AIUsageManager.shared.refresh()
             }
         }
@@ -271,8 +272,13 @@ struct DevExtrasSettings: View {
 
     private func copy(_ text: String?, as name: String) {
         guard let text else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        // The token is a secret: both types are declared in one call (one change
+        // count) so the clipboard history poller never sees it unmarked.
+        let pasteboard = NSPasteboard.general
+        let concealed = NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")
+        pasteboard.declareTypes([.string, concealed], owner: nil)
+        pasteboard.setString(text, forType: .string)
+        pasteboard.setData(Data(), forType: concealed)
         copied = name
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             if copied == name { copied = nil }

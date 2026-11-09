@@ -135,6 +135,9 @@ enum WindowLocator {
         if AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &value) == .success,
            let windows = value as? [AXUIElement] {
             let scored = windows.compactMap { window -> (AXUIElement, CGFloat)? in
+                // A timeout set on the app element does not cover its windows; this
+                // runs inside the event tap, so each element needs its own bound.
+                AXUIElementSetMessagingTimeout(window, 0.4)
                 guard let frame = WindowFrame.read(window) else { return nil }
                 return (window, frame.distance(to: bounds))
             }
@@ -145,6 +148,7 @@ enum WindowLocator {
         if AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute as CFString, &focused) == .success,
            let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() {
             let element = focused as! AXUIElement // type checked on the line above
+            AXUIElementSetMessagingTimeout(element, 0.4)
             if let frame = WindowFrame.read(element), frame.distance(to: bounds) < 40 { return element }
         }
         return nil
@@ -211,8 +215,10 @@ enum WindowFrame {
     /// leaves the app's menu bar behind the previous app's.
     static func raise(_ window: AXUIElement, pid: pid_t) {
         AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-        AXUIElementSetAttributeValue(
-            AXUIElementCreateApplication(pid), kAXFrontmostAttribute as CFString, kCFBooleanTrue
-        )
+        // A fresh app element has the default six second wait; raise() also
+        // runs inside the event tap.
+        let app = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(app, 0.4)
+        AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
     }
 }

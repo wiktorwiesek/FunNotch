@@ -238,9 +238,13 @@ final class GitHubManager: ObservableObject {
 
     var configuredSlugs: [String] {
         let raw = UserDefaults.standard.string(forKey: Self.reposKey) ?? ""
+        // Deduplicated: a repeated slug would make `refresh` keep two statuses
+        // under one key and trap when it indexes them by slug.
+        var seen = Set<String>()
         return raw.split(whereSeparator: { ",;\n ".contains($0) })
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .compactMap(Self.normalize)
+            .filter { seen.insert($0.lowercased()).inserted }
     }
 
     var watchesInBackground: Bool {
@@ -323,7 +327,7 @@ final class GitHubManager: ObservableObject {
 
         var loginProblem: String?
         var results: [GitHubRepoStatus] = []
-        let previous = Dictionary(uniqueKeysWithValues: repos.map { ($0.slug, $0) })
+        let previous = Dictionary(repos.map { ($0.slug, $0) }, uniquingKeysWith: { first, _ in first })
         for slug in slugs {
             var status = previous[slug] ?? GitHubRepoStatus(slug: slug)
             do {

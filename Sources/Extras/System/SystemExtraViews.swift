@@ -51,7 +51,7 @@ struct KeepAwakeWidget: View {
 
     private func content(text: String?) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: keepAwake.isActive ? "cup.and.saucer.fill" : "cup.and.saucer")
+            Image(systemName: keepAwake.isActive ? KeepAwakeManager.activeSymbol : KeepAwakeManager.symbol)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(keepAwake.isActive ? Color.orange : .white.opacity(0.4))
             if let text {
@@ -141,7 +141,7 @@ struct SystemQuickActionButtons: View {
         Group {
             if showKeepAwake {
                 button(
-                    keepAwake.isActive ? "cup.and.saucer.fill" : "cup.and.saucer",
+                    keepAwake.isActive ? KeepAwakeManager.activeSymbol : KeepAwakeManager.symbol,
                     keepAwake.isActive ? "Nie usypiaj: włączone — kliknij, aby wyłączyć" : "Nie usypiaj Maca",
                     tint: keepAwake.isActive ? .orange : nil
                 ) { keepAwake.toggle() }

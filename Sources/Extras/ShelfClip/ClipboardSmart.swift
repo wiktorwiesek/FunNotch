@@ -327,10 +327,18 @@ final class LinkTitleStore: ObservableObject {
 
     private var order: [String] = []
     private var attempted: Set<String> = []
-    private let storeKey = "extras.shelfclip.linkTitles"
+    /// Not the same key as `ShelfClipPrefs.linkTitlesKey`: the cache must never
+    /// share storage with the on/off switch, or clearing it flips the switch.
+    private let storeKey = "extras.shelfclip.linkTitleCache"
     private let limit = 200
 
     private init() {
+        // Before the keys were split, the cache lived under the switch's key.
+        // Drop that array: it holds URLs the user can no longer see or clear.
+        let legacyKey = ShelfClipPrefs.linkTitlesKey
+        if UserDefaults.standard.object(forKey: legacyKey) is [Any] {
+            UserDefaults.standard.removeObject(forKey: legacyKey)
+        }
         let stored = UserDefaults.standard.array(forKey: storeKey) as? [[String]] ?? []
         for pair in stored where pair.count == 2 {
             titles[pair[0]] = pair[1]
@@ -361,7 +369,8 @@ final class LinkTitleStore: ObservableObject {
 
         Task { [weak self] in
             let title = await Self.fetchTitle(url)
-            guard let self, let title else { return }
+            // The switch may have been turned off while the request was in flight.
+            guard let self, let title, ShelfClipPrefs.linkTitles else { return }
             self.store(title, for: key)
         }
     }
@@ -377,8 +386,25 @@ final class LinkTitleStore: ObservableObject {
 
     nonisolated static func isSafeToFetch(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
-              url.host != nil, url.user == nil, url.password == nil
+              let rawHost = url.host, url.user == nil, url.password == nil
         else { return false }
+
+        // Only the scheme's own port: other ports are where routers, printers
+        // and dev servers listen.
+        if let port = url.port, port != (scheme == "https" ? 443 : 80) { return false }
+
+        // A public site name only. This rejects IP literals in every spelling
+        // (dotted, decimal, hex, IPv6), localhost and single-label LAN names,
+        // because a real top-level domain never starts with a digit and
+        // never contains ":".
+        var host = rawHost.lowercased()
+        while host.hasSuffix(".") { host.removeLast() }
+        let labels = host.split(separator: ".", omittingEmptySubsequences: false)
+        guard labels.count >= 2, let tld = labels.last, tld.first?.isLetter == true,
+              !host.contains(":")
+        else { return false }
+        let internalSuffixes = ["localhost", "local", "internal", "lan", "home", "arpa", "intranet", "corp", "private"]
+        if internalSuffixes.contains(String(tld)) { return false }
 
         let sensitive = "token|key|secret|auth|sig|session|pass|pwd|code|otp|reset|magic|confirm|verify|unsubscribe|invite|login|logout|nonce|jwt|ticket"
         let queryNames = URLComponents(url: url, resolvingAgainstBaseURL: false)?
@@ -388,6 +414,19 @@ final class LinkTitleStore: ObservableObject {
         }
         let pathWords = "unsubscribe|reset|verify|confirm|activate|invite|login|logout|magic|optout|opt-out|signout"
         return url.path.range(of: pathWords, options: [.regularExpression, .caseInsensitive]) == nil
+    }
+
+    /// A public page can redirect to localhost or a LAN address; the target of
+    /// every hop has to pass the same check as the first URL.
+    private final class RedirectGuard: NSObject, URLSessionTaskDelegate {
+        func urlSession(
+            _ session: URLSession, task: URLSessionTask,
+            willPerformHTTPRedirection response: HTTPURLResponse,
+            newRequest request: URLRequest
+        ) async -> URLRequest? {
+            guard let target = request.url, LinkTitleStore.isSafeToFetch(target) else { return nil }
+            return request
+        }
     }
 
     nonisolated private static func fetchTitle(_ url: URL) async -> String? {
@@ -409,7 +448,7 @@ final class LinkTitleStore: ObservableObject {
         request.setValue("pl-PL,pl;q=0.9,en;q=0.7", forHTTPHeaderField: "Accept-Language")
 
         do {
-            let (bytes, response) = try await session.bytes(for: request)
+            let (bytes, response) = try await session.bytes(for: request, delegate: RedirectGuard())
             guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else { return nil }
             let contentType = http.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? "text/html"
             guard contentType.contains("html") else { return nil }

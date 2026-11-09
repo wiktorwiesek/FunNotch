@@ -279,7 +279,10 @@ struct AlbumArtwork: View {
 
 struct PlayerControls: View {
     @ObservedObject private var music = MusicManager.shared
+    @ObservedObject private var lyrics = LyricsManager.shared
     @EnvironmentObject private var settings: Settings
+    @AppStorage(MediaExtrasDefaults.lyricsEnabledKey) private var lyricsEnabled = true
+    @AppStorage(MediaExtrasDefaults.lyricsInPlayerKey) private var lyricsInPlayer = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -295,7 +298,11 @@ struct PlayerControls: View {
                     MediaPlayerButtons()
                 }
 
-                LyricsPlayerBlock()
+                // Decided here, not inside the block: an empty child would still
+                // be given a stack spacing slot, and this tile has none to spare.
+                if LyricsPlayerBlock.height(for: lyrics.state, enabled: lyricsEnabled, inPlayer: lyricsInPlayer) != nil {
+                    LyricsPlayerBlock()
+                }
 
                 if music.track.hasTiming {
                     scrubber

@@ -50,7 +50,11 @@ enum DevShellActivity {
 
     /// Writes the block, replacing an older one if present.
     static func install(minimumSeconds: Int) throws {
-        let current = (try? String(contentsOf: zshrc, encoding: .utf8)) ?? ""
+        // A read failure must not look like an empty file, or the install would
+        // replace the user's .zshrc without a backup. It surfaces as an error.
+        let current = FileManager.default.fileExists(atPath: zshrc.path)
+            ? try String(contentsOf: zshrc, encoding: .utf8)
+            : ""
         // One copy of the user's original, taken before the first change.
         if !FileManager.default.fileExists(atPath: backup.path), !current.isEmpty {
             try current.write(to: backup, atomically: true, encoding: .utf8)

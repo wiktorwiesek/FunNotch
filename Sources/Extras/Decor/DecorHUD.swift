@@ -67,7 +67,9 @@ final class DecorHUDOverlay {
 
         let size = Self.size(for: style, scale: store.hudScale)
         let panel = ensurePanel()
-        panel.setFrame(frame(for: style, size: size), display: true)
+        // present() runs inside the media-key event tap; display: true would
+        // force a synchronous redraw there. The window redraws on its own.
+        panel.setFrame(frame(for: style, size: size), display: false)
         panel.contentView?.frame = NSRect(origin: .zero, size: size)
         panel.orderFrontRegardless()
 
@@ -91,6 +93,12 @@ final class DecorHUDOverlay {
         }
         orderOutWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
+    }
+
+    /// Builds the panel ahead of the first key press, so the event tap never
+    /// pays for creating the window and its hosting view.
+    func prepare() {
+        _ = ensurePanel()
     }
 
     // MARK: - Panel

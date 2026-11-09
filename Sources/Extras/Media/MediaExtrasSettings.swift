@@ -13,7 +13,7 @@ struct MediaExtrasSettings: View {
     @AppStorage(MediaExtrasDefaults.lyricsInPlayerKey) private var lyricsInPlayer = true
     @AppStorage(MediaExtrasDefaults.lyricsInClosedNotchKey) private var lyricsInClosedNotch = false
     @AppStorage(MediaExtrasDefaults.mixerEnabledKey) private var mixerEnabled = true
-    @AppStorage(MediaExtrasDefaults.realSpectrumKey) private var realSpectrum = true
+    @AppStorage(MediaExtrasDefaults.realSpectrumKey) private var realSpectrum = false
 
     @ObservedObject private var lyrics = LyricsManager.shared
     @ObservedObject private var mixer = AudioMixerManager.shared
@@ -111,7 +111,7 @@ struct MediaExtrasSettings: View {
             }
             SettingsToggle(
                 title: "Prawdziwe spektrum",
-                subtitle: "Słupki obok notcha reagują na dźwięk z głośników. Bez zgody pokazują animację.",
+                subtitle: "Słupki obok notcha reagują na dźwięk z głośników. macOS poprosi o zgodę na nagrywanie dźwięku systemu; bez niej słupki pokazują animację.",
                 symbol: "waveform",
                 tint: SettingsStyle.teal,
                 isOn: $realSpectrum
