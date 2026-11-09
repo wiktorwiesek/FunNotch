@@ -156,6 +156,9 @@ Tools/
   MakeIcon.swift    Generates the app icon at build time
   fetch-sparkle.sh  Pins and verifies the Sparkle framework
   make-appcast.sh   Signs a release for the auto-updater
+Integrations/
+  omp/              omp extension that publishes omp sessions for AI Agents;
+                    copy it to ~/.omp/agent/extensions/
 ```
 
 The marketing site at [funnotch.xyz](https://funnotch.xyz) is deliberately not

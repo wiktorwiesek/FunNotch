@@ -670,10 +670,14 @@ enum SelfTest {
 
         // MARK: Agents
         //
-        // Claude Code's registry is only ever read: whatever is running is
-        // reported, and nothing in it is touched.
-        let registry = AgentSessionsManager.readClaudeRegistry()
-        info("Claude Code sessions running", "\(registry.count)")
+        // Claude Code's registry, and the one omp's extension keeps, are only
+        // ever read: whatever is running is reported, and nothing in them is
+        // touched.
+        let claudeRegistry = AgentSessionsManager.readClaudeRegistry()
+        let ompRegistry = AgentSessionsManager.readOmpRegistry()
+        info("Claude Code sessions running", "\(claudeRegistry.count)")
+        info("omp sessions running", "\(ompRegistry.count)")
+        let registry = claudeRegistry + ompRegistry
         check(
             "every registry session belongs to a live process",
             registry.allSatisfy { ProcessInfoReader.isAlive($0.pid) }
