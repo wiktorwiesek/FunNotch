@@ -594,23 +594,23 @@ private struct NotesPanel: View {
 // MARK: - Wi-Fi
 
 private struct WiFiPanel: View {
-    @ObservedObject private var weather = WeatherManager.shared
+    @ObservedObject private var wifi = WiFiMonitor.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             PanelLabel(text: "Wi-Fi")
             HStack(spacing: 4) {
-                Image(systemName: weather.isWiFiConnected ? "wifi" : "wifi.slash")
+                Image(systemName: wifi.isConnected ? "wifi" : "wifi.slash")
                     .font(.system(size: 11))
-                    .foregroundStyle(weather.isWiFiConnected ? .white.opacity(0.85) : .white.opacity(0.4))
-                Text(weather.wifiNetwork ?? (weather.isWiFiConnected ? "Połączono" : "Wyłączone"))
+                    .foregroundStyle(wifi.isConnected ? .white.opacity(0.85) : .white.opacity(0.4))
+                Text(wifi.network ?? (wifi.isConnected ? "Połączono" : "Wyłączone"))
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.75))
                     .lineLimit(1)
             }
             // macOS hides the network name behind location access, so say so
             // rather than looking broken when it is simply not permitted.
-            if weather.isWiFiConnected, weather.wifiNetwork == nil, !weather.isLocationAuthorized {
+            if wifi.isConnected, wifi.network == nil, !wifi.isLocationAuthorized {
                 Text("Nazwa wymaga lokalizacji")
                     .font(.system(size: 7.5))
                     .foregroundStyle(.white.opacity(0.35))
@@ -618,10 +618,9 @@ private struct WiFiPanel: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        // Nothing else reads the Wi-Fi state unless a weather view is on screen,
-        // so without this the tile showed "Wyłączone" until one appeared.
-        .onAppear { weather.addSubscriber() }
-        .onDisappear { weather.removeSubscriber() }
+        // Its own light monitor: no weather manager, no location prompt.
+        .onAppear { wifi.addSubscriber() }
+        .onDisappear { wifi.removeSubscriber() }
     }
 }
 

@@ -12,10 +12,6 @@ import Combine
 import SwiftUI
 
 extension PreviewRenderer {
-    /// The user's own value, read before any scene changes it.
-    private static let savedClosedLyrics: Any? =
-        UserDefaults.standard.object(forKey: MediaExtrasDefaults.lyricsInClosedNotchKey)
-
     private static func mediaArtwork() -> NSImage {
         let size = CGSize(width: 300, height: 300)
         let image = NSImage(size: size)
@@ -184,6 +180,7 @@ extension PreviewRenderer {
         scenes.append(("qm-arbitrate", { _ in
             var sources: [MediaControllerType: ScriptedSource] = [:]
             let music = MusicManager.shared
+            qaKeep(Settings.shared, \.mediaController)
             Settings.shared.mediaController = .kaset
             music.controllerFactory = { type in
                 let source = ScriptedSource(type)
@@ -340,7 +337,7 @@ extension PreviewRenderer {
         // The track-change peek: lyric line in the chin, and the plain title
         // when the lyrics are off or there is no line yet.
         scenes.append(("qm-closed-lyric", { viewModel in
-            _ = savedClosedLyrics
+            qaKeepDefaults(MediaExtrasDefaults.lyricsInClosedNotchKey)
             UserDefaults.standard.set(true, forKey: MediaExtrasDefaults.lyricsInClosedNotchKey)
             MusicManager.shared.injectPreviewTrack(mediaTrack(elapsed: 33))
             LyricsManager.shared.injectPreview(lines: mediaLyrics, currentIndex: 2)
@@ -357,6 +354,7 @@ extension PreviewRenderer {
             viewModel.sneakPeek = SneakPeek(show: true, type: .music)
         }))
         scenes.append(("qm-closed-peek-title", { viewModel in
+            qaKeepDefaults(MediaExtrasDefaults.lyricsInClosedNotchKey)
             UserDefaults.standard.set(false, forKey: MediaExtrasDefaults.lyricsInClosedNotchKey)
             MusicManager.shared.injectPreviewTrack(mediaTrack(title: "Żółć w żółtym żwirze", artist: "Taco Hemingway, Żabson"))
             LyricsManager.shared.clearPreview()
@@ -367,11 +365,7 @@ extension PreviewRenderer {
         // Leave the shared layout override as the other scenes expect it.
         scenes.append(("qm-zz-reset", { viewModel in
             HomeLayout.filmTiles = nil
-            if let saved = savedClosedLyrics {
-                UserDefaults.standard.set(saved, forKey: MediaExtrasDefaults.lyricsInClosedNotchKey)
-            } else {
-                UserDefaults.standard.removeObject(forKey: MediaExtrasDefaults.lyricsInClosedNotchKey)
-            }
+            // The closed-notch lyrics default is put back by qaKeepDefaults.
             LyricsManager.shared.clearPreview()
             MusicManager.shared.clearPreviewTrack()
             viewModel.refreshPreviewMusicActivity()

@@ -247,7 +247,12 @@ final class NotchWindowController {
     /// own base width, so it behaves the same relative to its own rect.
     /// Uses only the pointer position, so no Accessibility permission.
     func isPointerOverMenuBarWings(_ point: CGPoint) -> Bool {
-        guard Settings.shared.hideWingsAtMenuBar,
+        // This runs for every global mouse move, on every display. The screen
+        // queries below cost tens of microseconds each, so rule out the (vast
+        // majority of) points away from the top edge with the panel's frame,
+        // whose top is the display's top. No menu bar is taller than this.
+        guard point.y >= panel.frame.maxY - Self.menuBarSearchHeight,
+              Settings.shared.hideWingsAtMenuBar,
               let screen = NSScreen.screen(withIdentifier: viewModel.screenIdentifier) ?? panel.screen
         else { return false }
 
@@ -255,6 +260,7 @@ final class NotchWindowController {
         // frame reaches the top; a notched display still has its safe-area
         // band, which is where the revealed menu bar appears.
         let barHeight = max(screen.frame.maxY - screen.visibleFrame.maxY, screen.safeAreaInsets.top)
+        guard barHeight > 0, point.y >= screen.frame.maxY - barHeight else { return false }
 
         var cutoutWidth = viewModel.closedNotchSize.width
         if let left = screen.auxiliaryTopLeftArea?.width, let right = screen.auxiliaryTopRightArea?.width {
@@ -264,6 +270,9 @@ final class NotchWindowController {
             point, screenFrame: screen.frame, barHeight: barHeight, cutoutWidth: cutoutWidth
         )
     }
+
+    /// Generous upper bound for a menu bar's height (a notched MacBook's is 38).
+    private static let menuBarSearchHeight: CGFloat = 80
 
     /// The geometry behind `isPointerOverMenuBarWings`, free of any AppKit
     /// state so it can be checked directly.

@@ -159,6 +159,10 @@ void fn_stream(void) {
                     out[@"artworkID"] = artworkID;
                     NSData *data = info[@"kMRMediaRemoteNowPlayingInfoArtworkData"];
                     if ([data isKindOfClass:[NSData class]] && data.length > 0) artwork = data;
+                } else {
+                    // The app drops its picture on an empty report; when the
+                    // same item comes back it needs the image again.
+                    lastArtworkID = @"";
                 }
 
                 // Sorted keys, so an unchanged state always serialises the

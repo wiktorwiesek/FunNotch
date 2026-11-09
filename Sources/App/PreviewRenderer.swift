@@ -771,12 +771,30 @@ extension PreviewRenderer {
     typealias QAScene = (name: String, configure: (NotchViewModel) -> Void)
 
     /// Remembers a preference so the end of the run puts it back.
-    private static func qaKeep<O: AnyObject, T>(_ object: O, _ keyPath: ReferenceWritableKeyPath<O, T>) {
+    static func qaKeep<O: AnyObject, T>(_ object: O, _ keyPath: ReferenceWritableKeyPath<O, T>) {
         let value = object[keyPath: keyPath]
         let previous = restoreSettings
+        // Own value first, then the earlier registrations: the chain runs
+        // newest to oldest, so the very first saved value is applied last and
+        // wins. (Running `previous` first let later scenes' values stick.)
         restoreSettings = {
-            previous?()
             object[keyPath: keyPath] = value
+            previous?()
+        }
+    }
+
+    /// Same for a raw `UserDefaults` key (absent stays absent), so a scene
+    /// that writes one is undone even when the scene list is filtered.
+    static func qaKeepDefaults(_ key: String) {
+        let value = UserDefaults.standard.object(forKey: key)
+        let previous = restoreSettings
+        restoreSettings = {
+            if let value {
+                UserDefaults.standard.set(value, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+            previous?()
         }
     }
 

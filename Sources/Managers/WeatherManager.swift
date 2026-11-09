@@ -6,8 +6,8 @@
 //  no account. Location comes from CoreLocation; if the user says no, the
 //  widget just says so rather than the app pretending otherwise.
 //
-//  Wi-Fi network names also need location access on modern macOS, so the same
-//  authorisation covers both widgets.
+//  Wi-Fi network names also need location access on modern macOS; that lives in
+//  `WiFiMonitor`, which never starts any of this.
 //
 
 import Combine
@@ -30,14 +30,9 @@ final class WeatherManager: NSObject, ObservableObject {
     @Published private(set) var conditions: Conditions?
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
     @Published private(set) var lastError: String?
-    /// Current Wi-Fi network, which also needs location permission to read.
-    @Published private(set) var wifiNetwork: String?
 
     private let locationManager = CLLocationManager()
     private var timer: Timer?
-    /// Wi-Fi state is cheap to read and changes in seconds (unplugging, a
-    /// router reboot), unlike the ten-minute weather refresh it rode along on.
-    private var wifiTimer: Timer?
     private var subscribers = 0
     private var lastFetch: Date?
     private var isFetching = false
@@ -86,25 +81,14 @@ final class WeatherManager: NSObject, ObservableObject {
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
-
-        let wifiTimer = Timer(timeInterval: 10, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.readWiFi() }
-        }
-        wifiTimer.tolerance = 3
-        RunLoop.main.add(wifiTimer, forMode: .common)
-        self.wifiTimer = wifiTimer
     }
 
     private func stop() {
         timer?.invalidate()
         timer = nil
-        wifiTimer?.invalidate()
-        wifiTimer = nil
     }
 
     func refresh() {
-        readWiFi()
-
         guard isLocationAuthorized else {
             lastError = "Wymagany dostęp do lokalizacji"
             return
@@ -113,23 +97,9 @@ final class WeatherManager: NSObject, ObservableObject {
     }
 
     /// True once the user has said yes. macOS hides the Wi-Fi network name
-    /// behind location access as well, not just the weather.
+    /// behind location access as well (see `WiFiMonitor`).
     var isLocationAuthorized: Bool {
         authorization == .authorized || authorization == .authorizedAlways
-    }
-
-    /// Whether there is a Wi-Fi interface associated with a network at all,
-    /// which is knowable even when the name is not.
-    @Published private(set) var isWiFiConnected = false
-
-    private func readWiFi() {
-        let interface = CWWiFiClient.shared().interface()
-        // Assigned only on change: this runs every few seconds, and every
-        // assignment to a published property redraws whatever observes it.
-        let connected = interface?.powerOn() == true && interface?.serviceActive() == true
-        if connected != isWiFiConnected { isWiFiConnected = connected }
-        let ssid = interface?.ssid()
-        if ssid != wifiNetwork { wifiNetwork = ssid }
     }
 
     private func fetch(for location: CLLocation) {

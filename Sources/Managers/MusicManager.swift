@@ -319,9 +319,14 @@ final class MusicManager: ObservableObject {
         }
 
         let wasPlaying = slot.isPlaying
+        let previousBundle = slot.info.bundleIdentifier
         slot.info = info
         if slot.isPlaying {
-            if !wasPlaying { slot.playingSince = Date() }
+            // The system slot follows whichever app owns Now Playing; a
+            // different owner that is already "playing" is a newer start.
+            // (A missing id is a failed lookup, not a new owner.)
+            let newOwner = previousBundle != nil && info.bundleIdentifier != nil && previousBundle != info.bundleIdentifier
+            if !wasPlaying || newOwner { slot.playingSince = Date() }
         } else {
             slot.playingSince = nil
         }

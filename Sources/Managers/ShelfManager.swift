@@ -51,8 +51,11 @@ final class ShelfManager: NSObject, ObservableObject {
     private var accessedURLs: [URL] = []
 
     private lazy var temporaryDirectory: URL = {
+        // Per bundle id, so a renamed QA copy never sees (or purges) the
+        // installed app's cache.
         let base = FileManager.default.standardDirectory(.cachesDirectory, fallback: "Library/Caches")
-            .appendingPathComponent("com.funnotch.FunNotch/Shelf", isDirectory: true)
+            .appendingPathComponent(Bundle.main.bundleIdentifier ?? "com.funnotch.FunNotch", isDirectory: true)
+            .appendingPathComponent("Shelf", isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base
     }()
@@ -339,15 +342,24 @@ final class ShelfManager: NSObject, ObservableObject {
         return directory
     }
 
-    /// Removes working folders left behind by a conversion that was interrupted.
+    /// Removes what a previous run left in the cache: working folders of an
+    /// interrupted conversion, and cached files no restored item points at
+    /// (their delayed delete after a drag out never ran if the app quit first).
+    /// Meant for launch, before anything new is added.
     func purgeStaging() {
         let contents = (try? FileManager.default.contentsOfDirectory(
             at: temporaryDirectory,
             includingPropertiesForKeys: nil,
             options: []
         )) ?? []
-        for url in contents where url.lastPathComponent.hasPrefix(".work-") {
-            try? FileManager.default.removeItem(at: url)
+        // Bookmarks resolve to real paths ("/private/…"), so compare resolved ones.
+        let referenced = items.map { $0.url.resolvingSymlinksInPath().path }
+        for url in contents {
+            let path = url.resolvingSymlinksInPath().path
+            let inUse = referenced.contains { $0 == path || $0.hasPrefix(path + "/") }
+            if url.lastPathComponent.hasPrefix(".work-") || !inUse {
+                try? FileManager.default.removeItem(at: url)
+            }
         }
     }
 

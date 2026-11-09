@@ -266,21 +266,27 @@ final class NotificationBannerWatcher: ObservableObject {
 
         let now = Date()
         delivered = delivered.filter { $0.value > now }
+        var seen = Set<String>()
         for banner in banners {
             guard !banner.text.isEmpty else { continue }
             let content = [banner.appName ?? "", banner.title, banner.subtitle, banner.body].joined(separator: "\u{1F}")
             let key = (banner.identifier ?? "") + "|" + content
-            let lifetime: TimeInterval = banner.identifier == nil ? 15 : 600
+            seen.insert(key)
             // A banner still on screen stays "delivered": its lifetime restarts on
             // every scan that sees it. Otherwise an alert left up for longer than
             // the lifetime would be announced a second time as soon as any other
-            // banner triggered a scan.
-            if delivered[key] != nil {
-                delivered[key] = now.addingTimeInterval(lifetime)
-                continue
-            }
-            delivered[key] = now.addingTimeInterval(lifetime)
-            onBanner?(banner)
+            // banner triggered a scan. A collapsed stack (no identifier) gets the
+            // same hold; it is shortened below once it has left the screen.
+            let alreadyDelivered = delivered[key] != nil
+            delivered[key] = now.addingTimeInterval(600)
+            if !alreadyDelivered { onBanner?(banner) }
+        }
+        // Without an identifier the key names only the top message, so once
+        // it is gone an identical message must be announced again soon, not
+        // ten minutes on.
+        let soon = now.addingTimeInterval(15)
+        for (key, expiry) in delivered where key.hasPrefix("|") && !seen.contains(key) && expiry > soon {
+            delivered[key] = soon
         }
     }
 

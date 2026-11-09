@@ -407,40 +407,37 @@ private struct WeatherWidget: View {
 }
 
 private struct WiFiWidget: View {
-    @ObservedObject private var weather = WeatherManager.shared
+    @ObservedObject private var wifi = WiFiMonitor.shared
 
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: symbol)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(weather.wifiNetwork == nil ? 0.45 : 0.85))
+                .foregroundStyle(.white.opacity(wifi.isConnected ? 0.85 : 0.45))
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white.opacity(weather.wifiNetwork == nil ? 0.55 : 0.85))
+                .foregroundStyle(.white.opacity(wifi.isConnected ? 0.85 : 0.55))
                 .lineLimit(1)
         }
         .fixedSize()
         .help(helpText)
-        .onAppear { weather.addSubscriber() }
-        .onDisappear { weather.removeSubscriber() }
+        .onAppear { wifi.addSubscriber() }
+        .onDisappear { wifi.removeSubscriber() }
     }
 
     private var symbol: String {
-        if let network = weather.wifiNetwork, !network.isEmpty { return "wifi" }
-        if !weather.isLocationAuthorized { return "wifi.exclamationmark" }
-        return weather.isWiFiConnected ? "wifi" : "wifi.slash"
+        wifi.isConnected ? "wifi" : "wifi.slash"
     }
 
-    // "Offline" would be a lie when the real problem is that macOS will not
-    // hand over the network name without location access.
+    // Without location access macOS withholds the network name; the widget
+    // then says only whether there is a connection.
     private var label: String {
-        if let network = weather.wifiNetwork, !network.isEmpty { return network }
-        if !weather.isLocationAuthorized { return "Włącz lokalizację" }
-        return weather.isWiFiConnected ? "Połączono" : "Brak sieci"
+        if let network = wifi.network, !network.isEmpty { return network }
+        return wifi.isConnected ? "Połączono" : "Brak sieci"
     }
 
     private var helpText: String {
-        weather.isLocationAuthorized
+        wifi.isLocationAuthorized || !wifi.isConnected
             ? "Sieć Wi-Fi"
             : "macOS podaje nazwę sieci tylko aplikacjom z dostępem do lokalizacji — kliknij, aby przyznać dostęp"
     }

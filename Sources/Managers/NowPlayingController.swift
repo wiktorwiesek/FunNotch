@@ -202,9 +202,13 @@ final class NowPlayingController: MediaController {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: Self.perlPath)
         process.arguments = ["-e", Self.loader, library.path, function]
-        var env = ProcessInfo.processInfo.environment
-        env.removeValue(forKey: "PERL5LIB")
-        env.removeValue(forKey: "PERL5OPT")
+        // A clean environment, not the app's: perl is not hardened-runtime, so
+        // variables such as PERLLIB (not just PERL5LIB/PERL5OPT) would make it
+        // load someone else's code with this app's privacy permissions.
+        var env = ["PATH": "/usr/bin:/bin"]
+        for key in ["HOME", "TMPDIR"] {
+            if let value = ProcessInfo.processInfo.environment[key] { env[key] = value }
+        }
         for (key, value) in environment { env[key] = value }
         process.environment = env
         process.standardError = FileHandle.nullDevice
@@ -285,7 +289,8 @@ final class NowPlayingController: MediaController {
             DiagnosticLog.write("media", "now playing bridge: \(error)")
             return
         }
-        quickExits = 0
+        // quickExits is reset by the termination handler (a run of 3 s or more),
+        // not here: a bridge that prints one line and crashes must still count.
 
         var info = TrackInfo()
         let title = root["title"] as? String ?? ""

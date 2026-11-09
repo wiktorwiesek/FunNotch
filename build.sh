@@ -249,6 +249,10 @@ fi
 
 if [ -n "$SIGN_IDENTITY" ]; then
   echo "==> Signing as $SIGN_IDENTITY"
+  # The bridge is code inside Resources, which --deep does not sign (and
+  # notarisation rejects unsigned Mach-O files): sign it first, with the same
+  # identity and options as the app.
+  codesign --force --sign "$SIGN_IDENTITY" --options runtime --timestamp "$RESOURCES_DIR/mrbridge.dylib"
   # --timestamp and the hardened runtime are both required for notarisation.
   codesign --force --deep --sign "$SIGN_IDENTITY" \
     --options runtime \
@@ -265,6 +269,9 @@ else
     | sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' | head -1)
   if [ -n "$LOCAL_IDENTITY" ]; then
     echo "==> Signing as $LOCAL_IDENTITY (local)"
+    # The bridge is code inside Resources, which --deep does not sign; do it
+    # first, with the same identity and options as the app.
+    codesign --force --sign "$LOCAL_IDENTITY" --options runtime "$RESOURCES_DIR/mrbridge.dylib"
     codesign --force --deep --sign "$LOCAL_IDENTITY" \
       --options runtime \
       --entitlements FunNotch.entitlements \

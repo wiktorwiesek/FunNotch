@@ -308,6 +308,15 @@ final class BrowserMediaController: MediaController {
             guard let self else { return }
 
             guard let result, result.contains(fieldSeparator) else {
+                // A later tab failing says nothing about JavaScript being off:
+                // an earlier tab was read fine, so that read stands.
+                if let firstRead {
+                    self.activeTab = (browser, firstRead.hit.window, firstRead.hit.tab)
+                    self.isScanning = false
+                    self.noteReadMode(scripted: true, browser: browser)
+                    self.apply(rawState: firstRead.raw, site: firstRead.hit.site, browser: browser, pageURL: firstRead.hit.url)
+                    return
+                }
                 // JavaScript is switched off; the tab title still names the
                 // track. Nothing distinguishes the tabs from one another then.
                 self.activeTab = (browser, hits[0].window, hits[0].tab)

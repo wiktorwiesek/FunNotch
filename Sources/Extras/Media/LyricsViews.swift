@@ -32,7 +32,7 @@ struct LyricsPlayerBlock: View {
         switch state {
         case .synced: return requested
         case .plain: return .one
-        case .idle, .loading, .instrumental, .notFound, .unavailable: return nil
+        case .idle, .loading, .instrumental, .notFound, .skipped, .unavailable: return nil
         }
     }
 
@@ -76,7 +76,7 @@ struct LyricsPlayerBlock: View {
             .animation(.easeOut(duration: 0.2), value: lyrics.currentIndex)
         case .plain:
             note("Tekst bez synchronizacji · kliknij, aby przeczytać")
-        case .loading, .instrumental, .notFound, .unavailable, .idle:
+        case .loading, .instrumental, .notFound, .skipped, .unavailable, .idle:
             EmptyView()
         }
     }
@@ -116,6 +116,12 @@ struct LyricsFullView: View {
                 message(symbol: "pianokeys", text: "Utwór instrumentalny", detail: nil)
             case .notFound:
                 message(symbol: "text.badge.xmark", text: "Brak tekstu", detail: "LRCLIB nie ma tego utworu.")
+            case .skipped:
+                message(
+                    symbol: "text.badge.minus",
+                    text: "Bez wyszukiwania tekstu",
+                    detail: "To nagranie nie wygląda na piosenkę (zbyt długie lub zbyt krótkie)."
+                )
             case .unavailable:
                 message(
                     symbol: "wifi.exclamationmark",

@@ -23,6 +23,8 @@ final class KasetMediaController: MediaController {
     private var artworkKey = ""
     /// Consecutive polls that returned nothing usable.
     private var failures = 0
+    /// True while a `get player info` is out; see `refresh`.
+    private var isReading = false
 
     var isAvailable: Bool {
         AppleScriptRunner.isRunning(Self.bundleIdentifier)
@@ -55,11 +57,17 @@ final class KasetMediaController: MediaController {
         // Armed before the read so a script that never answers cannot end
         // the polling; re-armed below once the answer says what is playing.
         scheduleNextPoll()
+        // One read at a time: every AppleScript shares one thread, so a
+        // blocked Kaset would otherwise queue a backlog of polls ahead of
+        // the transport commands of whichever source is on screen.
+        guard !isReading else { return }
+        isReading = true
         // `is running` first: a bare `tell` would relaunch a Kaset that quit
         // between the check above and the script running.
         let script = "if application \"Kaset\" is running then\ntell application \"Kaset\"\nreturn get player info\nend tell\nend if\nreturn \"\""
         AppleScriptRunner.shared.runForString(script) { [weak self] json in
             guard let self else { return }
+            self.isReading = false
             guard let json, let state = PlayerInfo(json: json) else {
                 self.noteFailure(json == nil ? "no answer" : "unreadable player info")
                 return

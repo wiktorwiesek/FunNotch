@@ -41,6 +41,8 @@ final class ScriptedMediaController: MediaController {
     private var current = TrackInfo()
     private var lastArtworkKey = ""
     private var observer: NSObjectProtocol?
+    /// True while a state read is out; see `refresh`.
+    private var isReading = false
 
     init?(type: MediaControllerType) {
         guard let dialect = ScriptedMediaController.dialect(for: type) else { return nil }
@@ -91,9 +93,16 @@ final class ScriptedMediaController: MediaController {
             return
         }
         scheduleNextPoll()
+        // One read at a time: every AppleScript shares one thread, so a
+        // blocked app (beachballing, or waiting on the Automation prompt)
+        // would otherwise queue a backlog of polls ahead of the transport
+        // commands of whichever source is on screen.
+        guard !isReading else { return }
+        isReading = true
 
         AppleScriptRunner.shared.run(dialect.guardedStateScript) { [weak self] descriptor, error in
             guard let self else { return }
+            self.isReading = false
             // No answer at all (the app is busy, or Automation was refused) is
             // not the same as an answer of "nothing is loaded".
             guard error == nil, let result = descriptor?.stringValue else { return }

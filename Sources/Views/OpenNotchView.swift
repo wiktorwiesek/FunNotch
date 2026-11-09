@@ -575,6 +575,10 @@ private struct PlaybackSlider: View {
             }
         )
         .frame(height: 12)
+        // The slider can leave mid-drag (the layout ladder changes rung, the
+        // source changes to one without timing); its drag then never ends,
+        // and a stuck flag would freeze the playhead and lyrics.
+        .onDisappear { music.isScrubbing = false }
     }
 }
 

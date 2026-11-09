@@ -39,6 +39,9 @@ enum LyricsState: Equatable {
     case plain
     case instrumental
     case notFound
+    /// The recording does not look like a song (a long mix, a short clip), so
+    /// no lookup was made.
+    case skipped
     /// The request itself failed (no network, server error), as opposed to
     /// the track simply having no lyrics.
     case unavailable
@@ -457,7 +460,8 @@ final class LyricsManager: ObservableObject {
         loadedKey = key
 
         guard Self.looksLikeSong(track) else {
-            state = .notFound
+            // Never looked up, so "LRCLIB does not have it" would be untrue.
+            state = .skipped
             return
         }
 

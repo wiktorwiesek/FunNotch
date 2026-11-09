@@ -253,7 +253,13 @@ enum ClipboardSmart {
         guard values.count == 11 else { return false }
         let weights = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3]
         let sum = zip(values.prefix(10), weights).reduce(0) { $0 + $1.0 * $1.1 }
-        return (10 - sum % 10) % 10 == values[10]
+        guard (10 - sum % 10) % 10 == values[10] else { return false }
+        // The checksum alone passes about one eleven-digit string in ten, which
+        // would swallow real phone numbers. A PESEL also carries a birth date:
+        // month + 0/20/40/60/80 for the century, then the day.
+        let month = values[2] * 10 + values[3]
+        let day = values[4] * 10 + values[5]
+        return (1 ... 12).contains(month % 20) && month / 20 <= 4 && (1 ... 31).contains(day)
     }
 
     /// "123-456-32-18"

@@ -355,7 +355,9 @@ struct NotchSlider: View {
                         value = range.lowerBound + ratio * span
                     }
                     .onEnded { _ in
-                        guard isEnabled else { return }
+                        // Not `isEnabled`: it can turn false mid-drag, and the
+                        // drag that began must still end.
+                        guard isDragging else { return }
                         isDragging = false
                         onEditingChanged?(false)
                     }

@@ -236,25 +236,33 @@ final class BrowserScriptAccess: ObservableObject {
     // MARK: - Menu walking
 
     /// The "Allow JavaScript from Apple Events" item, in any language: a menu
-    /// item mentioning both "JavaScript" and "Apple Events", found by walking
-    /// the menu bar four levels deep.
+    /// item mentioning both "JavaScript" and "Apple Event(s)", found by
+    /// walking the menu bar five levels deep (bar item → menu → "Developer"
+    /// → submenu → item; one level short missed it in Chrome-family browsers).
     static func javaScriptMenuItem(in application: AXUIElement) -> AXUIElement? {
         guard let bar = copyElement(application, attribute: kAXMenuBarAttribute) else { return nil }
 
         func search(_ element: AXUIElement, depth: Int) -> AXUIElement? {
             guard depth > 0, let children = copyChildren(element) else { return nil }
             for child in children {
-                if let title = copyString(child, attribute: kAXTitleAttribute),
-                   title.localizedCaseInsensitiveContains("JavaScript"),
-                   title.localizedCaseInsensitiveContains("Apple Events")
-                {
+                if let title = copyString(child, attribute: kAXTitleAttribute), isJavaScriptItemTitle(title) {
                     return child
                 }
                 if let found = search(child, depth: depth - 1) { return found }
             }
             return nil
         }
-        return search(bar, depth: 4)
+        return search(bar, depth: 5)
+    }
+
+    /// Matches the title in any localisation: diacritics, case and
+    /// non-breaking spaces (menus use them) are ignored, so Polish titles such
+    /// as "Zezwól na kod JavaScript z Apple Events" are recognised.
+    static func isJavaScriptItemTitle(_ title: String) -> Bool {
+        let folded = title
+            .replacingOccurrences(of: "\u{00A0}", with: " ")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+        return folded.contains("javascript") && folded.contains("apple event")
     }
 
     static func isChecked(_ item: AXUIElement) -> Bool {

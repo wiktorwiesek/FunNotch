@@ -99,6 +99,7 @@ struct MediaExtrasSettings: View {
         case .plain: return "Mam tekst bez synchronizacji, więc nie będzie się przewijał."
         case .instrumental: return "To utwór instrumentalny."
         case .notFound: return "Brak tekstu dla bieżącego utworu."
+        case .skipped: return "To nagranie nie wygląda na piosenkę, więc nie szukam tekstu."
         case .unavailable: return "Nie udało się połączyć z LRCLIB."
         }
     }
