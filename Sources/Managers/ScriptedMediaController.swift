@@ -37,7 +37,7 @@ final class ScriptedMediaController: MediaController {
     var onUpdate: ((TrackInfo) -> Void)?
 
     private let dialect: ScriptDialect
-    private var timer: Timer?
+    private let poll = AdaptivePoll()
     private var current = TrackInfo()
     private var lastArtworkKey = ""
     private var observer: NSObjectProtocol?
@@ -63,33 +63,34 @@ final class ScriptedMediaController: MediaController {
             self?.refresh()
         }
 
-        // The notification covers state changes; the timer keeps the scrubber
-        // honest and notices apps launching or quitting.
-        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refresh() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        // The notification covers state changes; the adaptive poll catches
+        // what it misses (a seek, a track change some versions do not post).
         refresh()
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        poll.cancel()
         if let observer {
             DistributedNotificationCenter.default().removeObserver(observer)
             self.observer = nil
         }
     }
 
+    private func scheduleNextPoll() {
+        let interval = AdaptivePoll.interval(bundleIdentifier: dialect.bundleIdentifier, isPlaying: current.isPlaying)
+        poll.schedule(after: interval) { [weak self] in self?.refresh() }
+    }
+
     func refresh() {
         guard isAvailable else {
+            poll.cancel()
             if !current.isEmpty || current.isPlaying {
                 current = TrackInfo()
                 onUpdate?(current)
             }
             return
         }
+        scheduleNextPoll()
 
         AppleScriptRunner.shared.run(dialect.guardedStateScript) { [weak self] descriptor, error in
             guard let self else { return }
@@ -136,8 +137,10 @@ final class ScriptedMediaController: MediaController {
             fetchArtwork(for: key)
         }
 
+        let wasPlaying = current.isPlaying
         current = info
         onUpdate?(info)
+        if info.isPlaying != wasPlaying { scheduleNextPoll() }
     }
 
     private static func parseRepeat(_ raw: String) -> RepeatMode {

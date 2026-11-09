@@ -18,17 +18,36 @@ import AppKit
 import Combine
 import SwiftUI
 
+/// The playhead the scrubber and lyrics follow.
+///
+/// Kept out of `MusicManager` on purpose: it changes five times a second
+/// while music plays, and every view observing the manager — the root of the
+/// notch among them — re-rendered with it, closed notch included. Only the
+/// views that draw the position observe this.
+@MainActor
+final class PlaybackClock: ObservableObject {
+    @Published var elapsed: TimeInterval = 0
+}
+
 @MainActor
 final class MusicManager: ObservableObject {
     static let shared = MusicManager()
 
-    @Published private(set) var track = TrackInfo()
+    @Published private(set) var track = TrackInfo() {
+        didSet {
+            if track.isPlaying != oldValue.isPlaying { updateTicking() }
+        }
+    }
     @Published private(set) var artwork: NSImage?
     /// Colours sampled from the artwork, used to tint the player.
     @Published private(set) var artworkColor: Color = .gray
     @Published private(set) var artworkSecondaryColor: Color = .gray
-    /// Continuously updated playback position for the scrubber.
-    @Published var displayedElapsed: TimeInterval = 0
+    /// Continuously updated playback position; observe `playback` to redraw with it.
+    let playback = PlaybackClock()
+    var displayedElapsed: TimeInterval {
+        get { playback.elapsed }
+        set { playback.elapsed = newValue }
+    }
     /// True while the user is dragging the scrubber, so updates do not fight them.
     @Published var isScrubbing = false
 
@@ -91,6 +110,14 @@ final class MusicManager: ObservableObject {
             .sink { [weak self] _ in self?.activateControllers() }
             .store(in: &cancellables)
 
+        // A player brought to the front is about to be clicked; read it now,
+        // which also moves its polling to the fast rate (`AdaptivePoll`).
+        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)
+            .compactMap { ($0.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier }
+            .receive(on: RunLoop.main)
+            .sink { [weak self] bundle in self?.refreshSource(ownedBy: bundle) }
+            .store(in: &cancellables)
+
         // The automatic-source switch lives in UserDefaults; this fires for
         // every key, so only act when ours actually changed.
         var lastAuto = MediaExtrasDefaults.autoSource
@@ -105,10 +132,22 @@ final class MusicManager: ObservableObject {
             .store(in: &cancellables)
 
         activateControllers()
+        updateTicking()
+    }
 
+    /// The playhead only moves while something plays; a paused or empty
+    /// player needs no timer at all.
+    private func updateTicking() {
+        guard track.isPlaying else {
+            tickTimer?.invalidate()
+            tickTimer = nil
+            return
+        }
+        guard tickTimer == nil else { return }
         let timer = Timer(timeInterval: 0.2, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
+        timer.tolerance = 0.05
         RunLoop.main.add(timer, forMode: .common)
         tickTimer = timer
     }
@@ -116,11 +155,16 @@ final class MusicManager: ObservableObject {
     private func tick() {
         guard !isScrubbing else { return }
         let elapsed = track.interpolatedElapsed
-        // Assigning an unchanged value still fires `objectWillChange`, and
-        // that redraws and re-lays-out the whole notch. Five times a second
-        // with nothing playing, this was the busiest thing the app did.
+        // Assigning an unchanged value still notifies every observer.
         if abs(elapsed - displayedElapsed) > 0.05 {
             displayedElapsed = elapsed
+        }
+    }
+
+    /// Re-reads the source that drives the app with this bundle identifier.
+    private func refreshSource(ownedBy bundle: String) {
+        for slot in slots.values where slot.type.appBundleIdentifier == bundle {
+            slot.controller.refresh()
         }
     }
 
@@ -243,6 +287,14 @@ final class MusicManager: ObservableObject {
         guard let slot = slots[type] else { return }
         var info = incoming
 
+        // The system feed reports a change the moment it happens; the app's
+        // own source polls slowly (`AdaptivePoll`) and would otherwise hold
+        // the display on its stale answer, since it shadows this one.
+        if type == .nowPlaying, let bundle = incoming.bundleIdentifier,
+           incoming.isPlaying != slot.info.isPlaying || incoming.title != slot.info.title {
+            refreshSource(ownedBy: bundle)
+        }
+
         if info.isEmpty, !slot.info.isEmpty {
             let now = Date()
             if let since = slot.emptySince {
@@ -362,7 +414,7 @@ final class MusicManager: ObservableObject {
         let key = "\(info.title)|\(info.artist)|\(info.album)"
         let isNewTrack = !info.title.isEmpty && key != lastTrackKey
 
-        // Every backend reports about once a second; most reports change
+        // Backends report every few seconds or on change; most reports change
         // nothing the UI shows, and each assignment redraws the notch. The
         // position counts as a change only if it drifted off the projection.
         if info != track || abs(info.interpolatedElapsed - track.interpolatedElapsed) > 0.6 {

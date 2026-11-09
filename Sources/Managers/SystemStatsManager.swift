@@ -74,9 +74,16 @@ final class SystemStatsManager: ObservableObject {
     func refresh() {
         readCPU()
         readMemory()
-        readDisk()
+        // Free space is an XPC round trip to the cache-delete daemon (it
+        // counts purgeable space) and barely moves; a minute is plenty.
+        if Date().timeIntervalSince(lastDiskRead) >= 60 {
+            lastDiskRead = Date()
+            readDisk()
+        }
         recordHistory()
     }
+
+    private var lastDiskRead = Date.distantPast
 
     private func recordHistory() {
         cpuHistory.append(cpuUsage)
@@ -141,8 +148,11 @@ final class SystemStatsManager: ObservableObject {
         let total = ProcessInfo.processInfo.physicalMemory
         guard total > 0 else { return }
 
-        memoryUsedBytes = used
-        memoryUsage = min(max(Double(used) / Double(total), 0), 1)
+        // Unchanged values are not assigned: each assignment invalidates
+        // every view observing this manager.
+        if memoryUsedBytes != used { memoryUsedBytes = used }
+        let usage = min(max(Double(used) / Double(total), 0), 1)
+        if memoryUsage != usage { memoryUsage = usage }
     }
 
     // MARK: - Disk

@@ -162,6 +162,11 @@ final class NotchWindowController {
         container.autoresizingMask = [.width, .height]
 
         let hosting = NSHostingView(rootView: rootView)
+        // The panel has a fixed size and the root view frames itself to it,
+        // so the hosting view has nothing to tell Auto Layout. With the
+        // default options it recomputed its ideal size and updated its
+        // constraints on every render — every frame of every animation.
+        hosting.sizingOptions = []
         hosting.frame = container.bounds
         hosting.autoresizingMask = [.width, .height]
         container.addSubview(hosting)

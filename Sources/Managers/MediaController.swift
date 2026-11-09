@@ -116,3 +116,46 @@ extension MediaController {
     func toggleLike() {}
     func toggleDislike() {}
 }
+
+/// The read schedule of a player driven over Apple Events.
+///
+/// Every read is a round trip into the player's process, and every source
+/// runs at once, so a fixed one-second poll per player kept the CPU awake all
+/// day for apps that sat paused or were not even open. The next read is
+/// re-armed after each one, at a rate that follows what can still change.
+/// Position needs no polling at all: `TrackInfo.interpolatedElapsed`
+/// projects it from the last read.
+final class AdaptivePoll {
+    private var timer: Timer?
+
+    /// Seconds until the next read, or nil for none. A player that is not
+    /// running is not polled: `MusicManager` refreshes every source when an
+    /// app launches, which re-arms this.
+    static func interval(bundleIdentifier: String, isPlaying: Bool) -> TimeInterval? {
+        guard AppleScriptRunner.isRunning(bundleIdentifier) else { return nil }
+        // Nobody is looking; the first read after unlocking catches up.
+        if SystemActivityMonitor.isScreenIdle { return 30 }
+        // In front, the user is likely clicking its own controls.
+        if NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundleIdentifier { return 1 }
+        // Playing: notice the next track soon after it starts. The system
+        // Now Playing feed also nudges a read on every change it sees.
+        if isPlaying { return 2 }
+        return 5
+    }
+
+    func schedule(after interval: TimeInterval?, _ action: @escaping () -> Void) {
+        timer?.invalidate()
+        timer = nil
+        guard let interval else { return }
+        let timer = Timer(timeInterval: interval, repeats: false) { _ in action() }
+        // Lets macOS fold this wake-up into others.
+        timer.tolerance = interval * 0.25
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    func cancel() {
+        timer?.invalidate()
+        timer = nil
+    }
+}

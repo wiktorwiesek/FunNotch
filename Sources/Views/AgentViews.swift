@@ -8,6 +8,7 @@
 //  announcement in the notch uses.
 //
 
+import AppKit
 import SwiftUI
 
 // MARK: - Motion
@@ -129,20 +130,27 @@ struct OrbitSpinner: View {
     @Environment(\.decorAnimationsPaused) private var paused
 
     var body: some View {
-        // 15 fps and frozen while the notch is hidden: a 30 Hz timeline for a
-        // 13-point ring cost a steady slice of a core while an agent worked.
-        TimelineView(.animation(minimumInterval: 1.0 / 15.0, paused: paused)) { context in
-            let angle = Motion.filmTime.map { $0 * 300 }
-                ?? (Motion.snapshotMode ? 40 : context.date.timeIntervalSinceReferenceDate * 300)
-            ZStack {
-                Circle().stroke(tint.opacity(0.25), lineWidth: 1.6)
-                Circle()
-                    .trim(from: 0, to: 0.3)
-                    .stroke(tint, style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
-                    .rotationEffect(.degrees(angle))
-            }
-            .frame(width: size, height: size)
+        if Motion.filmTime != nil || Motion.snapshotMode {
+            // The offline renderers draw views, not layer animations.
+            drawn(angle: Motion.filmTime.map { $0 * 300 } ?? 40)
+        } else {
+            // Turned by Core Animation in the render server: an agent can
+            // work for hours, and the 15 fps SwiftUI timeline this replaces
+            // re-laid-out the whole notch window on every frame of it.
+            LayerOrbit(size: size, tint: NSColor(tint), paused: paused)
+                .frame(width: size, height: size)
         }
+    }
+
+    private func drawn(angle: Double) -> some View {
+        ZStack {
+            Circle().stroke(tint.opacity(0.25), lineWidth: 1.6)
+            Circle()
+                .trim(from: 0, to: 0.3)
+                .stroke(tint, style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                .rotationEffect(.degrees(angle))
+        }
+        .frame(width: size, height: size)
     }
 }
 
@@ -176,17 +184,25 @@ struct AgentWaitingGlyph: View {
         } else if Motion.snapshotMode {
             drawn(1.1)
         } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 15.0, paused: paused)) { context in
-                drawn(context.date.timeIntervalSinceReferenceDate)
-            }
+            // A session can wait for an answer all night; Core Animation
+            // plays the wave without waking the app (see `LayerOrbit`).
+            LayerWaitingHand(size: size, paused: paused)
+                .frame(width: size * 1.3, height: size * 1.3)
         }
     }
 
-    private func drawn(_ t: Double) -> some View {
-        let period = 2.2
+    static let period = 2.2
+    static let ringPeriod = 1.4
+
+    /// The hand's tilt in degrees, clockwise, at `t` seconds.
+    static func waveAngle(_ t: Double) -> Double {
         let local = t.truncatingRemainder(dividingBy: period)
         let wave = max(0, 1 - local / 0.9)
-        let ring = t.truncatingRemainder(dividingBy: 1.4) / 1.4
+        return sin(local * 16) * 16 * wave
+    }
+
+    private func drawn(_ t: Double) -> some View {
+        let ring = t.truncatingRemainder(dividingBy: Self.ringPeriod) / Self.ringPeriod
         return ZStack {
             Circle()
                 .stroke(AgentPalette.waiting.opacity(0.55 * (1 - ring)), lineWidth: 1.2)
@@ -194,9 +210,218 @@ struct AgentWaitingGlyph: View {
             Image(systemName: "hand.raised.fill")
                 .font(.system(size: size * 0.82, weight: .semibold))
                 .foregroundStyle(AgentPalette.waiting)
-                .rotationEffect(.degrees(sin(local * 16) * 16 * wave), anchor: .bottom)
+                .rotationEffect(.degrees(Self.waveAngle(t)), anchor: .bottom)
         }
         .frame(width: size * 1.3, height: size * 1.3)
+    }
+}
+
+// MARK: - Layer-driven glyphs
+
+/// Base for glyphs animated by Core Animation. The animations run in the
+/// render server, so a glyph that moves for hours costs the app nothing per
+/// frame; they are dropped while paused and stop being drawn with the window.
+/// Each one also asks for the frame rate the SwiftUI version had, so the
+/// render server does not redraw it at the display's full refresh rate.
+private class AgentLayerView: NSView {
+    /// Holds the glyph's layers, with y growing downwards like SwiftUI's, so
+    /// "bottom" and "clockwise" mean the same as in the drawn fallback.
+    let canvas = CALayer()
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        canvas.isGeometryFlipped = true
+        layer?.addSublayer(canvas)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        needsLayout = true
+    }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        canvas.frame = bounds
+        layoutCanvas()
+        CATransaction.commit()
+    }
+
+    /// Lays the glyph out in `canvas.bounds`; actions are already disabled.
+    func layoutCanvas() {}
+
+    var scale: CGFloat { window?.backingScaleFactor ?? 2 }
+
+    static func frameRate(_ fps: Float) -> CAFrameRateRange {
+        CAFrameRateRange(minimum: fps / 2, maximum: fps, preferred: fps)
+    }
+}
+
+private struct LayerOrbit: NSViewRepresentable {
+    let size: CGFloat
+    let tint: NSColor
+    let paused: Bool
+
+    func makeNSView(context: Context) -> OrbitLayerView { OrbitLayerView() }
+
+    func updateNSView(_ view: OrbitLayerView, context: Context) {
+        view.configure(tint: tint, paused: paused)
+    }
+}
+
+private final class OrbitLayerView: AgentLayerView {
+    private let track = CAShapeLayer()
+    private let arc = CAShapeLayer()
+    private var paused = false
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        for shape in [track, arc] {
+            shape.fillColor = nil
+            canvas.addSublayer(shape)
+        }
+        track.lineWidth = 1.6
+        arc.lineWidth = 1.8
+        arc.lineCap = .round
+        arc.strokeEnd = 0.3
+    }
+
+    func configure(tint: NSColor, paused: Bool) {
+        track.strokeColor = tint.withAlphaComponent(0.25).cgColor
+        arc.strokeColor = tint.cgColor
+        self.paused = paused
+        updateAnimation()
+    }
+
+    override func layoutCanvas() {
+        let bounds = canvas.bounds
+        let side = min(bounds.width, bounds.height)
+        let box = CGRect(x: (bounds.width - side) / 2, y: (bounds.height - side) / 2, width: side, height: side)
+        for shape in [track, arc] {
+            shape.frame = box
+            shape.contentsScale = scale
+            shape.path = CGPath(ellipseIn: CGRect(origin: .zero, size: box.size).insetBy(dx: 0.9, dy: 0.9), transform: nil)
+        }
+    }
+
+    private func updateAnimation() {
+        let key = "spin"
+        if paused {
+            arc.removeAnimation(forKey: key)
+        } else if arc.animation(forKey: key) == nil {
+            // 300° a second, as the drawn fallback; clockwise on screen,
+            // like SwiftUI's positive rotation, in the flipped canvas.
+            let spin = CABasicAnimation(keyPath: "transform.rotation.z")
+            spin.fromValue = 0
+            spin.toValue = 2 * Double.pi
+            spin.duration = 1.2
+            spin.repeatCount = .infinity
+            spin.isRemovedOnCompletion = false
+            spin.preferredFrameRateRange = Self.frameRate(15)
+            arc.add(spin, forKey: key)
+        }
+    }
+}
+
+private struct LayerWaitingHand: NSViewRepresentable {
+    let size: CGFloat
+    let paused: Bool
+
+    func makeNSView(context: Context) -> WaitingLayerView { WaitingLayerView() }
+
+    func updateNSView(_ view: WaitingLayerView, context: Context) {
+        view.configure(size: size, paused: paused)
+    }
+}
+
+private final class WaitingLayerView: AgentLayerView {
+    private let ring = CAShapeLayer()
+    private let hand = CALayer()
+    private var size: CGFloat = 0
+    private var paused = false
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        ring.fillColor = nil
+        ring.lineWidth = 1.2
+        ring.strokeColor = NSColor(AgentPalette.waiting).cgColor
+        // Seen only through the pulse animation, which fades it out.
+        ring.opacity = 0
+        hand.contentsGravity = .resizeAspect
+        // Waves from the wrist: the bottom edge in the flipped canvas.
+        hand.anchorPoint = CGPoint(x: 0.5, y: 1)
+        canvas.addSublayer(ring)
+        canvas.addSublayer(hand)
+    }
+
+    func configure(size: CGFloat, paused: Bool) {
+        if size != self.size {
+            self.size = size
+            needsLayout = true
+        }
+        self.paused = paused
+        updateAnimations()
+    }
+
+    override func layoutCanvas() {
+        let bounds = canvas.bounds
+        ring.frame = bounds
+        ring.contentsScale = scale
+        ring.path = CGPath(ellipseIn: bounds.insetBy(dx: 0.6, dy: 0.6), transform: nil)
+
+        let config = NSImage.SymbolConfiguration(pointSize: size * 0.82, weight: .semibold)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(AgentPalette.waiting)]))
+        if let image = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(config) {
+            hand.contentsScale = scale
+            hand.contents = image.layerContents(forContentsScale: scale)
+            hand.bounds = CGRect(origin: .zero, size: image.size)
+            hand.position = CGPoint(x: bounds.midX, y: bounds.midY + image.size.height / 2)
+        }
+    }
+
+    private func updateAnimations() {
+        guard !paused else {
+            ring.removeAllAnimations()
+            hand.removeAllAnimations()
+            return
+        }
+        if ring.animation(forKey: "pulse") == nil {
+            let grow = CABasicAnimation(keyPath: "transform.scale")
+            grow.fromValue = 0.7
+            grow.toValue = 1.6
+            let fade = CABasicAnimation(keyPath: "opacity")
+            fade.fromValue = 0.55
+            fade.toValue = 0
+            let pulse = CAAnimationGroup()
+            pulse.animations = [grow, fade]
+            pulse.duration = AgentWaitingGlyph.ringPeriod
+            pulse.repeatCount = .infinity
+            pulse.isRemovedOnCompletion = false
+            pulse.preferredFrameRateRange = Self.frameRate(15)
+            ring.add(pulse, forKey: "pulse")
+        }
+        if hand.animation(forKey: "wave") == nil {
+            // The same damped wave as the drawn glyph, sampled at 30 points
+            // a second and interpolated by Core Animation.
+            let steps = Int(AgentWaitingGlyph.period * 30)
+            let wave = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+            wave.values = (0 ... steps).map { step in
+                AgentWaitingGlyph.waveAngle(Double(step) / 30) * Double.pi / 180
+            }
+            wave.duration = AgentWaitingGlyph.period
+            wave.repeatCount = .infinity
+            wave.isRemovedOnCompletion = false
+            wave.preferredFrameRateRange = Self.frameRate(20)
+            hand.add(wave, forKey: "wave")
+        }
     }
 }
 

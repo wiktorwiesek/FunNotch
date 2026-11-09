@@ -681,6 +681,7 @@ private struct OpenAppPanel: View {
 /// only appears while something is playing.
 struct MediaScrubberPanel: View {
     @ObservedObject private var music = MusicManager.shared
+    @ObservedObject private var playback = MusicManager.shared.playback
     @ObservedObject private var settings = Settings.shared
 
     var body: some View {
@@ -699,7 +700,7 @@ struct MediaScrubberPanel: View {
 
                 GeometryReader { geo in
                     let fraction = music.track.duration > 0
-                        ? min(max(music.displayedElapsed / music.track.duration, 0), 1)
+                        ? min(max(playback.elapsed / music.track.duration, 0), 1)
                         : 0
                     ZStack(alignment: .leading) {
                         Capsule().fill(.white.opacity(0.14))

@@ -142,9 +142,14 @@ final class ClipboardManager: ObservableObject {
         guard Settings.shared.clipboardHistoryEnabled else { return }
 
         lastChangeCount = NSPasteboard.general.changeCount
+        // macOS has no pasteboard-changed notification, so this polls the
+        // change counter. The tolerance lets the wake-ups ride along with
+        // other timers; nothing is copied behind a lock screen.
         let timer = Timer(timeInterval: 0.6, repeats: true) { [weak self] _ in
+            guard !SystemActivityMonitor.isScreenIdle else { return }
             MainActor.assumeIsolated { self?.poll() }
         }
+        timer.tolerance = 0.3
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
     }

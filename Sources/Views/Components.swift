@@ -6,6 +6,7 @@
 //  buttons used throughout the notch.
 //
 
+import AppKit
 import SwiftUI
 
 /// Four bars that bounce while music plays and settle flat when it stops.
@@ -13,12 +14,33 @@ struct MusicVisualizer: View {
     let isPlaying: Bool
     let color: Color
 
+    @AppStorage(MediaExtrasDefaults.realSpectrumKey) private var realSpectrum = false
+
     private let barCount = 4
     /// Per-bar phase and rate so the bars never move in lockstep.
     private let phases: [Double] = [0.0, 1.7, 0.6, 2.4]
     private let rates: [Double] = [3.1, 4.3, 2.6, 3.7]
 
     var body: some View {
+        Group {
+            if realSpectrum || Motion.filmSpectrum != nil || Motion.snapshotMode {
+                // Real levels change every frame, and the offline renderers
+                // draw views rather than layer animations.
+                timeline
+            } else {
+                // The made-up bounce is a fixed function of time, so Core
+                // Animation can play it in the render server. The closed notch
+                // shows these bars for as long as music plays, and the 30 fps
+                // timeline below re-rendered the notch window on every frame.
+                LayerVisualizer(isPlaying: isPlaying, color: NSColor(color), phases: phases, rates: rates)
+            }
+        }
+        // The analyzer runs only while some visualiser is on screen.
+        .onAppear { if Motion.filmSpectrum == nil { SpectrumAnalyzer.shared.acquire() } }
+        .onDisappear { if Motion.filmSpectrum == nil { SpectrumAnalyzer.shared.release() } }
+    }
+
+    private var timeline: some View {
         TimelineView(.animation(minimumInterval: isPlaying ? 1.0 / 30.0 : nil, paused: !isPlaying)) { context in
             let time = context.date.timeIntervalSinceReferenceDate
             GeometryReader { proxy in
@@ -37,9 +59,6 @@ struct MusicVisualizer: View {
             }
         }
         .animation(.easeOut(duration: 0.25), value: isPlaying)
-        // The analyzer runs only while some visualiser is on screen.
-        .onAppear { if Motion.filmSpectrum == nil { SpectrumAnalyzer.shared.acquire() } }
-        .onDisappear { if Motion.filmSpectrum == nil { SpectrumAnalyzer.shared.release() } }
     }
 
     private func barHeight(index: Int, time: Double, maximum: CGFloat) -> CGFloat {
@@ -52,10 +71,135 @@ struct MusicVisualizer: View {
         if let level = SpectrumAnalyzer.shared.level(index) {
             return max(maximum * (0.2 + 0.8 * CGFloat(level)), 2)
         }
-        let wave = sin(time * rates[index] + phases[index])
-        let secondary = sin(time * rates[index] * 0.53 + phases[index] * 1.7)
-        let normalised = (wave * 0.6 + secondary * 0.4 + 1) / 2
+        let normalised = Self.bounce(time: time, rate: rates[index], phase: phases[index])
         return max(maximum * (0.2 + 0.8 * normalised), 2)
+    }
+
+    /// The made-up level, 0...1, of a bar with this rate and phase. The
+    /// slower secondary wave runs at 0.53 of the rate unless told otherwise.
+    static func bounce(time: Double, rate: Double, phase: Double, secondaryRate: Double? = nil) -> Double {
+        let wave = sin(time * rate + phase)
+        let secondary = sin(time * (secondaryRate ?? rate * 0.53) + phase * 1.7)
+        return (wave * 0.6 + secondary * 0.4 + 1) / 2
+    }
+}
+
+private struct LayerVisualizer: NSViewRepresentable {
+    let isPlaying: Bool
+    let color: NSColor
+    let phases: [Double]
+    let rates: [Double]
+
+    func makeNSView(context: Context) -> VisualizerLayerView {
+        VisualizerLayerView(phases: phases, rates: rates)
+    }
+
+    func updateNSView(_ view: VisualizerLayerView, context: Context) {
+        view.configure(isPlaying: isPlaying, color: color)
+    }
+}
+
+/// `MusicVisualizer`'s bars as layers whose heights Core Animation plays from
+/// precomputed keyframes, so the app does no work per frame while they move.
+private final class VisualizerLayerView: NSView {
+    private let bars: [CALayer]
+    private let phases: [Double]
+    private let rates: [Double]
+    private var isPlaying = false
+    private var animatedHeight: CGFloat = 0
+
+    /// The keyframes repeat after this many seconds. Each wave's rate is
+    /// nudged to a whole number of cycles in the loop, so the wrap-around is
+    /// seamless; twenty seconds keeps every nudge within 3% and no two bars
+    /// on the same rate.
+    private static let loop = 20.0
+    private static let samplesPerSecond = 30.0
+
+    init(phases: [Double], rates: [Double]) {
+        self.phases = phases
+        self.rates = rates
+        bars = phases.map { _ in CALayer() }
+        super.init(frame: .zero)
+        wantsLayer = true
+        bars.forEach { layer?.addSublayer($0) }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func configure(isPlaying: Bool, color: NSColor) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        bars.forEach { $0.backgroundColor = color.cgColor }
+        CATransaction.commit()
+        guard isPlaying != self.isPlaying else { return }
+        self.isPlaying = isPlaying
+        updateAnimations(settling: true)
+    }
+
+    private var flatHeight: CGFloat { max(bounds.height * 0.18, 2) }
+
+    override func layout() {
+        super.layout()
+        let spacing = bounds.width / CGFloat(bars.count * 2 - 1)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (index, bar) in bars.enumerated() {
+            bar.bounds = CGRect(x: 0, y: 0, width: spacing, height: flatHeight)
+            bar.position = CGPoint(x: spacing * (CGFloat(index) * 2 + 0.5), y: bounds.midY)
+            bar.cornerRadius = spacing / 2
+        }
+        CATransaction.commit()
+        // The keyframes are absolute heights; a new size needs new ones.
+        if isPlaying, animatedHeight != bounds.height { updateAnimations(settling: false) }
+    }
+
+    private func updateAnimations(settling: Bool) {
+        let key = "bounce"
+        guard isPlaying else {
+            for bar in bars {
+                let from = bar.presentation()?.bounds.height ?? flatHeight
+                bar.removeAnimation(forKey: key)
+                guard settling else { continue }
+                let settle = CABasicAnimation(keyPath: "bounds.size.height")
+                settle.fromValue = from
+                settle.toValue = flatHeight
+                settle.duration = 0.25
+                settle.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                bar.add(settle, forKey: "settle")
+            }
+            animatedHeight = 0
+            return
+        }
+        animatedHeight = bounds.height
+        let maximum = bounds.height
+        let steps = Int(Self.loop * Self.samplesPerSecond)
+        let now = CACurrentMediaTime()
+        func looped(_ rate: Double) -> Double {
+            let cycles = max((rate * Self.loop / (2 * Double.pi)).rounded(), 1)
+            return cycles * 2 * Double.pi / Self.loop
+        }
+        for (index, bar) in bars.enumerated() {
+            let rate = looped(rates[index])
+            let secondaryRate = looped(rates[index] * 0.53)
+            let animation = CAKeyframeAnimation(keyPath: "bounds.size.height")
+            animation.values = (0 ... steps).map { step in
+                let level = MusicVisualizer.bounce(
+                    time: Double(step) / Self.samplesPerSecond,
+                    rate: rate, phase: phases[index], secondaryRate: secondaryRate
+                )
+                return max(maximum * (0.2 + 0.8 * level), 2)
+            }
+            animation.duration = Self.loop
+            animation.repeatCount = .infinity
+            animation.isRemovedOnCompletion = false
+            animation.beginTime = now
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+            bar.removeAnimation(forKey: "settle")
+            bar.add(animation, forKey: key)
+        }
     }
 }
 

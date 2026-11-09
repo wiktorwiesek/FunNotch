@@ -4,8 +4,8 @@
 //
 //  Kaset, the native YouTube Music player, answers one AppleScript command —
 //  `get player info` — with its whole state as JSON. It posts no distributed
-//  notification when that changes, so this polls once a second like the
-//  scrubber needs anyway. Kaset has no seek command; the scrubber shows the
+//  notification when that changes, so this polls, at a rate set by
+//  `AdaptivePoll`. Kaset has no seek command; the scrubber shows the
 //  position but dragging it does not move playback.
 //
 
@@ -18,7 +18,7 @@ final class KasetMediaController: MediaController {
     let type: MediaControllerType = .kaset
     var onUpdate: ((TrackInfo) -> Void)?
 
-    private var timer: Timer?
+    private let poll = AdaptivePoll()
     private var current = TrackInfo()
     private var artworkKey = ""
     /// Consecutive polls that returned nothing usable.
@@ -30,28 +30,31 @@ final class KasetMediaController: MediaController {
 
     func start() {
         stop()
-        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refresh() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
         refresh()
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        poll.cancel()
+    }
+
+    private func scheduleNextPoll() {
+        let interval = AdaptivePoll.interval(bundleIdentifier: Self.bundleIdentifier, isPlaying: current.isPlaying)
+        poll.schedule(after: interval) { [weak self] in self?.refresh() }
     }
 
     func refresh() {
         guard isAvailable else {
             failures = 0
+            poll.cancel()
             if !current.isEmpty || current.isPlaying {
                 current = TrackInfo()
                 onUpdate?(current)
             }
             return
         }
+        // Armed before the read so a script that never answers cannot end
+        // the polling; re-armed below once the answer says what is playing.
+        scheduleNextPoll()
         // `is running` first: a bare `tell` would relaunch a Kaset that quit
         // between the check above and the script running.
         let script = "if application \"Kaset\" is running then\ntell application \"Kaset\"\nreturn get player info\nend tell\nend if\nreturn \"\""
@@ -62,7 +65,9 @@ final class KasetMediaController: MediaController {
                 return
             }
             self.failures = 0
+            let wasPlaying = self.current.isPlaying
             self.apply(state)
+            if self.current.isPlaying != wasPlaying { self.scheduleNextPoll() }
         }
     }
 

@@ -137,6 +137,11 @@ final class AppleScriptRunner: NSObject {
         if let cached = compiled[box.source] {
             script = cached
         } else if let fresh = NSAppleScript(source: box.source) {
+            // Polls repeat a handful of fixed scripts, but commands carry
+            // their arguments in the source ("set player position to 93", a
+            // tab index), so the cache would otherwise grow with every seek.
+            // Dropping it all now and then costs one recompile per poll.
+            if compiled.count >= Self.cacheLimit { compiled.removeAll(keepingCapacity: true) }
             compiled[box.source] = fresh
             script = fresh
         } else {
@@ -158,6 +163,8 @@ final class AppleScriptRunner: NSObject {
             box.completion(result, nil)
         }
     }
+
+    private static let cacheLimit = 48
 
     /// True when the app with this bundle identifier is currently running.
     static func isRunning(_ bundleIdentifier: String) -> Bool {

@@ -366,7 +366,7 @@ final class LyricsManager: ObservableObject {
             .sink { [weak self] _ in self?.reload() }
             .store(in: &cancellables)
 
-        music.$displayedElapsed
+        music.playback.$elapsed
             .sink { [weak self] elapsed in self?.follow(elapsed) }
             .store(in: &cancellables)
 

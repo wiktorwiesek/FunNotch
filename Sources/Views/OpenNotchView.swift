@@ -426,31 +426,15 @@ struct PlayerControls: View {
     }
 
     private var slider: some View {
-        NotchSlider(
-            value: Binding(
-                get: { music.displayedElapsed },
-                set: { music.displayedElapsed = $0 }
-            ),
-            range: 0 ... max(music.track.duration, 1),
-            color: sliderColor,
-            height: 4,
-            isEnabled: music.track.duration > 0,
-            onEditingChanged: { editing in
-                music.isScrubbing = editing
-                if !editing {
-                    music.seek(to: music.displayedElapsed)
-                }
-            }
-        )
-        .frame(height: 12)
+        PlaybackSlider(color: sliderColor)
     }
 
     private var elapsedLabel: some View {
-        Text(music.displayedElapsed.playbackTimestamp)
+        PlaybackTimeLabel(remaining: false)
     }
 
     private var remainingLabel: some View {
-        Text(max(music.track.duration - music.displayedElapsed, 0).playbackTimestamp)
+        PlaybackTimeLabel(remaining: true)
     }
 
     /// Times under the bar, as the player has always had them.
@@ -565,6 +549,44 @@ struct PlayerControls: View {
                 ) { music.toggleDislike() }
             }
         }
+    }
+}
+
+/// The scrubber bar. It observes `PlaybackClock` on its own so the playhead's
+/// five updates a second redraw the bar, not the whole player around it.
+private struct PlaybackSlider: View {
+    let color: Color
+
+    @ObservedObject private var music = MusicManager.shared
+    @ObservedObject private var playback = MusicManager.shared.playback
+
+    var body: some View {
+        NotchSlider(
+            value: $playback.elapsed,
+            range: 0 ... max(music.track.duration, 1),
+            color: color,
+            height: 4,
+            isEnabled: music.track.duration > 0,
+            onEditingChanged: { editing in
+                music.isScrubbing = editing
+                if !editing {
+                    music.seek(to: playback.elapsed)
+                }
+            }
+        )
+        .frame(height: 12)
+    }
+}
+
+/// Elapsed or remaining time, isolated for the same reason as the bar.
+private struct PlaybackTimeLabel: View {
+    let remaining: Bool
+
+    @ObservedObject private var music = MusicManager.shared
+    @ObservedObject private var playback = MusicManager.shared.playback
+
+    var body: some View {
+        Text((remaining ? max(music.track.duration - playback.elapsed, 0) : playback.elapsed).playbackTimestamp)
     }
 }
 
