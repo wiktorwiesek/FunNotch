@@ -23,9 +23,11 @@ final class KeepAwakeManager: ObservableObject {
     static let defaultMinutesKey = "extras.system.keepAwake.defaultMinutes"
     static let announceKey = "extras.system.keepAwake.announce"
 
-    /// Not the cup: that is the Focus timer's icon, shown in the same row.
-    nonisolated static let symbol = "bolt.horizontal.circle"
-    nonisolated static let activeSymbol = "bolt.horizontal.circle.fill"
+    /// Not the cup: that is the Focus timer's icon, shown in the same row. A
+    /// light left on reads as "stays awake"; the earlier bolt-in-a-circle
+    /// looked like the Messenger logo at this size.
+    nonisolated static let symbol = "lightbulb"
+    nonisolated static let activeSymbol = "lightbulb.max.fill"
 
     @Published private(set) var isActive = false
     /// When keeping awake ends; nil while active means "until switched off".

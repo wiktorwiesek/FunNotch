@@ -113,22 +113,44 @@ private struct QuickActionsPanel: View {
     @EnvironmentObject private var viewModel: NotchViewModel
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var focus = FocusManager.shared
+    @ObservedObject private var timer = TimerManager.shared
+    @ObservedObject private var keepAwake = KeepAwakeManager.shared
+    @ObservedObject private var mic = MicMuteManager.shared
+    @ObservedObject private var output = AudioOutputManager.shared
+    @AppStorage("extras.system.quickActions.keepAwake") private var showKeepAwake = true
+    @AppStorage("extras.system.quickActions.mic") private var showMic = true
+    @AppStorage("extras.system.quickActions.output") private var showOutput = true
 
     var body: some View {
-        HStack(spacing: 4) {
-            action(focus.isActive ? "stop.fill" : "cup.and.saucer.fill",
-                   focus.isActive ? "Zakończ skupienie" : "Rozpocznij skupienie",
-                   tint: focus.isActive ? .orange : nil) {
+        QuickActionStrip(items: items)
+            .padding(4)
+            .onAppear { SystemExtras.start() }
+    }
+
+    private var items: [QuickActionItem] {
+        var list: [QuickActionItem] = [
+            QuickActionItem(
+                id: "focus",
+                symbol: focus.isActive ? "stop.fill" : "cup.and.saucer.fill",
+                label: focus.isActive ? "Zakończ skupienie" : "Skupienie",
+                activeTint: focus.isActive ? .orange : nil,
+                help: focus.isActive ? "Zakończ skupienie" : "Rozpocznij \(settings.focusDefaultMinutes)-minutowe skupienie",
+                menu: focus.isActive ? [] : [15, 25, 45, 60].map { minutes in
+                    PointerMenu.Item(title: "\(minutes) min", isChecked: minutes == settings.focusDefaultMinutes) {
+                        FocusManager.shared.start(minutes: minutes)
+                    }
+                }
+            ) {
                 if focus.isActive {
                     FocusManager.shared.stop()
                 } else {
                     FocusManager.shared.start(minutes: settings.focusDefaultMinutes)
                 }
-            }
-            action("note.text", "Nowa notatka") {
+            },
+            QuickActionItem(id: "note", symbol: "note.text", label: "Notatka", help: "Otwórz notatki") {
                 viewModel.currentTab = .notes
-            }
-            action("camera.viewfinder", "Zrzut ekranu") {
+            },
+            QuickActionItem(id: "shot", symbol: "camera.viewfinder", label: "Zrzut ekranu", help: "Zaznacz obszar do zrzutu") {
                 // The interactive capture, the same one ⌘⇧4 runs. It lands in
                 // the shelf on its own, because the screenshot watcher is
                 // already looking for it.
@@ -136,30 +158,54 @@ private struct QuickActionsPanel: View {
                 task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
                 task.arguments = ["-i", "-c"]
                 try? task.run()
-            }
-            action("timer", "Minutnik", tint: TimerManager.shared.isActive ? .green : nil) {
+            },
+            QuickActionItem(
+                id: "timer", symbol: "timer", label: "Minutnik",
+                activeTint: timer.isActive ? .green : nil, help: "Otwórz minutnik"
+            ) {
                 FocusTabState.shared.mode = .timer
                 viewModel.currentTab = .focus
+            },
+        ]
+        if showKeepAwake {
+            var menu = KeepAwakeManager.durationChoices.map { choice in
+                PointerMenu.Item(title: choice.title) { KeepAwakeManager.shared.activate(minutes: choice.minutes) }
             }
-            SystemQuickActionButtons()
+            if keepAwake.isActive {
+                menu.append(PointerMenu.Item(title: "Wyłącz") { KeepAwakeManager.shared.deactivate() })
+            }
+            list.append(QuickActionItem(
+                id: "awake",
+                symbol: keepAwake.isActive ? KeepAwakeManager.activeSymbol : KeepAwakeManager.symbol,
+                label: keepAwake.isActive ? "Nie usypia · \(keepAwake.remainingText())" : "Nie usypiaj",
+                activeTint: keepAwake.isActive ? .yellow : nil,
+                help: keepAwake.helpText(),
+                menu: menu
+            ) { KeepAwakeManager.shared.toggle() })
         }
-    }
-
-    private func action(_ symbol: String, _ help: String, tint: Color? = nil,
-                        _ run: @escaping () -> Void) -> some View {
-        Button(action: run) {
-            Image(systemName: symbol)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(tint ?? .white.opacity(0.8))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(.white.opacity(0.06))
-                )
+        if showMic {
+            list.append(QuickActionItem(
+                id: "mic",
+                symbol: mic.isMuted ? "mic.slash.fill" : "mic.fill",
+                label: mic.isMuted ? "Mikrofon wyciszony" : "Wycisz mikrofon",
+                activeTint: mic.isMuted ? Color(red: 1, green: 0.35, blue: 0.32) : nil,
+                help: mic.isMuted ? "Mikrofon wyciszony — kliknij, aby włączyć" : "Wycisz mikrofon"
+            ) { MicMuteManager.shared.toggle() })
         }
-        .buttonStyle(.plain)
-        .help(help)
+        if showOutput {
+            list.append(QuickActionItem(
+                id: "output",
+                symbol: output.current?.symbol ?? "speaker.wave.2",
+                label: output.current?.name ?? "Wyjście dźwięku",
+                help: output.helpText,
+                menu: output.outputs.map { device in
+                    PointerMenu.Item(title: device.name, symbol: device.symbol, isChecked: device.id == output.current?.id) {
+                        AudioOutputManager.shared.select(device)
+                    }
+                }
+            ) { AudioOutputManager.shared.showMenu() })
+        }
+        return list
     }
 }
 

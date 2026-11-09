@@ -2,9 +2,9 @@
 //  SystemExtraViews.swift
 //  FunNotch
 //
-//  The closed-notch widgets and Home quick-action buttons of the system
-//  extras. `NotchWidgets.swift` places the widgets; `HomeStripView.swift`
-//  places `SystemQuickActionButtons` inside its quick-action row.
+//  The closed-notch widgets of the system extras, placed by
+//  `NotchWidgets.swift`. Their Home quick actions live in the chip strip of
+//  `HomeStripView.swift`.
 //
 
 import AppKit
@@ -124,58 +124,3 @@ struct AudioOutputWidget: View {
     }
 }
 
-// MARK: - Quick actions
-
-/// The extra buttons of the Home "Szybkie akcje" tile, each one switchable in
-/// settings so the row does not get crowded.
-struct SystemQuickActionButtons: View {
-    @AppStorage("extras.system.quickActions.keepAwake") private var showKeepAwake = true
-    @AppStorage("extras.system.quickActions.mic") private var showMic = true
-    @AppStorage("extras.system.quickActions.output") private var showOutput = true
-
-    @ObservedObject private var keepAwake = KeepAwakeManager.shared
-    @ObservedObject private var mic = MicMuteManager.shared
-    @ObservedObject private var output = AudioOutputManager.shared
-
-    var body: some View {
-        Group {
-            if showKeepAwake {
-                button(
-                    keepAwake.isActive ? KeepAwakeManager.activeSymbol : KeepAwakeManager.symbol,
-                    keepAwake.isActive ? "Nie usypiaj: włączone — kliknij, aby wyłączyć" : "Nie usypiaj Maca",
-                    tint: keepAwake.isActive ? .orange : nil
-                ) { keepAwake.toggle() }
-                .contextMenu { KeepAwakeMenu(keepAwake: keepAwake) }
-            }
-            if showMic {
-                button(
-                    mic.isMuted ? "mic.slash.fill" : "mic.fill",
-                    mic.isMuted ? "Mikrofon wyciszony — kliknij, aby włączyć" : "Wycisz mikrofon",
-                    tint: mic.isMuted ? widgetRed : nil
-                ) { mic.toggle() }
-            }
-            if showOutput {
-                button(output.current?.symbol ?? "speaker.wave.2", output.helpText, tint: nil) {
-                    output.showMenu()
-                }
-            }
-        }
-        .onAppear { SystemExtras.start() }
-    }
-
-    private func button(_ symbol: String, _ help: String, tint: Color?, _ run: @escaping () -> Void) -> some View {
-        Button(action: run) {
-            Image(systemName: symbol)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(tint ?? .white.opacity(0.8))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(.white.opacity(0.06))
-                )
-        }
-        .buttonStyle(.plain)
-        .help(help)
-    }
-}
