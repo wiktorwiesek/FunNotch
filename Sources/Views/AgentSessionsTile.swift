@@ -195,17 +195,25 @@ private struct AgentRow: View {
     }
 
     static func detail(for session: AgentSessionsManager.Session) -> String {
+        let status: String
         switch session.status {
         case .working:
-            return session.name == session.project ? "Working" : "Working · \(session.project)"
+            if let activity = session.activity {
+                status = activity
+            } else {
+                status = session.name == session.project ? "Working" : "Working · \(session.project)"
+            }
         case let .waiting(reason):
-            return AgentSessionsManager.waitingText(reason)
+            status = AgentSessionsManager.waitingText(reason)
         case .idle:
             if let duration = session.lastTurnDuration {
-                return "Finished in \(AgentSessionsManager.duration(duration))"
+                status = "Finished in \(AgentSessionsManager.duration(duration))"
+            } else {
+                status = session.name == session.project ? "Idle" : "Idle · \(session.project)"
             }
-            return session.name == session.project ? "Idle" : "Idle · \(session.project)"
         }
+        guard let usage = session.usage else { return status }
+        return "\(status) · \(usage.summary)"
     }
 
     static func detailColor(for session: AgentSessionsManager.Session) -> Color {

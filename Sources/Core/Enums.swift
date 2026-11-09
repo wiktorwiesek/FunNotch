@@ -105,6 +105,7 @@ enum MediaControllerType: String, CaseIterable, Identifiable {
     case nowPlaying = "Now Playing"
     case appleMusic = "Apple Music"
     case spotify = "Spotify"
+    case kaset = "Kaset"
     case browser = "Browser"
 
     var id: String { rawValue }
@@ -113,6 +114,7 @@ enum MediaControllerType: String, CaseIterable, Identifiable {
         switch self {
         case .appleMusic: return "com.apple.Music"
         case .spotify: return "com.spotify.client"
+        case .kaset: return KasetMediaController.bundleIdentifier
         case .nowPlaying, .browser: return nil
         }
     }
@@ -151,6 +153,7 @@ enum NotchWidget: String, CaseIterable, Identifiable {
     case wifi = "Wi-Fi"
     case moonPhase = "Moon phase"
     case shelfCount = "Shelf count"
+    case unread = "Unread"
 
     var id: String { rawValue }
 
@@ -159,7 +162,7 @@ enum NotchWidget: String, CaseIterable, Identifiable {
     var estimatedWidth: CGFloat {
         switch self {
         case .battery, .cpu, .memory, .disk, .weather: return 56
-        case .clock, .focusTimer, .moonPhase, .shelfCount: return 54
+        case .clock, .focusTimer, .moonPhase, .shelfCount, .unread: return 54
         case .date, .wifi: return 82
         case .nextEvent, .nowPlaying: return 132
         }
@@ -180,6 +183,7 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .wifi: return "wifi"
         case .moonPhase: return "moonphase.waxing.crescent"
         case .shelfCount: return "tray.full"
+        case .unread: return "bubble.left.and.bubble.right"
         }
     }
 
@@ -197,6 +201,7 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .wifi: return .locationAccess
         case .moonPhase: return nil
         case .shelfCount: return .shelfTab
+        case .unread: return .unreadApp
         }
     }
 }
@@ -266,6 +271,8 @@ enum WidgetClickTarget: Equatable {
     case playingApp
     case focusTab
     case shelfTab
+    /// The first chat app with something unread.
+    case unreadApp
     case locationAccess
 }
 

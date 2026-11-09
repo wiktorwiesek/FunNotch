@@ -96,6 +96,7 @@ private struct NotchWidgetButton: View {
         case .wifi: WiFiWidget()
         case .moonPhase: MoonWidget()
         case .shelfCount: ShelfCountWidget()
+        case .unread: UnreadWidget()
         }
     }
 
@@ -125,6 +126,8 @@ private struct NotchWidgetButton: View {
         case .shelfTab:
             viewModel.currentTab = .shelf
             viewModel.open()
+        case .unreadApp:
+            UnreadBadgesManager.shared.openFirst()
         case .locationAccess:
             if WeatherManager.shared.isLocationAuthorized {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.wifi-settings-extension") {
@@ -456,5 +459,38 @@ private struct ShelfCountWidget: View {
         .help(shelf.items.isEmpty
               ? "The shelf is empty"
               : "\(shelf.items.count) item\(shelf.items.count == 1 ? "" : "s") on the shelf")
+    }
+}
+
+/// Unread messages in Slack, Vesktop or Discord, as their Dock badges say:
+/// each app's icon with its count, or a quiet bubble when all is read.
+private struct UnreadWidget: View {
+    @ObservedObject private var unread = UnreadBadgesManager.shared
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if unread.badges.isEmpty {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.4))
+            } else {
+                ForEach(unread.badges) { badge in
+                    HStack(spacing: 3) {
+                        if let icon = UnreadBadgesManager.icon(for: badge.bundleIdentifier) {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .frame(width: 14, height: 14)
+                        }
+                        Text(badge.label)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(Color(red: 1, green: 0.42, blue: 0.4))
+                    }
+                }
+            }
+        }
+        .fixedSize()
+        .onAppear { unread.start() }
+        .help(unread.badges.isEmpty ? "No unread messages" : "Unread messages — click to open")
     }
 }

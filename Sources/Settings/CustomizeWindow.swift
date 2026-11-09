@@ -432,6 +432,7 @@ extension NotchWidget {
         case .weather: return Color(red: 0.3, green: 0.72, blue: 1)
         case .wifi, .shelfCount: return SettingsStyle.blue
         case .moonPhase: return SettingsStyle.yellow
+        case .unread: return SettingsStyle.red
         }
     }
 }

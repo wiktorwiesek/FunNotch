@@ -437,9 +437,11 @@ private struct SettingsAgentRow: View {
     }
 
     private var detail: String {
-        let place = "\(session.agent.rawValue) · \(session.project)"
+        var place = "\(session.agent.rawValue) · \(session.project)"
+        if let usage = session.usage { place += " · \(usage.summary)" }
         switch session.status {
-        case .working: return "Working — \(place)"
+        case .working:
+            return "\(session.activity.map { "Running \($0)" } ?? "Working") — \(place)"
         case let .waiting(reason): return "\(AgentSessionsManager.waitingText(reason)) — \(place)"
         case .idle:
             if let duration = session.lastTurnDuration {

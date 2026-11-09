@@ -308,7 +308,7 @@ final class ScriptedMediaController: MediaController {
                 }
             )
 
-        case .nowPlaying, .browser:
+        case .nowPlaying, .kaset, .browser:
             return nil
         }
     }

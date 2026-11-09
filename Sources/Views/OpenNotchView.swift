@@ -389,6 +389,15 @@ struct PlayerControls: View {
 
     private var transport: some View {
         HStack(spacing: 2) {
+            if let likeStatus = music.track.likeStatus {
+                HoverButton(
+                    systemName: likeStatus == .liked ? "hand.thumbsup.fill" : "hand.thumbsup",
+                    size: 12,
+                    padding: 5,
+                    isActive: likeStatus == .liked,
+                    tint: settings.accentColor
+                ) { music.toggleLike() }
+            }
             if settings.showShuffleAndRepeat {
                 HoverButton(
                     systemName: "shuffle",
@@ -426,6 +435,16 @@ struct PlayerControls: View {
                     tint: settings.accentColor,
                     badge: music.track.repeatMode.badge
                 ) { music.cycleRepeat() }
+            }
+
+            if let likeStatus = music.track.likeStatus {
+                HoverButton(
+                    systemName: likeStatus == .disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                    size: 12,
+                    padding: 5,
+                    isActive: likeStatus == .disliked,
+                    tint: settings.accentColor
+                ) { music.toggleDislike() }
             }
         }
     }

@@ -19,6 +19,8 @@ struct TrackInfo: Equatable {
     var isPlaying: Bool = false
     var isShuffled: Bool = false
     var repeatMode: RepeatMode = .off
+    /// nil when the source has no likes to offer.
+    var likeStatus: LikeStatus?
     var bundleIdentifier: String?
     /// When `elapsed` was last measured, so playback can be interpolated.
     var timestamp: Date = .init()
@@ -47,8 +49,16 @@ struct TrackInfo: Equatable {
             && lhs.duration == rhs.duration
             && lhs.isShuffled == rhs.isShuffled
             && lhs.repeatMode == rhs.repeatMode
+            && lhs.likeStatus == rhs.likeStatus
             && lhs.artwork === rhs.artwork
     }
+}
+
+/// A thumbs up or down on the current track, as YouTube Music has it.
+enum LikeStatus: Equatable {
+    case none
+    case liked
+    case disliked
 }
 
 protocol MediaController: AnyObject {
@@ -71,6 +81,9 @@ protocol MediaController: AnyObject {
     func seek(to time: TimeInterval)
     func toggleShuffle()
     func cycleRepeat()
+    /// Thumbs up again clears it, the way the player's own button does.
+    func toggleLike()
+    func toggleDislike()
 }
 
 extension MediaController {
@@ -78,4 +91,6 @@ extension MediaController {
     func pause() {}
     func toggleShuffle() {}
     func cycleRepeat() {}
+    func toggleLike() {}
+    func toggleDislike() {}
 }

@@ -137,6 +137,8 @@ final class MusicManager: ObservableObject {
             return NowPlayingController()
         case .appleMusic, .spotify:
             return ScriptedMediaController(type: type) ?? NowPlayingController()
+        case .kaset:
+            return KasetMediaController()
         case .browser:
             return BrowserMediaController()
         }
@@ -269,6 +271,22 @@ final class MusicManager: ObservableObject {
 
     func cycleRepeat() {
         controller?.cycleRepeat()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.controller?.refresh()
+        }
+    }
+
+    func toggleLike() {
+        controller?.toggleLike()
+        track.likeStatus = track.likeStatus == .liked ? LikeStatus.none : .liked
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.controller?.refresh()
+        }
+    }
+
+    func toggleDislike() {
+        controller?.toggleDislike()
+        track.likeStatus = track.likeStatus == .disliked ? LikeStatus.none : .disliked
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.controller?.refresh()
         }

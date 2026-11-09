@@ -100,10 +100,33 @@ final class AgentSessionsManager: ObservableObject {
         let startedAt: Date
         let pid: pid_t?
         let host: Host
+        /// The tool running right now, when the agent reports it (omp does).
+        var activity: String? = nil
+        var usage: Usage? = nil
 
         var waitingReason: String? {
             if case let .waiting(reason) = status { return reason }
             return nil
+        }
+    }
+
+    /// What a session has spent, when the agent reports it (omp does).
+    struct Usage: Equatable, Sendable {
+        /// Tokens of every reply in the session, cache reads included.
+        let tokens: Int
+        /// USD; 0 on a subscription.
+        let cost: Double
+        let contextTokens: Int?
+        let contextWindow: Int?
+
+        /// "1.2M tok · $3.10 · 42% ctx", leaving out what is unknown or zero.
+        var summary: String {
+            var parts = [AgentSessionsManager.tokenCount(tokens) + " tok"]
+            if cost >= 0.005 { parts.append(String(format: "$%.2f", cost)) }
+            if let contextTokens, let contextWindow, contextWindow > 0 {
+                parts.append("\(Int((Double(contextTokens) / Double(contextWindow) * 100).rounded()))% ctx")
+            }
+            return parts.joined(separator: " · ")
         }
     }
 
@@ -230,7 +253,9 @@ final class AgentSessionsManager: ObservableObject {
                     lastTurnDuration: nil,
                     startedAt: entry.startedAt,
                     pid: entry.pid,
-                    host: entry.entrypoint == "claude-desktop" ? .claudeApp : .process
+                    host: entry.entrypoint == "claude-desktop" ? .claudeApp : .process,
+                    activity: entry.activity,
+                    usage: entry.usage
                 )
                 for event in Self.transition(from: previous[session.id], to: &session) {
                     events.append((session, event))
@@ -530,6 +555,8 @@ final class AgentSessionsManager: ObservableObject {
         let statusUpdatedAt: Date
         let startedAt: Date
         let entrypoint: String
+        let activity: String?
+        let usage: Usage?
     }
 
     struct CodexEntry: Sendable {
@@ -593,7 +620,16 @@ final class AgentSessionsManager: ObservableObject {
                 statusUpdatedAt: date(fromMilliseconds: object["statusUpdatedAt"])
                     ?? date(fromMilliseconds: object["updatedAt"]) ?? Date(),
                 startedAt: date(fromMilliseconds: object["startedAt"]) ?? Date(),
-                entrypoint: object["entrypoint"] as? String ?? ""
+                entrypoint: object["entrypoint"] as? String ?? "",
+                activity: object["activity"] as? String,
+                usage: (object["tokens"] as? NSNumber).map { tokens in
+                    Usage(
+                        tokens: tokens.intValue,
+                        cost: (object["cost"] as? NSNumber)?.doubleValue ?? 0,
+                        contextTokens: (object["contextTokens"] as? NSNumber)?.intValue,
+                        contextWindow: (object["contextWindow"] as? NSNumber)?.intValue
+                    )
+                }
             ))
         }
         return entries
@@ -684,6 +720,13 @@ final class AgentSessionsManager: ObservableObject {
             return seconds == 0 ? "\(total / 60)m" : "\(total / 60)m \(seconds)s"
         }
         return "\(total / 3600)h \((total % 3600) / 60)m"
+    }
+
+    /// "850", "42k", "1.2M" — a token count.
+    nonisolated static func tokenCount(_ count: Int) -> String {
+        if count < 1000 { return "\(count)" }
+        if count < 1_000_000 { return "\(count / 1000)k" }
+        return String(format: "%.1fM", Double(count) / 1_000_000)
     }
 
     /// "now", "5m", "2h" — how long ago.
