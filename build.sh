@@ -171,7 +171,10 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
          durable host for the one file that keeps everyone else current. -->
     <key>SUFeedURL</key>              <string>https://raw.githubusercontent.com/JoshuaT1105/FunNotch/main/appcast.xml</string>
     <key>SUPublicEDKey</key>          <string>$SPARKLE_PUBLIC_KEY</string>
-    <key>SUEnableAutomaticChecks</key><true/>
+    <!-- Local omp build: an upstream update would replace it with a build
+         that does not read ~/.omp/notch-sessions. Checks stay available from
+         Settings, off by default. -->
+    <key>SUEnableAutomaticChecks</key><false/>
     <key>SUScheduledCheckInterval</key><integer>86400</integer>
 
     <!-- Menu bar only: no Dock icon, no app switcher entry. -->
