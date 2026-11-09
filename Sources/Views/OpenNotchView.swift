@@ -460,6 +460,29 @@ struct MirrorPane: View {
         Group {
             if webcam.isRunning {
                 CameraPreview(session: webcam.session)
+            } else if webcam.hasCamera, webcam.isAccessBlocked {
+                Button {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") {
+                        NSWorkspace.shared.open(url)
+                    }
+                } label: {
+                    ZStack {
+                        Color.white.opacity(0.08)
+                        VStack(spacing: 5) {
+                            Image(systemName: "video.slash")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.white.opacity(0.6))
+                            Text("Włącz dostęp do kamery")
+                                .font(.system(size: 9))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        .padding(.horizontal, 6)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Fun Notch nie ma dostępu do kamery. Kliknij, aby otworzyć Prywatność i ochrona → Kamera.")
             } else {
                 ZStack {
                     Color.white.opacity(0.08)

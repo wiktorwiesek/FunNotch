@@ -47,8 +47,14 @@ final class WebcamManager: NSObject, ObservableObject {
             }
         default:
             authorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+            DiagnosticLog.write("camera", "access not granted (\(authorizationStatus.rawValue))")
             completion(false)
         }
+    }
+
+    /// Denied or restricted: asking again does nothing, only System Settings can change it.
+    var isAccessBlocked: Bool {
+        authorizationStatus == .denied || authorizationStatus == .restricted
     }
 
     func start() {
