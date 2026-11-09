@@ -94,8 +94,13 @@ final class ShelfManager: NSObject, ObservableObject {
     @discardableResult
     func rename(id: UUID, to newName: String) -> Bool {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return false }
-        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed != items[index].name else { return false }
+        // A "/" in the new name would walk into another folder (or fail
+        // half-way); a ":" is what Finder shows as "/", so it is just as unsafe.
+        let trimmed = newName
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.allSatisfy({ $0 == "." }), trimmed != items[index].name else { return false }
 
         let item = items[index]
         // Keep the extension unless the user typed one themselves.
@@ -206,7 +211,14 @@ final class ShelfManager: NSObject, ObservableObject {
                 options: [.withSecurityScope],
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
-            ) else { continue }
+            ) else {
+                // A deleted file does not resolve at all (it throws rather than
+                // returning a path that no longer exists), so the name has to be
+                // read straight from the bookmark to be able to report it.
+                let name = (try? URL.resourceValues(forKeys: [.nameKey], fromBookmarkData: data))?.name
+                missing.append(name ?? "nieznany plik")
+                continue
+            }
             guard FileManager.default.fileExists(atPath: url.path) else {
                 // The file moved or was deleted since it was put on the shelf.
                 // Dropping it silently reads as data loss to anyone who
@@ -218,7 +230,12 @@ final class ShelfManager: NSObject, ObservableObject {
             if url.startAccessingSecurityScopedResource() {
                 accessedURLs.append(url)
             }
-            restored.append(makeItem(for: url, isTemporary: url.path.hasPrefix(temporaryDirectory.path)))
+            // A bookmark resolves to the real path ("/private/…"), so both sides
+            // are compared with symlinks resolved; otherwise cached files stop
+            // counting as temporary after a relaunch and are never cleaned up.
+            let isCached = url.resolvingSymlinksInPath().path
+                .hasPrefix(temporaryDirectory.resolvingSymlinksInPath().path)
+            restored.append(makeItem(for: url, isTemporary: isCached))
         }
 
         items = restored
@@ -445,6 +462,13 @@ final class ShelfManager: NSObject, ObservableObject {
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
+            // Vision reads English only unless told otherwise, so Polish
+            // diacritics came out as plain letters. Ask only for languages this
+            // Vision revision knows; an unknown one makes the request throw.
+            if let supported = try? request.supportedRecognitionLanguages() {
+                let wanted = ["pl-PL", "en-US"].filter(supported.contains)
+                if !wanted.isEmpty { request.recognitionLanguages = wanted }
+            }
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             try? handler.perform([request])
@@ -477,12 +501,21 @@ final class ShelfManager: NSObject, ObservableObject {
         pasteboard.setString(item.url.lastPathComponent, forType: .string)
     }
 
-    func remove(id: UUID) {
+    /// `deleteFileAfter` postpones deleting a cached file, for an item that is
+    /// being dragged out right now: the receiving app reads the file when the
+    /// drop lands, which can be long after the drag started.
+    func remove(id: UUID, deleteFileAfter delay: TimeInterval = 0) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         let item = items.remove(at: index)
         selection.remove(id)
         if item.isTemporary {
-            try? FileManager.default.removeItem(at: item.url)
+            if delay > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    try? FileManager.default.removeItem(at: item.url)
+                }
+            } else {
+                try? FileManager.default.removeItem(at: item.url)
+            }
         }
         persist()
     }
@@ -504,7 +537,7 @@ final class ShelfManager: NSObject, ObservableObject {
     /// Called after a successful drag out of the shelf.
     func handleDragCompleted(id: UUID) {
         guard Settings.shared.autoRemoveShelfItems, !Settings.shared.copyOnDrag else { return }
-        remove(id: id)
+        remove(id: id, deleteFileAfter: 300)
     }
 
     // MARK: - Actions

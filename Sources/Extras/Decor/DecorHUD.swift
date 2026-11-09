@@ -161,7 +161,7 @@ final class DecorHUDOverlay {
 
 // MARK: - Views
 
-private struct DecorHUDView: View {
+struct DecorHUDView: View {
     @ObservedObject var model: DecorHUDModel
 
     var body: some View {

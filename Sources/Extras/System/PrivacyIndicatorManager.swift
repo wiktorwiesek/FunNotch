@@ -81,6 +81,11 @@ final class PrivacyIndicatorManager: ObservableObject {
         refreshMicrophone()
     }
 
+    /// System daemons that keep the microphone open all the time (the "Hey Siri"
+    /// hotword listener) and are not something the menu bar's orange dot reports
+    /// either. Without this the indicator would be lit permanently.
+    private static let ignoredAudioClients: Set<String> = ["com.apple.CoreSpeech"]
+
     private func refreshMicrophone() {
         // Our own tap aggregate reads as an input stream; it is not a microphone.
         let ownPID = ProcessInfo.processInfo.processIdentifier
@@ -89,6 +94,8 @@ final class PrivacyIndicatorManager: ObservableObject {
         for process in AudioObjects.processObjects() {
             guard (AudioObjects.value(process, kAudioProcessPropertyIsRunningInput, as: UInt32.self) ?? 0) != 0 else { continue }
             if AudioObjects.value(process, kAudioProcessPropertyPID, as: pid_t.self) == ownPID { continue }
+            if let bundleID = AudioObjects.string(process, kAudioProcessPropertyBundleID),
+               Self.ignoredAudioClients.contains(bundleID) { continue }
             active = true
             let devices = AudioObjects.objectIDs(process, kAudioProcessPropertyDevices, scope: kAudioDevicePropertyScopeInput)
             for device in devices where !AudioObjects.isOwnAggregate(device)
@@ -199,7 +206,8 @@ final class PrivacyIndicatorManager: ObservableObject {
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled, let self else { return }
             // Something that already stopped again is not worth announcing.
-            let camera = self.pendingCamera && self.cameraActive
+            // The camera mirror is ours and the user just asked for it.
+            let camera = self.pendingCamera && self.cameraActive && !WebcamManager.shared.isRunning
             let microphone = self.pendingMicrophone && self.microphoneActive
             self.pendingCamera = false
             self.pendingMicrophone = false

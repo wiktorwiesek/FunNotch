@@ -305,6 +305,11 @@ final class DecorStore: ObservableObject {
     /// True when there is something to draw.
     var idleIsReady: Bool { idleEnabled && idleAnimation != nil }
 
+    /// Snapshot renderer only: shows `animation` without touching disk.
+    func injectPreviewAnimation(_ animation: DecorAnimation?) {
+        idleAnimation = animation
+    }
+
     // MARK: - Glass
 
     /// True on a macOS that has `glassEffect`.

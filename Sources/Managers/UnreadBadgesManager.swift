@@ -35,6 +35,7 @@ final class UnreadBadgesManager: ObservableObject {
     @Published private(set) var badges: [Badge] = []
 
     private var timer: Timer?
+    private var launchObservers: [NSObjectProtocol] = []
 
     private typealias CreateASN = @convention(c) (CFAllocator?, pid_t) -> Unmanaged<CFTypeRef>?
     private typealias CopyItem = @convention(c) (Int32, CFTypeRef, CFString) -> Unmanaged<CFTypeRef>?
@@ -47,15 +48,36 @@ final class UnreadBadgesManager: ObservableObject {
         copyItem = dlsym(handle, "_LSCopyApplicationInformationItem").map { unsafeBitCast($0, to: CopyItem.self) }
     }
 
-    /// Safe to call from every `onAppear`: only one timer ever runs.
+    /// Safe to call from every `onAppear`: only one set of observers ever exists.
+    /// The poll runs only while a watched app is running, and not behind a lock
+    /// screen or a sleeping display, where nobody could see a badge change.
     func start() {
-        guard timer == nil else { return }
-        let timer = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refresh() }
+        guard launchObservers.isEmpty else { return }
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            launchObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.syncTimer() }
+            })
         }
-        timer.tolerance = 1
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        syncTimer()
+    }
+
+    private func syncTimer() {
+        let watching = Self.watched.contains {
+            !NSRunningApplication.runningApplications(withBundleIdentifier: $0).isEmpty
+        }
+        if watching, timer == nil {
+            let timer = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
+                guard !SystemActivityMonitor.isScreenIdle else { return }
+                MainActor.assumeIsolated { self?.refresh() }
+            }
+            timer.tolerance = 1
+            RunLoop.main.add(timer, forMode: .common)
+            self.timer = timer
+        } else if !watching {
+            timer?.invalidate()
+            timer = nil
+        }
         refresh()
     }
 

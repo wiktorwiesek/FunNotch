@@ -145,6 +145,18 @@ echo "==> Embedding Sparkle"
 rm -rf "$FRAMEWORKS_DIR/Sparkle.framework"
 cp -R "$SPARKLE_DIR/Sparkle.framework" "$FRAMEWORKS_DIR/Sparkle.framework"
 
+# System-wide Now Playing: MediaRemote answers only entitled processes since
+# macOS 15.4, and /usr/bin/perl is one, so the app runs perl and has it load
+# this helper. See Tools/mrbridge.m and NowPlayingController.swift.
+echo "==> Building the Now Playing bridge"
+if [ "$UNIVERSAL" -eq 1 ]; then
+  BRIDGE_ARCHS=(-arch arm64 -arch x86_64)
+else
+  BRIDGE_ARCHS=(-arch "$(uname -m)")
+fi
+xcrun clang -dynamiclib -fobjc-arc "${BRIDGE_ARCHS[@]}" -mmacosx-version-min="$MIN_MACOS" \
+  -framework Foundation -o "$RESOURCES_DIR/mrbridge.dylib" Tools/mrbridge.m
+
 echo "==> Writing Info.plist"
 cat > "$APP_DIR/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

@@ -126,9 +126,12 @@ struct ClaudeSpinner: View {
 struct OrbitSpinner: View {
     var size: CGFloat = 13
     var tint: Color = AgentPalette.codex
+    @Environment(\.decorAnimationsPaused) private var paused
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+        // 15 fps and frozen while the notch is hidden: a 30 Hz timeline for a
+        // 13-point ring cost a steady slice of a core while an agent worked.
+        TimelineView(.animation(minimumInterval: 1.0 / 15.0, paused: paused)) { context in
             let angle = Motion.filmTime.map { $0 * 300 }
                 ?? (Motion.snapshotMode ? 40 : context.date.timeIntervalSinceReferenceDate * 300)
             ZStack {
@@ -165,6 +168,7 @@ struct AgentWaitingGlyph: View {
     var size: CGFloat = 13
     /// Seconds since the wait began, when the caller already has a clock.
     var time: Double?
+    @Environment(\.decorAnimationsPaused) private var paused
 
     var body: some View {
         if let time = time ?? Motion.filmTime {
@@ -172,7 +176,7 @@ struct AgentWaitingGlyph: View {
         } else if Motion.snapshotMode {
             drawn(1.1)
         } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / 15.0, paused: paused)) { context in
                 drawn(context.date.timeIntervalSinceReferenceDate)
             }
         }

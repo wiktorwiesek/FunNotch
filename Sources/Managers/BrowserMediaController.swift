@@ -18,8 +18,32 @@
 
 import AppKit
 import Foundation
+import IOKit.pwr_mgt
 
 private let fieldSeparator = "|~|"
+
+/// Whether a browser is making sound right now. Chromium holds a power
+/// assertion named "Playing audio" for as long as any tab is audible, which
+/// answers "is it playing?" for a tab whose page we may not script.
+private enum BrowserAudio {
+    static func isPlaying(bundleIdentifier: String) -> Bool {
+        let pids = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+            .map { NSNumber(value: $0.processIdentifier) }
+        guard !pids.isEmpty else { return false }
+
+        var raw: Unmanaged<CFDictionary>?
+        guard IOPMCopyAssertionsByProcess(&raw) == kIOReturnSuccess,
+              let byProcess = raw?.takeRetainedValue() as? [NSNumber: [[String: Any]]]
+        else { return false }
+
+        return pids.contains { pid in
+            byProcess[pid]?.contains { assertion in
+                let name = (assertion["AssertName"] as? String ?? "").lowercased()
+                return name.contains("playing audio") || name.contains("media playback")
+            } ?? false
+        }
+    }
+}
 
 private struct BrowserTarget {
     let bundleIdentifier: String
@@ -72,6 +96,11 @@ final class BrowserMediaController: MediaController {
         BrowserTarget(bundleIdentifier: "com.microsoft.edgemac", applicationName: "Microsoft Edge", isChromeFamily: true),
         BrowserTarget(bundleIdentifier: "company.thebrowser.Browser", applicationName: "Arc", isChromeFamily: true),
         BrowserTarget(bundleIdentifier: "com.apple.Safari", applicationName: "Safari", isChromeFamily: false),
+        // Chromium forks that ship the same AppleScript dictionary as Chrome.
+        BrowserTarget(bundleIdentifier: "net.imput.helium", applicationName: "Helium", isChromeFamily: true),
+        BrowserTarget(bundleIdentifier: "com.vivaldi.Vivaldi", applicationName: "Vivaldi", isChromeFamily: true),
+        BrowserTarget(bundleIdentifier: "com.operasoftware.Opera", applicationName: "Opera", isChromeFamily: true),
+        BrowserTarget(bundleIdentifier: "org.chromium.Chromium", applicationName: "Chromium", isChromeFamily: true),
     ]
 
     private static let sites: [MediaSite] = [
@@ -248,21 +277,60 @@ final class BrowserMediaController: MediaController {
         let browser = browsers[index]
         AppleScriptRunner.shared.runForString(Self.tabListScript(for: browser)) { [weak self] result in
             guard let self else { return }
-            guard let result, let hit = Self.firstMediaTab(in: result) else {
+            guard let result else {
+                self.scan(browsers: browsers, index: index + 1)
+                return
+            }
+            let hits = Self.mediaTabs(in: result)
+            guard !hits.isEmpty else {
                 self.scan(browsers: browsers, index: index + 1)
                 return
             }
 
-            self.activeTab = (browser, hit.window, hit.tab)
             self.foundMediaTab = true
-            self.readTab(
-                browser: browser,
-                window: hit.window,
-                tab: hit.tab,
-                site: hit.site,
-                title: hit.title,
-                pageURL: hit.url
-            )
+            // A paused YouTube tab left open must not hide the one that is
+            // playing, so every media tab gets a look (a handful at most).
+            self.readBest(browser: browser, hits: Array(hits.prefix(5)), index: 0, firstRead: nil)
+        }
+    }
+
+    /// Reads the tabs in turn and stops at the first that is playing; if none
+    /// is, the first one read stands in.
+    private func readBest(
+        browser: BrowserTarget,
+        hits: [TabHit],
+        index: Int,
+        firstRead: (hit: TabHit, raw: String)?
+    ) {
+        let hit = hits[index]
+        let script = Self.javaScriptScript(for: browser, window: hit.window, tab: hit.tab, body: Self.metadataJavaScript)
+        AppleScriptRunner.shared.runForString(script) { [weak self] result in
+            guard let self else { return }
+
+            guard let result, result.contains(fieldSeparator) else {
+                // JavaScript is switched off; the tab title still names the
+                // track. Nothing distinguishes the tabs from one another then.
+                self.activeTab = (browser, hits[0].window, hits[0].tab)
+                self.isScanning = false
+                self.noteReadMode(scripted: false, browser: browser)
+                self.applyTitleOnly(hits[0].title, site: hits[0].site, browser: browser, pageURL: hits[0].url)
+                return
+            }
+
+            let fields = result.components(separatedBy: fieldSeparator)
+            let playing = fields.count > 5 && fields[5] == "playing"
+            let thisRead: (hit: TabHit, raw: String) = (hit, result)
+            let first: (hit: TabHit, raw: String) = firstRead ?? thisRead
+            if !playing, index + 1 < hits.count {
+                self.readBest(browser: browser, hits: hits, index: index + 1, firstRead: first)
+                return
+            }
+
+            let chosen: (hit: TabHit, raw: String) = playing ? thisRead : first
+            self.activeTab = (browser, chosen.hit.window, chosen.hit.tab)
+            self.isScanning = false
+            self.noteReadMode(scripted: true, browser: browser)
+            self.apply(rawState: chosen.raw, site: chosen.hit.site, browser: browser, pageURL: chosen.hit.url)
         }
     }
 
@@ -342,9 +410,12 @@ final class BrowserMediaController: MediaController {
         }
 
         var info = TrackInfo()
-        // "Track - Artist" is the common shape; keep the whole thing if not.
+        // "Track - Artist" is the common shape on the music sites; keep the
+        // whole thing if not. A YouTube video title has no fixed shape
+        // ("Artist - Song", "Song (official video)", a match summary), so it is
+        // never split.
         let separators = [" - ", " • ", " · "]
-        if let separator = separators.first(where: { title.contains($0) }) {
+        if site.host != "youtube.com", let separator = separators.first(where: { title.contains($0) }) {
             let pieces = title.components(separatedBy: separator)
             info.title = pieces[0].trimmingCharacters(in: .whitespaces)
             info.artist = pieces.dropFirst().joined(separator: separator).trimmingCharacters(in: .whitespaces)
@@ -352,9 +423,10 @@ final class BrowserMediaController: MediaController {
             info.title = title
             info.artist = site.name
         }
-        // Without JavaScript there is no way to know; assume it is playing,
-        // since an idle tab rarely sits on a media page for long.
-        info.isPlaying = true
+        // The title cannot say whether the tab is playing or paused. The
+        // browser holds a "Playing audio" power assertion exactly while a tab
+        // makes sound, which is the same fact.
+        info.isPlaying = BrowserAudio.isPlaying(bundleIdentifier: browser.bundleIdentifier)
         info.bundleIdentifier = browser.bundleIdentifier
         info.timestamp = Date()
         info.artwork = current.artwork
@@ -391,8 +463,11 @@ final class BrowserMediaController: MediaController {
         if !site.titleSuffix.isEmpty, title.hasSuffix(site.titleSuffix) {
             title.removeLast(site.titleSuffix.count)
         }
-        // Sites often mark an unread count or playing state in the title.
+        // Sites often mark an unread count ("(392) ") or playing state in the title.
         if title.hasPrefix("▶ ") { title.removeFirst(2) }
+        if let counter = title.range(of: #"^\(\d{1,4}\+?\)\s+"#, options: .regularExpression) {
+            title.removeSubrange(counter)
+        }
         return title.trimmingCharacters(in: .whitespaces)
     }
 
@@ -601,11 +676,8 @@ final class BrowserMediaController: MediaController {
         return (window, tab, site, parts[3], parts[2])
     }
 
-    private static func firstMediaTab(in rawTabs: String) -> TabHit? {
-        for line in rawTabs.components(separatedBy: "\n") where !line.isEmpty {
-            if let hit = parseTab(line) { return hit }
-        }
-        return nil
+    private static func mediaTabs(in rawTabs: String) -> [TabHit] {
+        rawTabs.components(separatedBy: "\n").filter { !$0.isEmpty }.compactMap(parseTab)
     }
 
     /// Whether a URL is one this controller knows how to read.

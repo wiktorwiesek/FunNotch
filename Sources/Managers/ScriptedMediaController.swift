@@ -22,6 +22,12 @@ private struct ScriptDialect {
     let artworkScript: String
     let shuffleCommand: (Bool) -> String
     let repeatCommand: (RepeatMode) -> String
+
+    /// `tell application` launches the app if it quit since we last looked;
+    /// `is running` does not, so a poll can never reopen a player the user closed.
+    var guardedStateScript: String {
+        "if application \"\(applicationName)\" is running then\n\(stateScript)\nend if\nreturn \"\""
+    }
 }
 
 private let fieldSeparator = "|~|"
@@ -34,7 +40,6 @@ final class ScriptedMediaController: MediaController {
     private var timer: Timer?
     private var current = TrackInfo()
     private var lastArtworkKey = ""
-    private var isFetchingArtwork = false
     private var observer: NSObjectProtocol?
 
     init?(type: MediaControllerType) {
@@ -86,9 +91,20 @@ final class ScriptedMediaController: MediaController {
             return
         }
 
-        AppleScriptRunner.shared.runForString(dialect.stateScript) { [weak self] result in
+        AppleScriptRunner.shared.run(dialect.guardedStateScript) { [weak self] descriptor, error in
             guard let self else { return }
-            guard let result, !result.isEmpty else { return }
+            // No answer at all (the app is busy, or Automation was refused) is
+            // not the same as an answer of "nothing is loaded".
+            guard error == nil, let result = descriptor?.stringValue else { return }
+            if result.isEmpty {
+                // Stopped, or the queue ran out: nothing is playing any more.
+                self.lastArtworkKey = ""
+                if !self.current.isEmpty || self.current.isPlaying {
+                    self.current = TrackInfo()
+                    self.onUpdate?(self.current)
+                }
+                return
+            }
             self.apply(rawState: result)
         }
     }
@@ -132,12 +148,11 @@ final class ScriptedMediaController: MediaController {
     }
 
     private func fetchArtwork(for key: String) {
-        guard !isFetchingArtwork else { return }
-        isFetchingArtwork = true
-
+        // No "one at a time" guard: when the track changes while a fetch is
+        // out, the new track must still get its own — the old answer is
+        // dropped below by its key.
         AppleScriptRunner.shared.run(dialect.artworkScript) { [weak self] descriptor, _ in
             guard let self else { return }
-            self.isFetchingArtwork = false
             guard key == self.lastArtworkKey else { return }
 
             // Spotify hands back a URL, Music hands back raw image bytes.
@@ -214,7 +229,7 @@ final class ScriptedMediaController: MediaController {
             guard let dialect = dialect(for: type), isInstalled(type) else { continue }
 
             var failure: String?
-            for source in [dialect.stateScript, dialect.artworkScript] where failure == nil {
+            for source in [dialect.guardedStateScript, dialect.artworkScript] where failure == nil {
                 guard let script = NSAppleScript(source: source) else {
                     failure = "could not create script"
                     continue

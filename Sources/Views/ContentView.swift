@@ -58,6 +58,9 @@ struct ContentView: View {
         .frame(width: windowSize.width, height: windowSize.height, alignment: .top)
         .animation(.notchOpen, value: viewModel.notchState)
         .animation(.notchContent, value: size)
+        // Hidden for a fullscreen video: nothing in here is visible, so the
+        // mascot and the idle picture stop redrawing.
+        .environment(\.decorAnimationsPaused, viewModel.hiddenForFullscreen)
     }
 
     /// A hairline traced along the notch's own outline.
@@ -132,6 +135,12 @@ struct ClosedNotchView: View {
                     .transition(.opacity)
             } else if viewModel.isShowingStandardMusicPeek {
                 MusicPeekBanner(geometry: bannerGeometry)
+                    .transition(.opacity)
+            } else if viewModel.wingsTucked {
+                // Nothing but the cutout. Replacing `resting` rather than
+                // hiding its parts lets it fade out while the shape shrinks.
+                Color.clear
+                    .frame(width: viewModel.closedNotchSize.width, height: viewModel.closedNotchSize.height)
                     .transition(.opacity)
             } else {
                 resting
@@ -272,10 +281,17 @@ private struct ClosedFocusCountdown: View {
             Text(focus.compactRemainingText)
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
                 .foregroundStyle(settings.accentColor)
                 .frame(maxWidth: decor.mascot == .none ? .infinity : nil, alignment: .center)
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        // With a mascot the row is as wide as its wing (see
+        // `decorMascotTrackWidth`), so it starts a few points off the camera
+        // and leaves the rest as the margin on the outer edge; centred, the
+        // countdown ran right up to the rounded corner.
+        .padding(.leading, decor.mascot == .none ? 0 : DecorMascotTrack.cameraGap)
+        .frame(maxWidth: .infinity, alignment: decor.mascot == .none ? .center : .leading)
     }
 }
 

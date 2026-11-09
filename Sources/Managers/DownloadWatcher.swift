@@ -120,7 +120,9 @@ final class DownloadWatcher: ObservableObject {
     private func scan(in directory: URL) {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
         let fresh = names.filter { !seen.contains($0) }
-        seen.formUnion(names)
+        // Replaced, not merged: a file that was deleted and downloaded again
+        // under the same name is a new download and has to be announced.
+        seen = Set(names)
 
         for name in fresh {
             guard !name.hasPrefix(".") else { continue }

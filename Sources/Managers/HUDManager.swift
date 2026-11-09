@@ -172,7 +172,8 @@ final class HUDManager: ObservableObject {
         switch action {
         case .volumeUp: applied = adjustVolume(by: step)
         case .volumeDown: applied = adjustVolume(by: -step)
-        case .mute: applied = toggleMute()
+        // Holding mute must not flip it on and off at the key-repeat rate.
+        case .mute: applied = isRepeat ? true : toggleMute()
         case .brightnessUp: applied = adjustBrightness(by: step)
         case .brightnessDown: applied = adjustBrightness(by: -step)
         case .backlightUp: applied = adjustBacklight(by: step)
@@ -239,8 +240,13 @@ final class HUDManager: ObservableObject {
             lastError = "Nie można odczytać urządzenia wyjściowego audio"
             return false
         }
-        let next = min(max(current + delta, 0), 1)
-        SystemAudio.setVolume(next, on: device)
+        let next = Self.steppedLevel(from: current, by: delta)
+        // A device whose volume is read-only (some HDMI/USB outputs): leave the
+        // key to macOS instead of swallowing it and changing nothing.
+        guard SystemAudio.setVolume(next, on: device) else {
+            lastError = "To urządzenie nie pozwala zmienić głośności"
+            return false
+        }
 
         var muted = SystemAudio.isMuted(device) ?? false
         if next > 0, muted {
@@ -251,14 +257,36 @@ final class HUDManager: ObservableObject {
         return true
     }
 
+    /// One notch of the keys moves to the next point of the 1/16 grid, the way
+    /// macOS does, so a level set with the slider (say 0.32) lands on 0.375 and
+    /// not on an odd 0.3825. Fine steps (Shift+Option) are exact.
+    private static func steppedLevel(from current: Float, by delta: Float) -> Float {
+        let size = abs(delta)
+        let grid = Float(1.0 / 16)
+        guard size >= grid - 0.0001 else { return min(max(current + delta, 0), 1) }
+        let units = current / grid
+        let nearest = units.rounded()
+        // Already on a grid point (within float noise): move one whole notch.
+        let target = abs(units - nearest) < 0.001
+            ? nearest + (delta > 0 ? 1 : -1)
+            : (delta > 0 ? units.rounded(.up) : units.rounded(.down))
+        return min(max(target * grid, 0), 1)
+    }
+
     private func toggleMute() -> Bool {
         guard let device = SystemAudio.defaultOutputDevice else {
             lastError = "Nie można odczytać urządzenia wyjściowego audio"
             return false
         }
-        let muted = !(SystemAudio.isMuted(device) ?? false)
-        SystemAudio.setMuted(muted, on: device)
-        present(.volume, value: SystemAudio.volume(of: device) ?? 0, muted: muted)
+        // No mute switch on this output (some USB/Bluetooth/HDMI devices):
+        // pretending to mute would swallow the key and do nothing.
+        guard let wasMuted = SystemAudio.isMuted(device),
+              SystemAudio.setMuted(!wasMuted, on: device)
+        else {
+            lastError = "To urządzenie nie ma wyciszenia"
+            return false
+        }
+        present(.volume, value: SystemAudio.volume(of: device) ?? 0, muted: !wasMuted)
         return true
     }
 
@@ -368,12 +396,13 @@ enum SystemAudio {
         return status == noErr ? value : nil
     }
 
-    static func setVolume(_ value: Float, on device: AudioDeviceID) {
+    @discardableResult
+    static func setVolume(_ value: Float, on device: AudioDeviceID) -> Bool {
         var value = value
         var address = volumeAddress
-        AudioObjectSetPropertyData(
+        return AudioObjectSetPropertyData(
             device, &address, 0, nil, UInt32(MemoryLayout<Float32>.size), &value
-        )
+        ) == noErr
     }
 
     static func isMuted(_ device: AudioDeviceID) -> Bool? {
@@ -384,12 +413,13 @@ enum SystemAudio {
         return status == noErr ? value == 1 : nil
     }
 
-    static func setMuted(_ muted: Bool, on device: AudioDeviceID) {
+    @discardableResult
+    static func setMuted(_ muted: Bool, on device: AudioDeviceID) -> Bool {
         var value: UInt32 = muted ? 1 : 0
         var address = muteAddress
-        AudioObjectSetPropertyData(
+        return AudioObjectSetPropertyData(
             device, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value
-        )
+        ) == noErr
     }
 
     // MARK: Convenience

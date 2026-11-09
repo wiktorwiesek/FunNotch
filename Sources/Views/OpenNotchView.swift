@@ -277,6 +277,18 @@ struct AlbumArtwork: View {
     }
 }
 
+/// The title, artist, lyrics, scrubber and transport beside the album art.
+///
+/// The column is as tall as its tile and not an inch taller. It used to stack
+/// everything at a fixed size and pass the total up to the home row, so a
+/// tile that was a few points short — or lyrics that added two lines — made
+/// the whole notch layout grow and slide: the header scrolled off the top, the
+/// bottom row off the bottom, and the transport row ended up under the art.
+/// Now the content is laid out inside a box of exactly the offered size, from a
+/// ladder of variants that gives up the least important thing first: the
+/// second lyric line, then the stacked scrubber's time labels, then the
+/// lyrics, then the scrubber. Every rung is a complete, correctly spaced
+/// column; the last one is guaranteed to be short enough for any tile.
 struct PlayerControls: View {
     @ObservedObject private var music = MusicManager.shared
     @ObservedObject private var lyrics = LyricsManager.shared
@@ -284,35 +296,76 @@ struct PlayerControls: View {
     @AppStorage(MediaExtrasDefaults.lyricsEnabledKey) private var lyricsEnabled = true
     @AppStorage(MediaExtrasDefaults.lyricsInPlayerKey) private var lyricsInPlayer = true
 
+    private enum ScrubberStyle { case stacked, inline, none }
+
+    /// Gap between rows. Tight on purpose: the tile is about 100 points tall.
+    private static let rowSpacing: CGFloat = 2
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if music.track.isEmpty {
-                emptyState
-            } else {
-                MarqueeText(text: music.track.title, font: .system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-
-                HStack(spacing: 4) {
-                    MarqueeText(text: music.track.artist, font: .system(size: 12))
-                        .foregroundStyle(.white.opacity(0.6))
-                    MediaPlayerButtons()
-                }
-
-                // Decided here, not inside the block: an empty child would still
-                // be given a stack spacing slot, and this tile has none to spare.
-                if LyricsPlayerBlock.height(for: lyrics.state, enabled: lyricsEnabled, inPlayer: lyricsInPlayer) != nil {
-                    LyricsPlayerBlock()
-                }
-
-                if music.track.hasTiming {
-                    scrubber
+        // A clear base takes exactly the size the row offers, and the content
+        // is drawn over it: nothing inside can ask the row for more.
+        Color.clear
+            .overlay(alignment: .topLeading) {
+                if music.track.isEmpty {
+                    emptyState
                 } else {
-                    noTimingHint
+                    player
                 }
-                transport
             }
+    }
+
+    // MARK: Ladder
+
+    private var player: some View {
+        // Richest first. When there are no lyrics the first four collapse into
+        // the last three, which is harmless: the first that fits is used.
+        ViewThatFits(in: .vertical) {
+            column(rows: .two, scrubber: .stacked)
+            column(rows: .two, scrubber: .inline)
+            column(rows: .one, scrubber: .stacked)
+            column(rows: .one, scrubber: .inline)
+            column(rows: nil, scrubber: .stacked)
+            column(rows: nil, scrubber: .inline)
+            column(rows: nil, scrubber: .none)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One rung. `rows` is what the caller would like; what the lyrics can
+    /// actually give (nothing while loading, one line for unsynced text) caps it.
+    private func column(rows requested: LyricsPlayerBlock.Rows?, scrubber: ScrubberStyle) -> some View {
+        let rows = LyricsPlayerBlock.rows(
+            requested: requested, state: lyrics.state, enabled: lyricsEnabled, inPlayer: lyricsInPlayer
+        )
+        return VStack(alignment: .leading, spacing: Self.rowSpacing) {
+            MarqueeText(text: music.track.title, font: .system(size: 14, weight: .semibold), lineHeight: 17)
+                .foregroundStyle(.white)
+
+            HStack(spacing: 4) {
+                MarqueeText(text: music.track.artist, font: .system(size: 12), lineHeight: 16)
+                    .foregroundStyle(.white.opacity(0.6))
+                MediaPlayerButtons()
+            }
+            .frame(height: 16)
+
+            if let rows {
+                LyricsPlayerBlock(rows: rows)
+            }
+
+            switch (music.track.hasTiming, scrubber) {
+            case (_, .none):
+                EmptyView()
+            case (false, _):
+                noTimingHint
+            case (true, .stacked):
+                stackedScrubber
+            case (true, .inline):
+                inlineScrubber
+            }
+
+            transport
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private var emptyState: some View {
@@ -326,7 +379,7 @@ struct PlayerControls: View {
                 .fixedSize(horizontal: false, vertical: true)
             MediaPlayerButtons()
         }
-        .frame(maxHeight: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     private var hintText: String {
@@ -335,6 +388,8 @@ struct PlayerControls: View {
         }
         return "Zacznij coś odtwarzać. Źródło: \(settings.mediaController.title)."
     }
+
+    // MARK: Scrubber
 
     /// Shown instead of the scrubber when the backend cannot report a
     /// position — a browser tab whose page we are not allowed to query. It
@@ -345,7 +400,7 @@ struct PlayerControls: View {
         if !settings.showPageAccessHint {
             // Switched off in settings: leave the space blank rather than
             // repeating something the user has already said they know about.
-            Color.clear.frame(height: 20)
+            Color.clear.frame(height: 14)
         } else if music.activeControllerType == .browser {
             Button {
                 SettingsWindowController.shared.show(tab: .media)
@@ -353,74 +408,119 @@ struct PlayerControls: View {
                 HStack(spacing: 4) {
                     Image(systemName: "info.circle")
                     Text("Włącz dostęp do stron, aby zobaczyć postęp")
+                        .lineLimit(1)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 7, weight: .bold))
                 }
                 .font(.system(size: 9))
                 .foregroundStyle(.white.opacity(0.4))
-                .padding(.vertical, 6)
+                .frame(height: 14)
             }
             .buttonStyle(.plain)
         } else {
             Text("Brak informacji o pozycji")
                 .font(.system(size: 9))
                 .foregroundStyle(.white.opacity(0.4))
-                .padding(.vertical, 6)
+                .frame(height: 14)
         }
     }
 
-    private var scrubber: some View {
-        VStack(spacing: 2) {
-            NotchSlider(
-                value: Binding(
-                    get: { music.displayedElapsed },
-                    set: { music.displayedElapsed = $0 }
-                ),
-                range: 0 ... max(music.track.duration, 1),
-                color: sliderColor,
-                height: 4,
-                isEnabled: music.track.duration > 0,
-                onEditingChanged: { editing in
-                    music.isScrubbing = editing
-                    if !editing {
-                        music.seek(to: music.displayedElapsed)
-                    }
+    private var slider: some View {
+        NotchSlider(
+            value: Binding(
+                get: { music.displayedElapsed },
+                set: { music.displayedElapsed = $0 }
+            ),
+            range: 0 ... max(music.track.duration, 1),
+            color: sliderColor,
+            height: 4,
+            isEnabled: music.track.duration > 0,
+            onEditingChanged: { editing in
+                music.isScrubbing = editing
+                if !editing {
+                    music.seek(to: music.displayedElapsed)
                 }
-            )
-            .frame(height: 12)
+            }
+        )
+        .frame(height: 12)
+    }
 
+    private var elapsedLabel: some View {
+        Text(music.displayedElapsed.playbackTimestamp)
+    }
+
+    private var remainingLabel: some View {
+        Text(max(music.track.duration - music.displayedElapsed, 0).playbackTimestamp)
+    }
+
+    /// Times under the bar, as the player has always had them.
+    private var stackedScrubber: some View {
+        VStack(spacing: 0) {
+            slider
             HStack {
-                Text(music.displayedElapsed.playbackTimestamp)
+                elapsedLabel
                 Spacer()
-                Text(max(music.track.duration - music.displayedElapsed, 0).playbackTimestamp)
+                remainingLabel
             }
             .font(.system(size: 9))
             .monospacedDigit()
             .foregroundStyle(.white.opacity(0.45))
+            .frame(height: 11)
         }
-        .padding(.top, 2)
+    }
+
+    /// Times either side of the bar: one row instead of two, for short tiles.
+    private var inlineScrubber: some View {
+        HStack(spacing: 5) {
+            elapsedLabel
+                .frame(minWidth: 24, alignment: .leading)
+            slider
+            remainingLabel
+                .frame(minWidth: 24, alignment: .trailing)
+        }
+        .font(.system(size: 9))
+        .monospacedDigit()
+        .foregroundStyle(.white.opacity(0.45))
+        .frame(height: 12)
     }
 
     private var sliderColor: Color {
         settings.sliderColor.resolved(albumArt: music.artworkColor, accent: settings.accentColor)
     }
 
+    // MARK: Transport
+
+    /// The tile's narrowest width leaves this column about 150 points, which
+    /// seven buttons only just fit; narrower still and the extras go first —
+    /// shuffle and repeat, then the thumbs — so play, previous and next are
+    /// never the ones to be cut.
     private var transport: some View {
-        HStack(spacing: 2) {
-            if let likeStatus = music.track.likeStatus {
+        ViewThatFits(in: .horizontal) {
+            transportRow(shuffleAndRepeat: true, likes: true)
+            transportRow(shuffleAndRepeat: false, likes: true)
+            transportRow(shuffleAndRepeat: false, likes: false)
+        }
+        .frame(height: 24)
+    }
+
+    private func transportRow(shuffleAndRepeat: Bool, likes: Bool) -> some View {
+        let likeStatus = likes ? music.track.likeStatus : nil
+        let extras = shuffleAndRepeat && settings.showShuffleAndRepeat
+        return HStack(spacing: 0) {
+            if let likeStatus {
                 HoverButton(
                     systemName: likeStatus == .liked ? "hand.thumbsup.fill" : "hand.thumbsup",
-                    size: 12,
-                    padding: 5,
+                    size: 11,
+                    padding: 4,
                     isActive: likeStatus == .liked,
                     tint: settings.accentColor
                 ) { music.toggleLike() }
             }
-            if settings.showShuffleAndRepeat {
+            if extras {
                 HoverButton(
                     systemName: "shuffle",
-                    size: 12,
-                    padding: 5,
+                    size: 11,
+                    padding: 4,
                     isActive: music.track.isShuffled,
                     tint: settings.accentColor
                 ) { music.toggleShuffle() }
@@ -428,38 +528,38 @@ struct PlayerControls: View {
 
             Spacer(minLength: 0)
 
-            HoverButton(systemName: "backward.fill", size: 14, padding: 6) {
+            HoverButton(systemName: "backward.fill", size: 13, padding: 4) {
                 music.previousTrack()
             }
 
             HoverButton(
                 systemName: music.isPlaying ? "pause.fill" : "play.fill",
-                size: 18,
-                padding: 7
+                size: 16,
+                padding: 4
             ) { music.togglePlayPause() }
 
-            HoverButton(systemName: "forward.fill", size: 14, padding: 6) {
+            HoverButton(systemName: "forward.fill", size: 13, padding: 4) {
                 music.nextTrack()
             }
 
             Spacer(minLength: 0)
 
-            if settings.showShuffleAndRepeat {
+            if extras {
                 HoverButton(
                     systemName: music.track.repeatMode.symbol,
-                    size: 12,
-                    padding: 5,
+                    size: 11,
+                    padding: 4,
                     isActive: music.track.repeatMode != .off,
                     tint: settings.accentColor,
                     badge: music.track.repeatMode.badge
                 ) { music.cycleRepeat() }
             }
 
-            if let likeStatus = music.track.likeStatus {
+            if let likeStatus {
                 HoverButton(
                     systemName: likeStatus == .disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
-                    size: 12,
-                    padding: 5,
+                    size: 11,
+                    padding: 4,
                     isActive: likeStatus == .disliked,
                     tint: settings.accentColor
                 ) { music.toggleDislike() }

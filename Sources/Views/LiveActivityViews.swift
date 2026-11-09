@@ -322,8 +322,12 @@ private struct HUDReadout: View {
     var body: some View {
         Group {
             if muted {
+                // The right wing is only ~48 points wide, so the word shrinks
+                // to fit rather than wrapping onto a second line.
                 Text("Wyciszono")
                     .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .foregroundStyle(.white.opacity(0.6))
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
             } else {
@@ -722,6 +726,10 @@ private struct AgentBanner: View {
             Text(AgentSessionsManager.duration(duration))
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                // "1 godz. 23 min" is wider than the 66-point wing; it shrinks
+                // instead of wrapping onto a second line.
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(AgentPalette.done)
         case .started:
             Text(announcement.session.agent.shortName)

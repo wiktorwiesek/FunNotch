@@ -56,7 +56,16 @@ struct NotesView: View {
         }
     }
 
+    /// The save status is the first thing to go when the tile is narrow; left
+    /// to wrap it ran down three lines and pushed the header apart.
     private var header: some View {
+        ViewThatFits(in: .horizontal) {
+            headerRow(showsStatus: true)
+            headerRow(showsStatus: false)
+        }
+    }
+
+    private func headerRow(showsStatus: Bool) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "note.text")
                 .font(.system(size: 11, weight: .semibold))
@@ -98,7 +107,7 @@ struct NotesView: View {
 
             Spacer()
 
-            status
+            status(showsText: showsStatus)
 
             Button {
                 notes.revealInFinder()
@@ -113,15 +122,25 @@ struct NotesView: View {
     }
 
     @ViewBuilder
-    private var status: some View {
+    private func status(showsText: Bool) -> some View {
         if let error = notes.saveError {
-            Label("Nie udało się zapisać kopii na pulpicie", systemImage: "exclamationmark.triangle.fill")
-                .font(.system(size: 9.5))
-                .foregroundStyle(.orange)
-                .help("\(error)\n\nKopia zapasowa została mimo to zapisana w aplikacji.")
-        } else if let at = notes.savedAt {
+            // An error is never dropped, only shortened to its icon.
+            Group {
+                if showsText {
+                    Label("Nie udało się zapisać kopii na pulpicie", systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 9.5))
+                        .lineLimit(1)
+                } else {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                }
+            }
+            .foregroundStyle(.orange)
+            .help("\(error)\n\nKopia zapasowa została mimo to zapisana w aplikacji.")
+        } else if showsText, let at = notes.savedAt {
             Text("Zapisano \(at.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Polish.locale)))")
                 .font(.system(size: 9.5))
+                .lineLimit(1)
                 .foregroundStyle(.white.opacity(0.35))
         }
     }

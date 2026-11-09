@@ -50,6 +50,8 @@ final class BluetoothMonitor: ObservableObject {
     @Published private(set) var lastChange: (device: BluetoothDeviceState, connected: Bool)?
 
     private var timer: Timer?
+    private var connectNotification: IOBluetoothUserNotification?
+    private let connectTarget = BluetoothConnectTarget()
     private var known: [String: Bool] = [:]
     private var hasBaseline = false
 
@@ -73,12 +75,25 @@ final class BluetoothMonitor: ObservableObject {
         guard timer == nil else { return }
         refresh(announce: false)
 
-        // IOBluetooth's connect notifications are per-device and awkward to
-        // keep in sync as devices come and go; a light poll is simpler and the
-        // cost is negligible.
-        let timer = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
+        // A device connecting is delivered as a notification, so the common case
+        // reacts at once. Disconnects (and devices that never notify) are caught
+        // by a slow poll, which is much cheaper than the old 2 s one: each pass
+        // walks the paired list and the IO registry.
+        connectTarget.onChange = { [weak self] in
+            // The device reports itself connected a moment after the callback.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                MainActor.assumeIsolated { self?.refresh() }
+            }
+        }
+        connectNotification = IOBluetoothDevice.register(
+            forConnectNotifications: connectTarget, selector: #selector(BluetoothConnectTarget.deviceConnected(_:device:))
+        )
+
+        let timer = Timer(timeInterval: 4.0, repeats: true) { [weak self] _ in
+            guard !SystemActivityMonitor.isScreenIdle else { return }
             MainActor.assumeIsolated { self?.refresh() }
         }
+        timer.tolerance = 2
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
     }
@@ -86,6 +101,8 @@ final class BluetoothMonitor: ObservableObject {
     func stop() {
         timer?.invalidate()
         timer = nil
+        connectNotification?.unregister()
+        connectNotification = nil
     }
 
     /// Sets a fixed connection change, for snapshots.
@@ -130,10 +147,12 @@ final class BluetoothMonitor: ObservableObject {
             announceChange(state)
         }
 
-        devices = current.sorted { lhs, rhs in
+        let sorted = current.sorted { lhs, rhs in
             if lhs.isConnected != rhs.isConnected { return lhs.isConnected }
             return lhs.name < rhs.name
         }
+        // Assigning an equal list would still redraw everything that watches it.
+        if sorted != devices { devices = sorted }
         hasBaseline = true
     }
 
@@ -191,5 +210,16 @@ final class BluetoothMonitor: ObservableObject {
         guard IORegistryEntryCreateCFProperties(service, &unmanaged, kCFAllocatorDefault, 0) == KERN_SUCCESS
         else { return nil }
         return unmanaged?.takeRetainedValue() as? [String: Any]
+    }
+}
+
+/// IOBluetooth delivers notifications through an Objective-C target/selector pair.
+/// The callback arrives on the main thread, but only a flag is forwarded; the
+/// monitor re-reads the paired list itself.
+final class BluetoothConnectTarget: NSObject {
+    nonisolated(unsafe) var onChange: (() -> Void)?
+
+    @objc func deviceConnected(_ notification: IOBluetoothUserNotification, device: IOBluetoothDevice) {
+        onChange?()
     }
 }

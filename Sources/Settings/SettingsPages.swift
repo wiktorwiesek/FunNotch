@@ -116,6 +116,11 @@ struct GeneralPage: View {
                     subtitle: "Notch otwiera się też po najechaniu tuż pod nim.",
                     isOn: $settings.extendHoverArea
                 )
+                SettingsToggle(
+                    title: "Chowaj skrzydła przy pasku menu",
+                    subtitle: "Po najechaniu na pasek menu obok notcha jego boki zwijają się, żeby nie zasłaniać menu i ikon.",
+                    isOn: $settings.hideWingsAtMenuBar
+                )
                 SettingsToggle(title: "Reakcje haptyczne", isOn: $settings.enableHaptics)
             }
 

@@ -131,7 +131,10 @@ enum GitHubCLI {
                 let message = String(data: box.err, encoding: .utf8)?
                     .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 let lowered = message.lowercased()
+                // Without a terminal gh does not say "gh auth login" when logged
+                // out; it asks for GH_TOKEN ("To use GitHub CLI in automation…").
                 let needsLogin = lowered.contains("gh auth login") || lowered.contains("not logged in")
+                    || lowered.contains("gh_token") || lowered.contains("bad credentials")
                     || lowered.contains("authentication") && lowered.contains("token")
                 continuation.resume(throwing: Failure(
                     message: needsLogin
@@ -277,6 +280,13 @@ final class GitHubManager: ObservableObject {
 
     func removeSubscriber() {
         subscribers = max(subscribers - 1, 0)
+    }
+
+    /// Preview renderer only: shows `repos` as if they had just been fetched.
+    func injectPreview(_ repos: [GitHubRepoStatus]) {
+        self.repos = repos
+        phase = .ready
+        lastUpdate = Date()
     }
 
     private func tick() {
@@ -453,17 +463,25 @@ final class GitHubManager: ObservableObject {
 
     // MARK: Helpers
 
-    /// "owner/name" from a slug or any GitHub URL.
+    /// "owner/name" from a slug or a GitHub URL. Anything that names another
+    /// host (a GitLab `origin`, say) gives nil rather than a slug gh would reject.
     static func normalize(_ text: String) -> String? {
         var value = text
-        for prefix in ["https://github.com/", "http://github.com/", "git@github.com:", "ssh://git@github.com/"]
+        for prefix in ["https://www.github.com/", "https://github.com/", "http://www.github.com/", "http://github.com/",
+                       "git@github.com:", "ssh://git@github.com/", "www.github.com/", "github.com/"]
             where value.hasPrefix(prefix) {
             value = String(value.dropFirst(prefix.count))
+            break
         }
-        if value.hasSuffix(".git") { value = String(value.dropLast(4)) }
         let parts = value.split(separator: "/").map(String.init)
         guard parts.count >= 2 else { return nil }
-        return "\(parts[0])/\(parts[1])"
+        var name = parts[1]
+        if name.hasSuffix(".git") { name = String(name.dropLast(4)) }
+        // A GitHub owner has no dot, colon or @; a leftover one means another host.
+        guard !parts[0].contains(where: { ".:@".contains($0) }), !parts[0].hasPrefix("-"),
+              !name.isEmpty, !name.hasPrefix("-")
+        else { return nil }
+        return "\(parts[0])/\(name)"
     }
 
     private static func detectOrigin(of checkout: String) async -> String? {

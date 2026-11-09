@@ -211,6 +211,16 @@ enum WindowFrame {
         return finalSizeError
     }
 
+    /// The origin that keeps a window of `frame`'s size inside `usable`, moving
+    /// it as little as possible. A window that is larger than `usable` keeps
+    /// its top-left corner on that edge.
+    static func origin(keeping frame: CGRect, inside usable: CGRect) -> CGPoint {
+        CGPoint(
+            x: max(usable.minX, min(frame.minX, usable.maxX - frame.width)),
+            y: max(usable.minY, min(frame.minY, usable.maxY - frame.height))
+        )
+    }
+
     /// Brings the window and its app to the front. Raising the window alone
     /// leaves the app's menu bar behind the previous app's.
     static func raise(_ window: AXUIElement, pid: pid_t) {

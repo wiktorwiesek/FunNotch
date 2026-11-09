@@ -47,7 +47,16 @@ struct NotificationsTabView: View {
         if watcher.state == .watching || center.databaseState == .active {
             return "Nowe powiadomienia pojawią się tutaj."
         }
-        return "Włącz Dostępność albo Pełny dostęp do dysku, żeby je zobaczyć."
+        if center.captureEnabled, watcher.state == .needsAccessibility {
+            return "Włącz uprawnienie Dostępność, żeby widzieć powiadomienia."
+        }
+        if !center.captureEnabled, !center.readsDatabase {
+            return "Włącz czytanie powiadomień w Ustawieniach → Dodatki."
+        }
+        if center.readsDatabase, center.databaseState == .needsFullDiskAccess {
+            return "Włącz Pełny dostęp do dysku, żeby zobaczyć powiadomienia z Centrum powiadomień."
+        }
+        return "Powiadomienia pojawią się tutaj, gdy Fun Notch zacznie je widzieć."
     }
 
     private var list: some View {

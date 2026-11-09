@@ -27,7 +27,13 @@ final class SystemActivityMonitor: ObservableObject {
     /// at most one extra poll.
     nonisolated(unsafe) private(set) static var isScreenIdle = false
 
-    private var observers: [Any] = []
+    private var observers: [(center: NotificationCenter, handle: NSObjectProtocol)] = []
+
+    /// The three reasons the screen can be unwatched are tracked separately: the
+    /// display can wake while the lock screen is still up, and a wake
+    /// notification for one reason must not cancel another that still holds.
+    private enum Reason { case locked, displayAsleep, systemAsleep }
+    private var active: Set<Reason> = []
 
     private init() {}
 
@@ -35,36 +41,43 @@ final class SystemActivityMonitor: ObservableObject {
         guard observers.isEmpty else { return }
 
         let workspace = NSWorkspace.shared.notificationCenter
-        observe(workspace, NSWorkspace.screensDidSleepNotification, idle: true)
-        observe(workspace, NSWorkspace.screensDidWakeNotification, idle: false)
-        observe(workspace, NSWorkspace.willSleepNotification, idle: true)
-        observe(workspace, NSWorkspace.didWakeNotification, idle: false)
+        observe(workspace, NSWorkspace.screensDidSleepNotification, .displayAsleep, on: true)
+        observe(workspace, NSWorkspace.screensDidWakeNotification, .displayAsleep, on: false)
+        observe(workspace, NSWorkspace.willSleepNotification, .systemAsleep, on: true)
+        observe(workspace, NSWorkspace.didWakeNotification, .systemAsleep, on: false)
 
         // The lock screen is not a notification AppKit publishes; it comes over
         // the distributed centre, under a name Apple has never documented but
         // which every screen-lock-aware app on macOS relies on.
         let distributed = DistributedNotificationCenter.default()
-        observe(distributed, Notification.Name("com.apple.screenIsLocked"), idle: true)
-        observe(distributed, Notification.Name("com.apple.screenIsUnlocked"), idle: false)
+        observe(distributed, Notification.Name("com.apple.screenIsLocked"), .locked, on: true)
+        observe(distributed, Notification.Name("com.apple.screenIsUnlocked"), .locked, on: false)
+
+        // Launched while already locked: no notification will announce that.
+        let session = CGSessionCopyCurrentDictionary() as? [String: Any]
+        if session?["CGSSessionScreenIsLocked"] as? Bool == true { set(.locked, on: true) }
     }
 
     func stop() {
         for observer in observers {
-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
-            DistributedNotificationCenter.default().removeObserver(observer)
+            observer.center.removeObserver(observer.handle)
         }
         observers.removeAll()
     }
 
-    private func observe(_ centre: NotificationCenter, _ name: Notification.Name, idle: Bool) {
-        let observer = centre.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, self.isIdle != idle else { return }
-                self.isIdle = idle
-                Self.isScreenIdle = idle
-                DiagnosticLog.write("power", idle ? "screen off, backing off polling" : "screen on, resuming")
-            }
+    private func observe(_ centre: NotificationCenter, _ name: Notification.Name, _ reason: Reason, on: Bool) {
+        let handle = centre.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.set(reason, on: on) }
         }
-        observers.append(observer)
+        observers.append((centre, handle))
+    }
+
+    private func set(_ reason: Reason, on: Bool) {
+        if on { active.insert(reason) } else { active.remove(reason) }
+        let idle = !active.isEmpty
+        guard isIdle != idle else { return }
+        isIdle = idle
+        Self.isScreenIdle = idle
+        DiagnosticLog.write("power", idle ? "screen off, backing off polling" : "screen on, resuming")
     }
 }

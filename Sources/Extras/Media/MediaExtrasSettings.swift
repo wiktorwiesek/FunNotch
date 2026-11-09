@@ -9,6 +9,7 @@ import AppKit
 import SwiftUI
 
 struct MediaExtrasSettings: View {
+    @AppStorage(MediaExtrasDefaults.autoSourceKey) private var autoSource = true
     @AppStorage(MediaExtrasDefaults.lyricsEnabledKey) private var lyricsEnabled = true
     @AppStorage(MediaExtrasDefaults.lyricsInPlayerKey) private var lyricsInPlayer = true
     @AppStorage(MediaExtrasDefaults.lyricsInClosedNotchKey) private var lyricsInClosedNotch = false
@@ -22,6 +23,7 @@ struct MediaExtrasSettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
+            sourceCard
             lyricsCard
             soundCard
         }
@@ -36,6 +38,23 @@ struct MediaExtrasSettings: View {
         }
         .onChange(of: mixer.permission) { _, _ in
             permission = AudioCapturePermission.status
+        }
+    }
+
+    // MARK: Source
+
+    private var sourceCard: some View {
+        SettingsCard(
+            title: "Źródło muzyki",
+            footer: "Przy automatycznym wyborze Fun Notch śledzi wszystkie odtwarzacze naraz i pokazuje ten, w którym ostatnio naciśnięto „odtwarzaj”. Źródło wybrane w Ustawieniach → Media rozstrzyga tylko, gdy dwa zaczęły grać razem."
+        ) {
+            SettingsToggle(
+                title: "Automatyczny wybór źródła",
+                subtitle: "Kaset, Muzyka, Spotify i karty przeglądarki: notch pokazuje to, co naprawdę gra, a nie zatrzymany odtwarzacz.",
+                symbol: "arrow.triangle.branch",
+                tint: SettingsStyle.pink,
+                isOn: $autoSource
+            )
         }
     }
 

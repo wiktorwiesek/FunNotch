@@ -50,7 +50,29 @@ struct TrackInfo: Equatable {
             && lhs.isShuffled == rhs.isShuffled
             && lhs.repeatMode == rhs.repeatMode
             && lhs.likeStatus == rhs.likeStatus
+            && lhs.bundleIdentifier == rhs.bundleIdentifier
             && lhs.artwork === rhs.artwork
+    }
+}
+
+extension TrackInfo {
+    /// Lowercase only, so "I Monster" or "And One" are left alone.
+    private static let joiners: Set<String> = ["oraz", "i", "and", "&", "und"]
+
+    /// Players build the artist line by joining a list of names, and some
+    /// feed it an empty name — the line read "Taco Hemingway oraz , Taco
+    /// Hemingway". Drops empty entries and the joiner left dangling beside
+    /// them, and leaves a well-formed "A i B" alone.
+    static func tidyArtist(_ raw: String) -> String {
+        let collapsed = raw.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        var parts: [String] = []
+        for piece in collapsed.split(separator: ",", omittingEmptySubsequences: false) {
+            var words = piece.split(separator: " ").map(String.init)
+            while let first = words.first, joiners.contains(first) { words.removeFirst() }
+            while let last = words.last, joiners.contains(last) { words.removeLast() }
+            if !words.isEmpty { parts.append(words.joined(separator: " ")) }
+        }
+        return parts.isEmpty ? collapsed : parts.joined(separator: ", ")
     }
 }
 

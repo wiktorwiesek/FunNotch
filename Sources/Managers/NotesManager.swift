@@ -103,6 +103,7 @@ final class NotesManager: ObservableObject {
         loadDay(day)
         refreshDays()
         startRolloverWatch()
+        Self.current = self
     }
 
     /// Notes used to be a single `Notes.txt`. Anything in it belongs to the day
@@ -222,11 +223,31 @@ final class NotesManager: ObservableObject {
         saveWorkItem?.cancel()
         saveWorkItem = nil
 
+        // Browsing days or rolling over midnight saves the open one; an empty
+        // day nobody has written in must not leave a blank .txt on the Desktop.
+        if isEmpty,
+           !FileManager.default.fileExists(atPath: desktopURL(for: day).path),
+           !FileManager.default.fileExists(atPath: backupURL(for: day).path) {
+            refreshDays()
+            return
+        }
+
         // The backup goes first and its failure is not reported: it is the copy
         // that exists so the visible one can be lost.
         write(text, to: backupURL(for: day), report: false)
         write(text, to: desktopURL(for: day), report: true)
         refreshDays()
+    }
+
+    /// The instance, if the notes have been opened this run. Lets quitting save
+    /// without creating the manager (and reading the Desktop) just to find out
+    /// there is nothing to save.
+    private(set) static var current: NotesManager?
+
+    /// Writes a note typed in the last second, which the debounce has not saved yet.
+    func flushPendingSave() {
+        guard saveWorkItem != nil else { return }
+        saveNow()
     }
 
     private func write(_ contents: String, to url: URL, report: Bool) {

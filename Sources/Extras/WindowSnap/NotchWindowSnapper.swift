@@ -125,7 +125,7 @@ final class NotchWindowSnapper {
         let frame = zone.frame(in: usable)
         let zoneTitle = zone.title.lowercased()
         axQueue.asyncAfter(deadline: .now() + 0.07) {
-            let problem = Self.snap(target, to: frame)
+            let problem = Self.snap(target, to: frame, within: usable)
             DispatchQueue.main.async {
                 MainActor.assumeIsolated { Self.report(problem, for: target, zone: zoneTitle) }
             }
@@ -176,17 +176,33 @@ final class NotchWindowSnapper {
         case cannotResize
     }
 
-    /// Runs on `axQueue`.
-    private nonisolated static func snap(_ target: WindowTarget, to frame: CGRect) -> Problem? {
+    /// Runs on `axQueue`. `usable` is the screen's usable area, so a window that
+    /// cannot get as small as the zone can be kept inside it.
+    private nonisolated static func snap(_ target: WindowTarget, to frame: CGRect, within usable: CGRect) -> Problem? {
         let current = WindowLocator.currentBounds(of: target.windowNumber) ?? target.bounds
         guard let window = WindowLocator.axWindow(pid: target.pid, matching: current) else { return .noWindow }
 
         let error = WindowFrame.apply(frame, to: window)
-        guard let result = WindowFrame.read(window) else {
+        guard var result = WindowFrame.read(window) else {
             return error == .success ? nil : .cannotMove
         }
-        if abs(result.minX - frame.minX) > 6 || abs(result.minY - frame.minY) > 6 { return .cannotMove }
+
+        // A window with a minimum size larger than the zone keeps the zone's
+        // top-left corner and grows past the screen edge (a right third of a
+        // window that needs 700 pt ends up 200 pt off screen). Slide it back
+        // so the whole window stays reachable.
+        if result.width > frame.width + 1 || result.height > frame.height + 1 {
+            let origin = WindowFrame.origin(keeping: result, inside: usable)
+            if abs(origin.x - result.minX) > 1 || abs(origin.y - result.minY) > 1 {
+                WindowFrame.setPosition(window, origin)
+                result = WindowFrame.read(window) ?? result
+            }
+        }
+
+        // Size is judged first: after the slide above the position differs from
+        // the zone's by design, and that is a size problem, not a move problem.
         if abs(result.width - frame.width) > 6 || abs(result.height - frame.height) > 6 { return .cannotResize }
+        if abs(result.minX - frame.minX) > 6 || abs(result.minY - frame.minY) > 6 { return .cannotMove }
         return nil
     }
 

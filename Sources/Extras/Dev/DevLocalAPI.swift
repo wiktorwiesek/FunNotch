@@ -110,8 +110,10 @@ struct DevHTTPResponse {
         case 200: return "OK"
         case 400: return "Bad Request"
         case 401: return "Unauthorized"
+        case 403: return "Forbidden"
         case 404: return "Not Found"
         case 405: return "Method Not Allowed"
+        case 411: return "Length Required"
         case 413: return "Payload Too Large"
         default: return "Error"
         }
@@ -155,6 +157,11 @@ private enum DevHTTPParse {
             guard let colon = line.firstIndex(of: ":") else { continue }
             let name = line[..<colon].lowercased()
             headers[name] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+        }
+        // A chunked body has no Content-Length; reading it as an empty body
+        // would only produce a baffling "expected JSON" answer.
+        if let encoding = headers["transfer-encoding"], encoding.lowercased() != "identity" {
+            return .invalid(DevHTTPResponse(411, ["error": "send a Content-Length instead of a chunked body"]))
         }
         let length = Int(headers["content-length"] ?? "0") ?? -1
         guard length >= 0 else {
@@ -306,8 +313,14 @@ final class LocalAPIManager: ObservableObject {
             DiagnosticLog.write("api", "listener failed: \(error)")
             return
         }
-        listener.stateUpdateHandler = { [weak self] state in
-            Task { @MainActor in self?.listenerStateChanged(state) }
+        listener.stateUpdateHandler = { [weak self, weak listener] state in
+            Task { @MainActor in
+                // A listener that was stopped (or replaced by a quick off/on)
+                // still reports its last states; they must not touch the
+                // current one.
+                guard let self, let listener, self.listener === listener else { return }
+                self.listenerStateChanged(state)
+            }
         }
         listener.newConnectionHandler = { [queue] connection in
             DevHTTPConnection(connection, queue: queue).start()
@@ -364,6 +377,11 @@ final class LocalAPIManager: ObservableObject {
     // MARK: Routing
 
     func route(_ request: DevHTTPRequest) -> DevHTTPResponse {
+        // The token already keeps a DNS-rebinding page out; refusing foreign
+        // Host names as well means it cannot even probe the server.
+        guard Self.isLocalHost(request.headers["host"]) else {
+            return DevHTTPResponse(403, ["error": "unexpected Host header"])
+        }
         guard isAuthorized(request) else {
             return DevHTTPResponse(401, ["error": "missing or invalid bearer token"])
         }
@@ -382,6 +400,18 @@ final class LocalAPIManager: ObservableObject {
         case "/activity/start": return startActivity(request.body)
         default: return endActivity(request.body)
         }
+    }
+
+    /// A missing Host (HTTP/1.0) passes; otherwise it must name this machine.
+    private static func isLocalHost(_ header: String?) -> Bool {
+        guard let header else { return true }
+        var name = header.lowercased()
+        if name.hasPrefix("[") {
+            name = String(name.prefix { $0 != "]" }) + "]"
+        } else if let colon = name.firstIndex(of: ":") {
+            name = String(name[..<colon])
+        }
+        return ["127.0.0.1", "localhost", "[::1]"].contains(name)
     }
 
     private func isAuthorized(_ request: DevHTTPRequest) -> Bool {

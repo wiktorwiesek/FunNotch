@@ -49,6 +49,14 @@ final class NotificationDatabaseReader {
     private var lastSignature: String?
     private var lastAccess: DatabaseAccess?
 
+    /// Drops the "unchanged since last read" memory, so the next read returns
+    /// rows again. Needed when the consumer threw its copy away (feature
+    /// switched off and on again) while the database file did not change.
+    func forget() {
+        lastSignature = nil
+        lastAccess = nil
+    }
+
     /// Every place the database can live, most recent macOS first.
     private static var candidateDirectories: [String] {
         var directories = [NSHomeDirectory() + "/Library/Group Containers/group.com.apple.usernoted/db2"]
@@ -168,13 +176,19 @@ final class NotificationDatabaseReader {
         let ceiling = Date().addingTimeInterval(60)
         while sqlite3_step(statement) == SQLITE_ROW {
             guard let identifierText = sqlite3_column_text(statement, 0) else { continue }
-            let identifier = String(cString: identifierText)
+            let columnIdentifier = String(cString: identifierText)
             let uuid = blob(statement, 1).map { $0.map { String(format: "%02x", $0) }.joined() } ?? UUID().uuidString
             let date = Date(timeIntervalSinceReferenceDate: sqlite3_column_double(statement, 3))
             guard date <= ceiling, let payload = blob(statement, 2),
                   let plist = try? PropertyListSerialization.propertyList(from: Data(payload), format: nil) as? [String: Any],
                   let request = plist["req"] as? [String: Any]
             else { continue }
+
+            // `app.identifier` is stored lowercased ("com.apple.scripteditor2") and
+            // system senders carry a "_system_center_:" prefix, while the payload
+            // keeps the real bundle id ("com.apple.ScriptEditor2"). Banners use the
+            // real one, so matching banners to rows needs the same spelling here.
+            let identifier = Self.bundleIdentifier(payload: plist["app"] as? String, column: columnIdentifier)
 
             let title = request["titl"] as? String ?? ""
             let subtitle = request["subt"] as? String ?? ""
@@ -194,5 +208,13 @@ final class NotificationDatabaseReader {
         let count = Int(sqlite3_column_bytes(statement, column))
         guard count > 0 else { return nil }
         return Array(UnsafeBufferPointer(start: pointer.assumingMemoryBound(to: UInt8.self), count: count))
+    }
+
+    private static func bundleIdentifier(payload: String?, column: String) -> String {
+        let prefix = "_system_center_:"
+        if let payload, !payload.isEmpty {
+            return payload.hasPrefix(prefix) ? String(payload.dropFirst(prefix.count)) : payload
+        }
+        return column.hasPrefix(prefix) ? String(column.dropFirst(prefix.count)) : column
     }
 }

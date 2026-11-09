@@ -35,6 +35,9 @@ final class WeatherManager: NSObject, ObservableObject {
 
     private let locationManager = CLLocationManager()
     private var timer: Timer?
+    /// Wi-Fi state is cheap to read and changes in seconds (unplugging, a
+    /// router reboot), unlike the ten-minute weather refresh it rode along on.
+    private var wifiTimer: Timer?
     private var subscribers = 0
     private var lastFetch: Date?
     private var isFetching = false
@@ -83,11 +86,20 @@ final class WeatherManager: NSObject, ObservableObject {
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+
+        let wifiTimer = Timer(timeInterval: 10, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.readWiFi() }
+        }
+        wifiTimer.tolerance = 3
+        RunLoop.main.add(wifiTimer, forMode: .common)
+        self.wifiTimer = wifiTimer
     }
 
     private func stop() {
         timer?.invalidate()
         timer = nil
+        wifiTimer?.invalidate()
+        wifiTimer = nil
     }
 
     func refresh() {
@@ -112,8 +124,12 @@ final class WeatherManager: NSObject, ObservableObject {
 
     private func readWiFi() {
         let interface = CWWiFiClient.shared().interface()
-        isWiFiConnected = interface?.powerOn() == true && interface?.serviceActive() == true
-        wifiNetwork = interface?.ssid()
+        // Assigned only on change: this runs every few seconds, and every
+        // assignment to a published property redraws whatever observes it.
+        let connected = interface?.powerOn() == true && interface?.serviceActive() == true
+        if connected != isWiFiConnected { isWiFiConnected = connected }
+        let ssid = interface?.ssid()
+        if ssid != wifiNetwork { wifiNetwork = ssid }
     }
 
     private func fetch(for location: CLLocation) {
@@ -301,6 +317,9 @@ extension WeatherManager: CLLocationManagerDelegate {
                 // moment they are being asked to allow it.
                 guard self.authorization != .notDetermined else { return }
                 self.lastError = "Lokalizacja niedostępna"
+                // A fix that is merely not there yet (kCLErrorLocationUnknown)
+                // passes; waiting ten minutes for the next refresh would not.
+                if self.isLocationAuthorized { self.scheduleRetry() }
             }
         }
     }

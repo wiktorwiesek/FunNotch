@@ -193,7 +193,9 @@ final class NotchWindowController {
             )
         }
 
-        let size = viewModel.contentSize
+        // `interactiveSize` rather than `contentSize`: with the wings tucked
+        // away at the menu bar, clicks must fall through to the menus there.
+        let size = viewModel.interactiveSize
         var rect = CGRect(
             x: (windowSize.width - size.width) / 2,
             y: windowSize.height - size.height,
@@ -203,8 +205,9 @@ final class NotchWindowController {
 
         if viewModel.notchState == .closed, Settings.shared.extendHoverArea {
             // A forgiving lip below the notch so the pointer does not have to be
-            // pixel-accurate to keep it open.
-            rect = rect.insetBy(dx: -12, dy: 0)
+            // pixel-accurate to keep it open. Not sideways while the wings are
+            // tucked: that strip is menu bar the user is trying to click.
+            rect = rect.insetBy(dx: viewModel.wingsTucked ? 0 : -12, dy: 0)
             rect.origin.y -= 12
             rect.size.height += 12
         }
@@ -230,6 +233,43 @@ final class NotchWindowController {
         rect.origin.x += panel.frame.origin.x
         rect.origin.y += panel.frame.origin.y
         return rect
+    }
+
+    /// True when the pointer is in this display's menu-bar strip but off the
+    /// cutout (the notch's plain closed rectangle, centred on the display).
+    /// That is where the wings would sit over the app's menus and status
+    /// items. On a display without a notch the "cutout" is the floating pill's
+    /// own base width, so it behaves the same relative to its own rect.
+    /// Uses only the pointer position, so no Accessibility permission.
+    func isPointerOverMenuBarWings(_ point: CGPoint) -> Bool {
+        guard Settings.shared.hideWingsAtMenuBar,
+              let screen = NSScreen.screen(withIdentifier: viewModel.screenIdentifier) ?? panel.screen
+        else { return false }
+
+        // With the menu bar auto-hidden or a fullscreen app up, the visible
+        // frame reaches the top; a notched display still has its safe-area
+        // band, which is where the revealed menu bar appears.
+        let barHeight = max(screen.frame.maxY - screen.visibleFrame.maxY, screen.safeAreaInsets.top)
+
+        var cutoutWidth = viewModel.closedNotchSize.width
+        if let left = screen.auxiliaryTopLeftArea?.width, let right = screen.auxiliaryTopRightArea?.width {
+            cutoutWidth = max(cutoutWidth, screen.frame.width - left - right)
+        }
+        return Self.isOverMenuBarWings(
+            point, screenFrame: screen.frame, barHeight: barHeight, cutoutWidth: cutoutWidth
+        )
+    }
+
+    /// The geometry behind `isPointerOverMenuBarWings`, free of any AppKit
+    /// state so it can be checked directly.
+    nonisolated static func isOverMenuBarWings(
+        _ point: CGPoint, screenFrame: CGRect, barHeight: CGFloat, cutoutWidth: CGFloat
+    ) -> Bool {
+        guard barHeight > 0,
+              point.x >= screenFrame.minX, point.x <= screenFrame.maxX,
+              point.y <= screenFrame.maxY, point.y >= screenFrame.maxY - barHeight
+        else { return false }
+        return abs(point.x - screenFrame.midX) > cutoutWidth / 2
     }
 
     func close() {

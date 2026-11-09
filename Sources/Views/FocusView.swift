@@ -72,6 +72,27 @@ enum ClockPalette {
     }
 }
 
+private struct FocusTileIsTightKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// True when the Home tile has too little height for every row of controls.
+    fileprivate var focusTileIsTight: Bool {
+        get { self[FocusTileIsTightKey.self] }
+        set { self[FocusTileIsTightKey.self] = newValue }
+    }
+}
+
+/// Hides a secondary row of controls while the tile is short.
+private struct HiddenWhenTight: ViewModifier {
+    @Environment(\.focusTileIsTight) private var tight
+
+    func body(content: Content) -> some View {
+        if !tight { content }
+    }
+}
+
 struct FocusView: View {
     /// On the home screen the tab is a tile, and may be given far less room.
     var isTile = false
@@ -100,6 +121,10 @@ struct FocusView: View {
                     HStack(alignment: .center, spacing: 14) {
                         TimeDial(mode: state.mode, size: dial)
                         ModeColumn(mode: state.mode, compact: true)
+                            // A tile beside the bottom row is only about 100
+                            // points tall: four rows of controls do not fit
+                            // and were clipped top and bottom.
+                            .environment(\.focusTileIsTight, isTile && size.height < 125)
                             .padding(.top, drop)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     }
@@ -625,6 +650,7 @@ private struct FocusControls: View {
                     settings.focusPomodoro.toggle()
                 }
             }
+            .modifier(HiddenWhenTight())
         }
     }
 
@@ -668,14 +694,17 @@ private struct FocusControls: View {
                 }
             }
 
-            if settings.focusPomodoro {
-                CycleDots(completed: focus.completedCycles, onBreak: focus.isOnBreak)
-            } else if let host = focus.lastBlockedHost {
-                Label("Zablokowano: \(host)", systemImage: "hand.raised.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.45))
-                    .lineLimit(1)
+            Group {
+                if settings.focusPomodoro {
+                    CycleDots(completed: focus.completedCycles, onBreak: focus.isOnBreak)
+                } else if let host = focus.lastBlockedHost {
+                    Label("Zablokowano: \(host)", systemImage: "hand.raised.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .lineLimit(1)
+                }
             }
+            .modifier(HiddenWhenTight())
         }
     }
 
@@ -755,6 +784,7 @@ private struct TimerControls: View {
                     }
                 }
             }
+            .modifier(HiddenWhenTight())
         }
     }
 
@@ -781,6 +811,7 @@ private struct TimerControls: View {
             ProgressLine(progress: timer.progress, tint: ClockPalette.timer)
                 .frame(height: 4)
                 .frame(maxWidth: 240)
+                .modifier(HiddenWhenTight())
         }
     }
 
@@ -842,6 +873,7 @@ private struct StopwatchControls: View {
                     .font(.system(size: 10))
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.45))
+                    .modifier(HiddenWhenTight())
             }
         }
     }

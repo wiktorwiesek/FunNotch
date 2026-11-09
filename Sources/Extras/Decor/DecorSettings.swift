@@ -69,7 +69,7 @@ struct DecorSettings: View {
     private var mascotCard: some View {
         SettingsCard(
             title: "Maskotka minutnika",
-            footer: "Maskotka biegnie po cienkiej ścieżce obok odliczania w zamkniętym notchu, podczas sesji skupienia i minutnika. Minutnik pokazuje ją jako widżet „Odliczanie” na liście widżetów bezczynności."
+            footer: "Maskotka biegnie po cienkiej ścieżce obok odliczania w zamkniętym notchu podczas sesji skupienia. Podczas minutnika pokazuje ją widżet „Minutnik skupienia”, który dodasz w oknie „Dostosuj notch”."
         ) {
             SettingsPicker(
                 title: "Maskotka",
@@ -215,7 +215,7 @@ struct DecorSettings: View {
     private var glassCard: some View {
         SettingsCard(
             title: "Liquid Glass",
-            footer: "Szklany wygląd wymaga macOS 26 lub nowszego. Na starszych systemach notch zostaje czarny. Rozmiaru otwartego panelu nie można tu zmienić, bo jest wpisany na stałe w wielu miejscach aplikacji."
+            footer: "Szklany wygląd wymaga macOS 26 lub nowszego. Na starszych systemach notch zostaje czarny."
         ) {
             if !DecorStore.glassIsAvailable {
                 SettingsStatus(
@@ -236,7 +236,7 @@ struct DecorSettings: View {
 
             SettingsToggle(
                 title: "Banery wyspy",
-                subtitle: "Szklane tło dla komunikatów, takich jak „Wysuń” albo kopiowanie.",
+                subtitle: "Szklane tło komunikatów, takich jak „Wysuń” albo kopiowanie, na ekranie bez notcha.",
                 symbol: "capsule.portrait",
                 tint: SettingsStyle.teal,
                 isOn: $store.glassBanners,
@@ -267,7 +267,7 @@ private struct DecorMascotLoopPreview: View {
     let mascot: DecorMascot
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+        TimelineView(DecorClock.schedule) { context in
             let loop = 5.0
             let progress = context.date.timeIntervalSinceReferenceDate
                 .truncatingRemainder(dividingBy: loop) / loop

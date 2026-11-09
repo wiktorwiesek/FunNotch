@@ -93,6 +93,10 @@ enum ClipboardSmart {
     // MARK: - Detection
 
     static func detect(_ text: String) -> ClipboardSmartKind {
+        // A pasted log or CSV runs to megabytes. Tiles are drawn on main for every
+        // redraw, so skip the trims and regexes and just count in a single pass.
+        // `utf8.count` is O(1), unlike `count`.
+        if text.utf8.count > 4_000 { return longTextSummary(text) }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .plain }
 
@@ -106,6 +110,9 @@ enum ClipboardSmart {
             if let ean = parseEAN(trimmed) { return .ean(ean) }
             if let nip = parseNIP(trimmed) { return .nip(nip) }
             if let phone = parsePhone(trimmed) { return .phone(phone) }
+        } else if singleLine, trimmed.count <= 2_048, let url = parseURL(trimmed) {
+            // Tracking and share links often run past 300 characters.
+            return .url(url)
         }
 
         let lines = trimmed.split(whereSeparator: \.isNewline).count
@@ -116,6 +123,31 @@ enum ClipboardSmart {
         return .plain
     }
 
+    /// One pass over the scalars: count what the tile shows, nothing else.
+    private static func longTextSummary(_ text: String) -> ClipboardSmartKind {
+        var characters = 0
+        var words = 0
+        var inWord = false
+        // Whitespace is only counted once more text follows it, so leading and
+        // trailing runs are left out, as trimming would leave them.
+        var pending = 0
+        for scalar in text.unicodeScalars {
+            if scalar.properties.isWhitespace {
+                pending += 1
+                inWord = false
+            } else {
+                if characters > 0 { characters += pending }
+                pending = 0
+                characters += 1
+                if !inWord {
+                    words += 1
+                    inWord = true
+                }
+            }
+        }
+        return words == 0 ? .plain : .longText(characters: characters, words: words)
+    }
+
     private static func matches(_ text: String, _ pattern: String) -> Bool {
         text.range(of: pattern, options: .regularExpression) != nil
     }
@@ -123,6 +155,9 @@ enum ClipboardSmart {
     private static func parseColor(_ text: String) -> ClipboardColor? {
         if matches(text, "^#([0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$") {
             var digits = Array(text.dropFirst())
+            // "#1234" or "#404" is an order number or an issue reference far more
+            // often than a colour; shorthand needs at least one letter digit.
+            if digits.count <= 4, !digits.contains(where: { $0.isLetter }) { return nil }
             // #RGB and #RGBA are shorthand for doubled digits.
             if digits.count <= 4 { digits = digits.flatMap { [$0, $0] } }
             func byte(_ index: Int) -> Int {
@@ -189,13 +224,20 @@ enum ClipboardSmart {
     }
 
     private static func parsePhone(_ text: String) -> String? {
-        guard matches(text, "^\\+?\\d[\\d\\s\\-().]{7,18}\\d$") else { return nil }
+        // A leading "(22)" is the usual way to write a Polish area code.
+        guard matches(text, "^(?:\\+?\\d[\\d\\s\\-().]{7,18}\\d|\\(\\d{2}\\)\\s?\\d[\\d\\s\\-]{5,12}\\d)$") else { return nil }
         let hasPlus = text.hasPrefix("+")
         let digits = String(text.filter(\.isNumber))
+        // A decimal such as "3.14159265" has the digit count of a phone number
+        // but is not one: dots only count as separators in international form.
+        if !hasPlus, !digits.hasPrefix("00"), text.contains(".") { return nil }
         switch digits.count {
         case 9 where !hasPlus:
             return "+48" + digits
         case 11 where !hasPlus && digits.hasPrefix("48"):
+            // Polish numbers never start with 0, and a PESEL born in 1948 looks
+            // exactly like "48" plus nine digits.
+            if digits.dropFirst(2).hasPrefix("0") || isPESEL(digits) { return nil }
             return "+" + digits
         case 10 ... 15 where !hasPlus && digits.hasPrefix("00"):
             return "+" + digits.dropFirst(2)
@@ -204,6 +246,14 @@ enum ClipboardSmart {
         default:
             return nil
         }
+    }
+
+    private static func isPESEL(_ digits: String) -> Bool {
+        let values = digits.compactMap(\.wholeNumberValue)
+        guard values.count == 11 else { return false }
+        let weights = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3]
+        let sum = zip(values.prefix(10), weights).reduce(0) { $0 + $1.0 * $1.1 }
+        return (10 - sum % 10) % 10 == values[10]
     }
 
     /// "123-456-32-18"
@@ -424,8 +474,71 @@ final class LinkTitleStore: ObservableObject {
             willPerformHTTPRedirection response: HTTPURLResponse,
             newRequest request: URLRequest
         ) async -> URLRequest? {
-            guard let target = request.url, LinkTitleStore.isSafeToFetch(target) else { return nil }
+            guard let target = request.url, LinkTitleStore.isSafeToFetch(target),
+                  await LinkTitleStore.resolvesToPublicAddress(target.host ?? "")
+            else { return nil }
             return request
+        }
+    }
+
+    /// A name that passes the textual check can still point at the LAN
+    /// ("192.168.0.1.nip.io", a record an attacker controls). The addresses it
+    /// resolves to must all be public.
+    nonisolated static func resolvesToPublicAddress(_ host: String) async -> Bool {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            DispatchQueue.global(qos: .utility).async {
+                var hints = addrinfo()
+                hints.ai_family = AF_UNSPEC
+                hints.ai_socktype = SOCK_STREAM
+                var list: UnsafeMutablePointer<addrinfo>?
+                guard getaddrinfo(host, nil, &hints, &list) == 0, let first = list else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                defer { freeaddrinfo(list) }
+                var cursor: UnsafeMutablePointer<addrinfo>? = first
+                var isPublic = true
+                while let entry = cursor?.pointee {
+                    if let address = entry.ai_addr, !isPublicAddress(address, family: entry.ai_family) { isPublic = false }
+                    cursor = entry.ai_next
+                }
+                continuation.resume(returning: isPublic)
+            }
+        }
+    }
+
+    nonisolated private static func isPublicAddress(_ address: UnsafeMutablePointer<sockaddr>, family: Int32) -> Bool {
+        if family == AF_INET {
+            return address.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { pointer in
+                let value = UInt32(bigEndian: pointer.pointee.sin_addr.s_addr)
+                return isPublicIPv4(UInt8(value >> 24), UInt8((value >> 16) & 0xFF))
+            }
+        }
+        guard family == AF_INET6 else { return false }
+        return address.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { pointer in
+            let bytes = withUnsafeBytes(of: pointer.pointee.sin6_addr) { Array($0) }
+            guard bytes.count == 16 else { return false }
+            // ::, ::1, and v4-mapped / v4-compatible forms of a private v4 address.
+            if bytes[0 ..< 10].allSatisfy({ $0 == 0 }) {
+                if bytes[10] == 0xFF, bytes[11] == 0xFF { return isPublicIPv4(bytes[12], bytes[13]) }
+                return false
+            }
+            // fe80::/10 link-local, fc00::/7 unique local, ff00::/8 multicast.
+            if bytes[0] == 0xFE, bytes[1] & 0xC0 == 0x80 { return false }
+            if bytes[0] & 0xFE == 0xFC || bytes[0] == 0xFF { return false }
+            return true
+        }
+    }
+
+    nonisolated private static func isPublicIPv4(_ first: UInt8, _ second: UInt8) -> Bool {
+        switch first {
+        case 0, 10, 127: return false
+        case 100 where (64 ... 127).contains(second): return false
+        case 169 where second == 254: return false
+        case 172 where (16 ... 31).contains(second): return false
+        case 192 where second == 168: return false
+        case 224...: return false
+        default: return true
         }
     }
 
@@ -448,6 +561,7 @@ final class LinkTitleStore: ObservableObject {
         request.setValue("pl-PL,pl;q=0.9,en;q=0.7", forHTTPHeaderField: "Accept-Language")
 
         do {
+            guard await resolvesToPublicAddress(url.host ?? "") else { return nil }
             let (bytes, response) = try await session.bytes(for: request, delegate: RedirectGuard())
             guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else { return nil }
             let contentType = http.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? "text/html"
@@ -506,21 +620,33 @@ final class LinkTitleStore: ObservableObject {
     }
 
     nonisolated private static func cleanTitle(_ raw: String) -> String? {
+        // One pass over every entity, so "&amp;lt;" becomes "&lt;" and not "<".
+        let named: [String: String] = [
+            "amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'", "nbsp": " ",
+            "ndash": "–", "mdash": "—", "hellip": "…", "laquo": "«", "raquo": "»",
+            "bull": "•", "middot": "·", "copy": "©", "reg": "®", "trade": "™",
+            "euro": "€", "oacute": "ó", "Oacute": "Ó", "eacute": "é",
+        ]
         var text = raw
-        let named = ["&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&apos;": "'", "&#39;": "'", "&nbsp;": " "]
-        for (entity, value) in named { text = text.replacingOccurrences(of: entity, with: value) }
-
-        // Numeric entities: &#8211; and &#x2013;
-        if let regex = try? NSRegularExpression(pattern: "&#(x?)([0-9A-Fa-f]+);") {
-            let source = text as NSString
+        if let regex = try? NSRegularExpression(pattern: "&(#[xX][0-9A-Fa-f]+|#[0-9]+|[A-Za-z]+);") {
+            let source = raw as NSString
             var result = ""
             var cursor = 0
-            for match in regex.matches(in: text, range: NSRange(location: 0, length: source.length)) {
+            for match in regex.matches(in: raw, range: NSRange(location: 0, length: source.length)) {
                 result += source.substring(with: NSRange(location: cursor, length: match.range.location - cursor))
-                let isHex = source.substring(with: match.range(at: 1)) == "x"
-                let digits = source.substring(with: match.range(at: 2))
-                if let code = UInt32(digits, radix: isHex ? 16 : 10), let scalar = Unicode.Scalar(code) {
-                    result += String(Character(scalar))
+                let body = source.substring(with: match.range(at: 1))
+                if body.hasPrefix("#") {
+                    let isHex = body.hasPrefix("#x") || body.hasPrefix("#X")
+                    let digits = String(body.dropFirst(isHex ? 2 : 1))
+                    // Control characters (a "&#0;") never belong in a title.
+                    if let code = UInt32(digits, radix: isHex ? 16 : 10), code > 31, let scalar = Unicode.Scalar(code) {
+                        result += String(Character(scalar))
+                    }
+                } else if let value = named[body] {
+                    result += value
+                } else {
+                    // Unknown entity: leave it as the page wrote it.
+                    result += source.substring(with: match.range)
                 }
                 cursor = match.range.location + match.range.length
             }

@@ -340,7 +340,7 @@ final class DiagnosticsReport: ObservableObject {
 
     /// The whole report as plain text, for pasting into a bug report.
     var plainText: String {
-        var out = "Fun Notch diagnostics — \(generated.formatted(.dateTime.locale(Polish.locale)))\n"
+        var out = "Fun Notch — diagnostyka, \(generated.formatted(.dateTime.locale(Polish.locale)))\n"
         for section in sections {
             out += "\n## \(section.title)\n"
             for row in section.rows {
@@ -351,7 +351,7 @@ final class DiagnosticsReport: ObservableObject {
             }
         }
         if !recentLog.isEmpty {
-            out += "\n## Recent log\n"
+            out += "\n## Ostatnie wpisy dziennika\n"
             out += recentLog.map { "  \($0)" }.joined(separator: "\n")
             out += "\n"
         }

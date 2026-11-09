@@ -15,7 +15,10 @@ extension NotchViewModel {
     /// no mascot is picked or no session is showing there.
     var decorMascotTrackWidth: CGFloat {
         guard showsFocusActivity, DecorStore.shared.mascot != .none else { return 0 }
-        return DecorMascotTrack.width + 8
+        // On top of the countdown's own width: the track and the gap before
+        // it, plus a little more margin on the outer edge, where the notch's
+        // corner rounds away.
+        return DecorMascotTrack.width + DecorMascotTrack.cameraGap + 4
     }
 
     /// Which wings the idle animation occupies right now, or nil. It only

@@ -270,8 +270,16 @@ final class NotificationBannerWatcher: ObservableObject {
             guard !banner.text.isEmpty else { continue }
             let content = [banner.appName ?? "", banner.title, banner.subtitle, banner.body].joined(separator: "\u{1F}")
             let key = (banner.identifier ?? "") + "|" + content
-            guard delivered[key] == nil else { continue }
-            delivered[key] = now.addingTimeInterval(banner.identifier == nil ? 15 : 600)
+            let lifetime: TimeInterval = banner.identifier == nil ? 15 : 600
+            // A banner still on screen stays "delivered": its lifetime restarts on
+            // every scan that sees it. Otherwise an alert left up for longer than
+            // the lifetime would be announced a second time as soon as any other
+            // banner triggered a scan.
+            if delivered[key] != nil {
+                delivered[key] = now.addingTimeInterval(lifetime)
+                continue
+            }
+            delivered[key] = now.addingTimeInterval(lifetime)
             onBanner?(banner)
         }
     }
@@ -369,6 +377,10 @@ final class NotificationBannerWatcher: ObservableObject {
 
         return items.flatMap { item -> [CapturedBanner] in
             let actions = actionNames(of: item.element)
+            // The collapsed stack is always called "AXNotificationListItems": it
+            // says nothing about which notification is on top, so it must not
+            // make two identical messages look like one for ten minutes.
+            let identifier = item.subrole == stackSubrole ? nil : item.identifier
             let groups = split(texts(in: item))
             if groups.isEmpty {
                 // No readable texts: the banner's own description holds
@@ -379,13 +391,13 @@ final class NotificationBannerWatcher: ObservableObject {
                 let body = parts.dropFirst().joined(separator: ", ")
                 return [CapturedBanner(
                     appName: nil, title: title, subtitle: "", body: body,
-                    element: item.element, identifier: item.identifier, actions: actions
+                    element: item.element, identifier: identifier, actions: actions
                 )]
             }
             return groups.map { group in
                 CapturedBanner(
                     appName: group.app, title: group.title, subtitle: group.subtitle, body: group.body,
-                    element: item.element, identifier: item.identifier, actions: actions
+                    element: item.element, identifier: identifier, actions: actions
                 )
             }
         }

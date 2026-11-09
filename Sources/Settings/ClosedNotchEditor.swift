@@ -243,7 +243,11 @@ struct ClosedNotchEditor: View {
             Text(widget.title)
                 .font(.system(size: 11.5, weight: .semibold))
                 .foregroundStyle(.white)
-                .lineLimit(1)
+                // Names like "Liczba elementów na Półce" are longer than the
+                // three-column card, so they wrap instead of ending in "…".
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             sideButton(widget, side: .leading)
             sideButton(widget, side: .trailing)

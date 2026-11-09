@@ -105,6 +105,8 @@ struct HomeLayoutEditor: View {
                     .font(.system(size: 10, weight: .semibold))
                 Text(item.title)
                     .font(.system(size: 11.5, weight: .medium))
+                    .lineLimit(1)
+                    .fixedSize()
                 if !hasOwn {
                     Circle()
                         .fill(Color.white.opacity(0.3))

@@ -36,6 +36,8 @@ final class NotchWindowManager: ObservableObject {
     }
 
     func start() {
+        // A second call would stack every subscription below.
+        guard cancellables.isEmpty else { return }
         rebuild()
 
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
@@ -111,6 +113,9 @@ final class NotchWindowManager: ObservableObject {
 
     private func handlePointer(_ point: CGPoint) {
         for controller in controllers {
+            // Tuck first: the hover test below must already see the small
+            // rect, or a wing under the pointer would open the notch.
+            controller.viewModel.setPointerOverMenuBar(controller.isPointerOverMenuBarWings(point))
             let inside = controller.hoverRect.contains(point)
             controller.viewModel.setHovering(inside)
         }

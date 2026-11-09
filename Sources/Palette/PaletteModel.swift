@@ -66,6 +66,10 @@ final class PaletteModel: ObservableObject {
     }
     private var translationTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
+    /// Between `reset` and `suspend`. A closed palette has nothing on screen to
+    /// refresh, and the clipboard alone would otherwise rebuild the list on
+    /// every copy made anywhere.
+    private var isOpen = false
 
     private static let rowLimit = 40
 
@@ -77,7 +81,10 @@ final class PaletteModel: ObservableObject {
         let commands = PaletteCommandRegistry.shared.objectWillChange.map { _ in () }
         Publishers.MergeMany(apps, shortcuts, clipboard, commands)
             .receive(on: RunLoop.main)
-            .sink { [weak self] in self?.rebuild(keepingSelection: true) }
+            .sink { [weak self] in
+                guard let self, self.isOpen else { return }
+                self.rebuild(keepingSelection: true)
+            }
             .store(in: &cancellables)
     }
 
@@ -85,6 +92,7 @@ final class PaletteModel: ObservableObject {
 
     /// Called each time the palette opens.
     func reset(query initial: String = "") {
+        isOpen = true
         fileSearch.cancel()
         translationTask?.cancel()
         files = []
@@ -100,6 +108,7 @@ final class PaletteModel: ObservableObject {
     }
 
     func suspend() {
+        isOpen = false
         fileSearch.cancel()
         translationTask?.cancel()
     }
@@ -174,9 +183,11 @@ final class PaletteModel: ObservableObject {
                 return
             }
             // A prefix needs its space ("g cats"); a bare "g" is still a search.
-            if let space = raw.firstIndex(of: " ") {
-                let prefix = String(raw[..<space]).lowercased()
-                let rest = String(raw[raw.index(after: space)...]).trimmingCharacters(in: .whitespaces)
+            // Leading spaces are ignored, so " g cats" still works.
+            let leading = raw.drop(while: { $0 == " " })
+            if let space = leading.firstIndex(of: " ") {
+                let prefix = String(leading[..<space]).lowercased()
+                let rest = String(leading[leading.index(after: space)...]).trimmingCharacters(in: .whitespaces)
                 switch prefix {
                 case "t": self = .translate(rest); return
                 case "s": self = .snippets(rest); return

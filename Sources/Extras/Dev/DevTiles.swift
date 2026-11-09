@@ -23,7 +23,8 @@ struct GitHubTile: View {
 
     var body: some View {
         content
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            // Centered in the 46-point row (the tall row reads from the top).
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: compact ? .leading : .topLeading)
             .padding(.vertical, compact ? 0 : 9)
             .onAppear { manager.addSubscriber() }
             .onDisappear { manager.removeSubscriber() }
@@ -87,14 +88,24 @@ struct GitHubTile: View {
                         .foregroundStyle(.orange.opacity(0.85))
                         .lineLimit(2)
                 } else {
+                    // Short on purpose: the tile is about 150 pt wide, and a chip
+                    // that has to truncate ("CI cz…") says nothing.
                     HStack(spacing: 8) {
-                        chip(ciTitle(repo.run), tint: Self.tint(of: repo.run), url: repo.run?.url ?? repo.actionsURL)
+                        chip(ciShortTitle(repo.run), tint: Self.tint(of: repo.run), url: repo.run?.url ?? repo.actionsURL,
+                             help: ciTitle(repo.run) + " na \(repo.branch)")
                         if repo.hasPullRequests {
+                            // The counts span every repository, so with several of
+                            // them the links must too.
+                            let several = manager.repos.count > 1
                             if reviewCount > 0 {
-                                chip("\(reviewCount) do przeglądu", tint: .orange, url: repo.reviewURL)
+                                chip("\(reviewCount)", symbol: "eye", tint: .orange,
+                                     url: several ? URL(string: "https://github.com/pulls/review-requested")! : repo.reviewURL,
+                                     help: "Do przeglądu: \(reviewCount)")
                             }
                             if authoredCount > 0 {
-                                chip("\(authoredCount) moje", tint: .blue, url: repo.authoredURL)
+                                chip("\(authoredCount)", symbol: "arrow.triangle.pull", tint: .blue,
+                                     url: several ? URL(string: "https://github.com/pulls")! : repo.authoredURL,
+                                     help: "Moje otwarte PR-y: \(authoredCount)")
                             }
                         }
                         Spacer(minLength: 0)
@@ -105,19 +116,26 @@ struct GitHubTile: View {
         }
     }
 
-    private func chip(_ text: String, tint: Color, url: URL) -> some View {
+    private func chip(_ text: String, symbol: String? = nil, tint: Color, url: URL, help: String) -> some View {
         Button { openInBrowser(url) } label: {
             HStack(spacing: 3) {
-                Circle().fill(tint).frame(width: 5, height: 5)
+                if let symbol {
+                    Image(systemName: symbol)
+                        .font(.system(size: 8.5, weight: .semibold))
+                        .foregroundStyle(tint)
+                } else {
+                    Circle().fill(tint).frame(width: 5, height: 5)
+                }
                 Text(text)
                     .font(.system(size: 9.5, weight: .medium))
                     .foregroundStyle(.white.opacity(0.88))
                     .lineLimit(1)
+                    .fixedSize()
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Otwórz w przeglądarce")
+        .help("\(help) · otwórz w przeglądarce")
     }
 
     // MARK: Expanded
@@ -190,6 +208,18 @@ struct GitHubTile: View {
         }
     }
 
+    /// For the compact chip; the full wording is in its tooltip.
+    private func ciShortTitle(_ run: GitHubRun?) -> String {
+        switch run?.state {
+        case .success: return "CI ok"
+        case .failure: return "CI błąd"
+        case .running: return "CI trwa"
+        case .cancelled: return "CI anul."
+        case .other: return "CI koniec"
+        case nil: return "brak CI"
+        }
+    }
+
     private func ciLine(_ repo: GitHubRepoStatus) -> String {
         guard let run = repo.run else { return "Brak przebiegów CI na \(repo.branch)" }
         return "\(ciTitle(run)) na \(repo.branch) · \(run.title)"
@@ -226,7 +256,7 @@ struct AIUsageTile: View {
         Group {
             if compact { compactBody } else { expandedBody }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: compact ? .leading : .topLeading)
         .padding(.vertical, compact ? 0 : 9)
         .onAppear { manager.addSubscriber() }
         .onDisappear { manager.removeSubscriber() }
@@ -241,16 +271,11 @@ struct AIUsageTile: View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 PanelLabel(text: "Zużycie AI dziś")
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text(costText)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(.white.opacity(0.92))
-                    Text(AIUsageManager.tokens(snapshot.todayTokens))
-                        .font(.system(size: 9))
-                        .foregroundStyle(.white.opacity(0.45))
+                // The cost is the point: the token count gives way first.
+                ViewThatFits(in: .horizontal) {
+                    compactFigures(withTokens: true)
+                    compactFigures(withTokens: false)
                 }
-                .lineLimit(1)
             }
             Spacer(minLength: 0)
             AIUsageBars(days: snapshot.days, showLabels: false)
@@ -259,18 +284,40 @@ struct AIUsageTile: View {
         .help("Koszt i tokeny z logów omp i Claude Code")
     }
 
+    private func compactFigures(withTokens: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Text(costText)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.92))
+            if withTokens {
+                Text(AIUsageManager.tokens(snapshot.todayTokens))
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+        }
+        .lineLimit(1)
+        .fixedSize()
+    }
+
     private var expandedBody: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
+            // Two lines: label, then figures. Side by side they do not fit in
+            // a tile about 200 pt wide and the label is the one that suffers.
+            VStack(alignment: .leading, spacing: 1) {
                 PanelLabel(text: "Zużycie AI dziś")
-                Spacer(minLength: 0)
-                Text(costText)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.92))
-                Text(AIUsageManager.tokens(snapshot.todayTokens) + " tok.")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.45))
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(costText)
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.white.opacity(0.92))
+                        .fixedSize()
+                    Text(AIUsageManager.tokens(snapshot.todayTokens) + " tokenów")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
             }
             ForEach(snapshot.providers.prefix(3)) { provider in
                 HStack(spacing: 6) {
@@ -326,6 +373,8 @@ private struct AIUsageBars: View {
                             Capsule()
                                 .fill(Color.orange.opacity(index == days.count - 1 ? 0.95 : 0.4))
                                 .frame(height: max(proxy.size.height * CGFloat(values[index] / peak), 2))
+                                // Full-width pills turn into blobs in the wide labelled tile.
+                                .frame(maxWidth: showLabels ? 14 : .infinity)
                         }
                     }
                     if showLabels {
@@ -367,8 +416,10 @@ final class LauncherStore: ObservableObject {
     }
 
     func icon(for path: String) -> NSImage? {
+        // Checked before the cache: an app deleted since it was pinned must
+        // stop looking clickable.
+        guard exists(path) else { icons[path] = nil; return nil }
         if let cached = icons[path] { return cached }
-        guard exists(path) else { return nil }
         let image = NSWorkspace.shared.icon(forFile: path)
         icons[path] = image
         return image
@@ -396,6 +447,11 @@ final class LauncherStore: ObservableObject {
         updated.insert(path, at: to)
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { paths = updated }
         save()
+    }
+
+    /// Preview renderer only: shows `paths` without saving them.
+    func injectPreview(_ paths: [String]) {
+        self.paths = paths
     }
 
     func open(_ path: String) {
@@ -439,7 +495,7 @@ struct LauncherTile: View {
                 grid
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: compact ? .leading : .topLeading)
         .padding(.vertical, compact ? 4 : 9)
     }
 
@@ -464,27 +520,43 @@ struct LauncherTile: View {
 
     private var grid: some View {
         let size: CGFloat = compact ? 26 : 34
-        return LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: size + 4, maximum: size + 8), spacing: 6)],
-            alignment: .leading,
-            spacing: 6
-        ) {
-            ForEach(store.paths, id: \.self) { path in
-                appButton(path, size: size)
+        return Group {
+            if compact {
+                // One row that scrolls sideways: a second row would spill out of
+                // the 46-point tile over its neighbours.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) { gridItems(size: size) }
+                        .frame(maxHeight: .infinity)
+                }
+            } else {
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: size + 4, maximum: size + 8), spacing: 6)],
+                        alignment: .leading,
+                        spacing: 6
+                    ) { gridItems(size: size) }
+                }
             }
-            Button {
-                store.chooseApps(keeping: viewModel)
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: size * 0.4, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(width: size, height: size)
-                    .background(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous).fill(.white.opacity(0.08)))
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help("Dodaj aplikację")
         }
+    }
+
+    @ViewBuilder
+    private func gridItems(size: CGFloat) -> some View {
+        ForEach(store.paths, id: \.self) { path in
+            appButton(path, size: size)
+        }
+        Button {
+            store.chooseApps(keeping: viewModel)
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: size * 0.4, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.5))
+                .frame(width: size, height: size)
+                .background(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous).fill(.white.opacity(0.08)))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Dodaj aplikację")
     }
 
     private func appButton(_ path: String, size: CGFloat) -> some View {

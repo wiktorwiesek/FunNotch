@@ -96,6 +96,10 @@ final class CustomizeWindowController: NSObject, NSWindowDelegate {
         window = nil
         DispatchQueue.main.async {
             SettingsWindowController.refreshActivationPolicy(excluding: closing)
+            // Releasing the window is not enough: AppKit keeps the closed window
+            // alive and its SwiftUI tree keeps ticking (measured). Drop the content.
+            closing?.contentViewController = nil
+            closing?.delegate = nil
         }
     }
 }

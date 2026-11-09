@@ -240,7 +240,8 @@ struct DevExtrasSettings: View {
                 value: $alertUSD,
                 range: 0 ... 200,
                 step: 5,
-                format: { $0 == 0 ? "wyłączony" : AIUsageManager.money($0).replacingOccurrences(of: ",00", with: "") }
+                // The value column is 46 pt wide: "wyłączony" wraps in it.
+                format: { $0 == 0 ? "wył." : AIUsageManager.money($0).replacingOccurrences(of: ",00", with: "") }
             )
             .onChange(of: alertUSD) { _, _ in
                 AIUsageManager.shared.start()

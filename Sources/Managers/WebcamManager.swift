@@ -57,9 +57,16 @@ final class WebcamManager: NSObject, ObservableObject {
         authorizationStatus == .denied || authorizationStatus == .restricted
     }
 
+    /// True from `start()` until `stop()`. The camera takes a moment to come up
+    /// on its own queue, and the mirror can be closed before it has: without
+    /// this, that late "started" would flip `isRunning` on after `stop()` and
+    /// leave the camera light burning behind a closed notch.
+    private var wantsRunning = false
+
     func start() {
+        wantsRunning = true
         requestAccessIfNeeded { [weak self] granted in
-            guard granted, let self else { return }
+            guard granted, let self, self.wantsRunning else { return }
             self.configureAndRun()
         }
     }
@@ -87,16 +94,23 @@ final class WebcamManager: NSObject, ObservableObject {
             if !self.session.isRunning {
                 self.session.startRunning()
             }
+            let running = self.session.isRunning
 
             DispatchQueue.main.async {
-                MainActor.assumeIsolated { self.isRunning = true }
+                MainActor.assumeIsolated {
+                    // Stopped while starting: the stop block queued after this one
+                    // shuts the session down, so nothing is left running.
+                    self.isRunning = running && self.wantsRunning
+                }
             }
         }
     }
 
     func stop() {
-        guard isRunning else { return }
+        wantsRunning = false
         isRunning = false
+        // Always queued, even when `isRunning` is still false: a start may be
+        // in flight, and the serial queue runs this after it.
         sessionQueue.async { [weak self] in
             guard let self else { return }
             if self.session.isRunning {
@@ -119,6 +133,7 @@ struct CameraPreview: NSViewRepresentable {
 
     func updateNSView(_ nsView: PreviewView, context: Context) {
         nsView.previewLayer.session = session
+        nsView.applyMirroring()
     }
 
     final class PreviewView: NSView {
@@ -129,13 +144,19 @@ struct CameraPreview: NSViewRepresentable {
             wantsLayer = true
             layer = CALayer()
             layer?.addSublayer(previewLayer)
-            // Mirror horizontally so it behaves like a real mirror.
-            previewLayer.connection?.automaticallyAdjustsVideoMirroring = false
-            previewLayer.connection?.isVideoMirrored = true
         }
 
         @available(*, unavailable)
         required init?(coder: NSCoder) { fatalError("not supported") }
+
+        /// The preview layer has no connection until the session has a camera
+        /// input, so this is applied on every update rather than once at init
+        /// (where it silently did nothing).
+        func applyMirroring() {
+            guard let connection = previewLayer.connection, connection.isVideoMirroringSupported else { return }
+            connection.automaticallyAdjustsVideoMirroring = false
+            if !connection.isVideoMirrored { connection.isVideoMirrored = true }
+        }
 
         override func layout() {
             super.layout()
@@ -143,6 +164,7 @@ struct CameraPreview: NSViewRepresentable {
             CATransaction.setDisableActions(true)
             previewLayer.frame = bounds
             CATransaction.commit()
+            applyMirroring()
         }
     }
 }

@@ -56,8 +56,19 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         let closing = notification.object as? NSWindow
+        // Forgotten at once, so a reopen right now builds a fresh window rather
+        // than reviving this one while its content is being taken apart.
+        if window === closing { window = nil }
         DispatchQueue.main.async {
             Self.refreshActivationPolicy(excluding: closing)
+            // A closed window keeps its SwiftUI tree alive, and every
+            // `TimelineView(.animation)` in it (the mascot pickers on the
+            // decor page) keeps redrawing at 30 Hz — measured at ~30 body
+            // updates a second after `close()`, enough to hold the app at
+            // tens of percent CPU long after Settings was dismissed. Dropping
+            // the content stops that; `show()` builds a fresh one.
+            closing?.contentViewController = nil
+            closing?.delegate = nil
         }
     }
 

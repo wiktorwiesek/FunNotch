@@ -146,6 +146,10 @@ final class NotifyCenter: ObservableObject {
             databaseTimer = nil
             databaseItems = []
             databaseState = .off
+            // The reader skips files it saw unchanged; without this, switching
+            // the source back on would show nothing until the next notification.
+            let reader = reader
+            readerQueue.async { reader.forget() }
             rebuild()
             return
         }
@@ -162,7 +166,9 @@ final class NotifyCenter: ObservableObject {
     /// Opens the notch on the display under the pointer, on the notifications.
     func showTab() {
         let mouse = NSEvent.mouseLocation
-        let target = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }?.displayIdentifier
+        // Not NSMouseInRect: it leaves out the top edge, which is exactly where
+        // the pointer sits when the notch is opened by flinging it upwards.
+        let target = DesktopGeometry.screen(containing: mouse)?.displayIdentifier
         let models = NotchWindowManager.shared.viewModels
         let chosen = models.filter { $0.screenIdentifier == target }
         for model in chosen.isEmpty ? models : chosen {
@@ -183,7 +189,8 @@ final class NotifyCenter: ObservableObject {
         if appName.isEmpty { appName = "Powiadomienie" }
 
         // FunNotch's own notifications are not news to the person using it.
-        let isOwn = bundleIdentifier != nil && bundleIdentifier == Bundle.main.bundleIdentifier
+        let isOwn = bundleIdentifier != nil
+            && bundleIdentifier?.lowercased() == Bundle.main.bundleIdentifier?.lowercased()
 
         var item = MirroredNotification(
             id: UUID().uuidString,
@@ -259,15 +266,15 @@ final class NotifyCenter: ObservableObject {
     }
 
     private static func style(for item: MirroredNotification) -> (symbol: String, tint: Color) {
-        switch item.bundleIdentifier {
-        case "com.apple.MobileSMS": return ("message.fill", .green)
+        switch item.bundleIdentifier?.lowercased() {
+        case "com.apple.mobilesms": return ("message.fill", .green)
         case "com.apple.mail": return ("envelope.fill", .cyan)
-        case "com.apple.iCal": return ("calendar", .red)
+        case "com.apple.ical": return ("calendar", .red)
         case "com.apple.reminders": return ("checklist", .orange)
-        case "com.tinyspeck.slackmacgap", "dev.vencord.vesktop", "com.hnc.Discord":
+        case "com.tinyspeck.slackmacgap", "dev.vencord.vesktop", "com.hnc.discord":
             return ("bubble.left.fill", .purple)
-        case "net.whatsapp.WhatsApp": return ("phone.bubble.fill", .green)
-        case "ru.keepcoder.Telegram", "org.whispersystems.signal-desktop":
+        case "net.whatsapp.whatsapp": return ("phone.bubble.fill", .green)
+        case "ru.keepcoder.telegram", "org.whispersystems.signal-desktop":
             return ("paperplane.fill", .cyan)
         default:
             return item.isMessages ? ("message.fill", .green) : ("bell.fill", .white)
@@ -394,6 +401,12 @@ final class NotifyCenter: ObservableObject {
         rebuild()
     }
 
+    /// Fills the list with invented notifications for the preview renderer.
+    func injectPreviewItems(_ items: [MirroredNotification]) {
+        bannerItems = items
+        rebuild()
+    }
+
     /// Banners and database rows together, without the same notification twice.
     private func rebuild() {
         let visibleDatabase = databaseItems.filter { !hiddenDatabaseIDs.contains($0.id) }
@@ -402,7 +415,8 @@ final class NotifyCenter: ObservableObject {
             let duplicate = visibleDatabase.contains { row in
                 row.fingerprint == banner.fingerprint
                     && abs(row.date.timeIntervalSince(banner.date)) < 90
-                    && (banner.bundleIdentifier == nil || banner.bundleIdentifier == row.bundleIdentifier)
+                    && (banner.bundleIdentifier == nil
+                        || banner.bundleIdentifier?.lowercased() == row.bundleIdentifier?.lowercased())
             }
             if !duplicate { merged.append(banner) }
         }

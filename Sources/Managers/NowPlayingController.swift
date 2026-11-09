@@ -2,10 +2,15 @@
 //  NowPlayingController.swift
 //  FunNotch
 //
-//  System-wide now playing via the private MediaRemote framework. This is the
-//  only backend that sees browsers and third-party players, but Apple gated it
-//  behind a private entitlement in macOS 15.4, so it degrades to "unavailable"
-//  there and the app falls back to the scripted controllers.
+//  System-wide now playing: the one backend that sees browsers, YouTube,
+//  podcasts apps and whatever else publishes to the Now Playing widget.
+//
+//  MediaRemote is a private framework, and since macOS 15.4 it answers only
+//  processes holding a private entitlement. Apple's own /usr/bin/perl holds it,
+//  so the app runs perl, which loads `mrbridge.dylib` (built from
+//  Tools/mrbridge.m by build.sh) and streams what MediaRemote says as one JSON
+//  object per line. Without the dylib the controller falls back to calling
+//  MediaRemote in-process, which works only before 15.4.
 //
 
 import AppKit
@@ -29,33 +34,60 @@ final class NowPlayingController: MediaController {
     let type: MediaControllerType = .nowPlaying
     var onUpdate: ((TrackInfo) -> Void)?
 
-    /// MediaRemote stopped answering unentitled callers in macOS 15.4.
-    static var isDeprecated: Bool {
-        let version = ProcessInfo.processInfo.operatingSystemVersion
-        if version.majorVersion > 15 { return true }
-        if version.majorVersion == 15, version.minorVersion >= 4 { return true }
-        return false
+    // MARK: Availability
+
+    private static let perlPath = "/usr/bin/perl"
+
+    /// The helper library shipped inside the app, if this build has one.
+    static var bridgeURL: URL? {
+        Bundle.main.url(forResource: "mrbridge", withExtension: "dylib")
     }
 
+    /// True when MediaRemote can be read through perl.
+    static var usesBridge: Bool {
+        bridgeURL != nil && FileManager.default.isExecutableFile(atPath: perlPath)
+    }
+
+    /// MediaRemote stopped answering unentitled callers in macOS 15.4, and
+    /// without the bridge there is no way round that.
+    static var isDeprecated: Bool {
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        let locked = version.majorVersion > 15 || (version.majorVersion == 15 && version.minorVersion >= 4)
+        return locked && !usesBridge
+    }
+
+    var isAvailable: Bool {
+        if Self.usesBridge { return bridgeFailed == false }
+        return getNowPlayingInfo != nil && (everAnswered || !Self.isDeprecated)
+    }
+
+    // MARK: State
+
+    private var current = TrackInfo()
+    private var timer: Timer?
+    private var observers: [NSObjectProtocol] = []
+
+    // Bridge
+    private var process: Process?
+    private var lineBuffer = Data()
+    private var stopping = false
+    private var bridgeFailed = false
+    private var quickExits = 0
+    private var artworkID = ""
+    private var artworkImage: NSImage?
+
+    // In-process fallback
     private var handle: UnsafeMutableRawPointer?
     private var getNowPlayingInfo: MRGetNowPlayingInfo?
     private var getIsPlaying: MRGetIsPlaying?
     private var registerForNotifications: MRRegisterForNotifications?
     private var sendCommand: MRSendCommand?
     private var setElapsedTime: MRSetElapsedTime?
-
-    private var current = TrackInfo()
-    private var timer: Timer?
-    private var observers: [NSObjectProtocol] = []
     /// Set once MediaRemote has actually answered with something.
     private var everAnswered = false
 
     init() {
-        loadFramework()
-    }
-
-    var isAvailable: Bool {
-        getNowPlayingInfo != nil && (everAnswered || !Self.isDeprecated)
+        if !Self.usesBridge { loadFramework() }
     }
 
     private func loadFramework() {
@@ -75,8 +107,16 @@ final class NowPlayingController: MediaController {
         setElapsedTime = symbol("MRMediaRemoteSetElapsedTime", as: MRSetElapsedTime.self)
     }
 
+    // MARK: Lifecycle
+
     func start() {
         stop()
+        if Self.usesBridge {
+            stopping = false
+            launchBridge()
+            return
+        }
+
         registerForNotifications?(.main)
 
         for name in [
@@ -107,50 +147,215 @@ final class NowPlayingController: MediaController {
         timer = nil
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         observers.removeAll()
+
+        stopping = true
+        if let process {
+            process.terminationHandler = nil
+            (process.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil
+            if process.isRunning { process.terminate() }
+        }
+        process = nil
+        lineBuffer.removeAll()
     }
 
     func refresh() {
-        guard let getNowPlayingInfo else { return }
+        // The bridge streams on its own; nothing to ask for.
+        guard !Self.usesBridge, let getNowPlayingInfo else { return }
 
         getNowPlayingInfo(.main) { [weak self] information in
             guard let self else { return }
-            guard !information.isEmpty else { return }
-            self.everAnswered = true
+            self.everAnswered = self.everAnswered || !information.isEmpty
 
             var info = TrackInfo()
-            info.title = information["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? ""
-            info.artist = information["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? ""
-            info.album = information["kMRMediaRemoteNowPlayingInfoAlbum"] as? String ?? ""
-            info.duration = information["kMRMediaRemoteNowPlayingInfoDuration"] as? TimeInterval ?? 0
-            info.elapsed = information["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? TimeInterval ?? 0
-            let rate = information["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0
-            info.isPlaying = rate > 0
-            info.timestamp = Date()
+            if !information.isEmpty {
+                info.title = information["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? ""
+                info.artist = TrackInfo.tidyArtist(information["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? "")
+                info.album = information["kMRMediaRemoteNowPlayingInfoAlbum"] as? String ?? ""
+                info.duration = information["kMRMediaRemoteNowPlayingInfoDuration"] as? TimeInterval ?? 0
+                info.elapsed = information["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? TimeInterval ?? 0
+                let rate = information["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0
+                info.isPlaying = rate > 0
+                info.timestamp = Date()
 
-            if let data = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data {
-                info.artwork = NSImage(data: data)
-            } else {
-                info.artwork = self.current.artwork
+                if let data = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data {
+                    info.artwork = NSImage(data: data)
+                } else {
+                    info.artwork = self.current.artwork
+                }
             }
-
-            // Attribute the track to the frontmost audio app when we can.
-            info.bundleIdentifier = information["kMRMediaRemoteNowPlayingInfoClientPropertiesData"] != nil
-                ? self.current.bundleIdentifier
-                : self.current.bundleIdentifier
 
             self.current = info
             self.onUpdate?(info)
         }
     }
 
-    func togglePlayPause() { _ = sendCommand?(MRCommand.togglePlayPause.rawValue, nil) }
-    func play() { _ = sendCommand?(MRCommand.play.rawValue, nil) }
-    func pause() { _ = sendCommand?(MRCommand.pause.rawValue, nil) }
-    func nextTrack() { _ = sendCommand?(MRCommand.nextTrack.rawValue, nil) }
-    func previousTrack() { _ = sendCommand?(MRCommand.previousTrack.rawValue, nil) }
+    // MARK: Bridge
+
+    /// The perl program that loads the helper and calls one exported function.
+    private static let loader =
+        "use DynaLoader;my $l=DynaLoader::dl_load_file($ARGV[0],0) or die 'load';"
+            + "my $s=DynaLoader::dl_find_symbol($l,$ARGV[1]) or die 'symbol';"
+            + "&{DynaLoader::dl_install_xsub('main::f',$s)}();"
+
+    private func makeProcess(function: String, environment: [String: String] = [:]) -> Process? {
+        guard let library = Self.bridgeURL else { return nil }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: Self.perlPath)
+        process.arguments = ["-e", Self.loader, library.path, function]
+        var env = ProcessInfo.processInfo.environment
+        env.removeValue(forKey: "PERL5LIB")
+        env.removeValue(forKey: "PERL5OPT")
+        for (key, value) in environment { env[key] = value }
+        process.environment = env
+        process.standardError = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice
+        return process
+    }
+
+    private func launchBridge() {
+        guard let process = makeProcess(function: "fn_stream") else {
+            bridgeFailed = true
+            return
+        }
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        let started = Date()
+
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty else {
+                handle.readabilityHandler = nil
+                return
+            }
+            DispatchQueue.main.async { self?.consume(data) }
+        }
+
+        process.terminationHandler = { [weak self] finished in
+            DispatchQueue.main.async {
+                guard let self, !self.stopping, self.process === finished else { return }
+                self.process = nil
+                // A helper that dies at once every time is broken, not unlucky;
+                // stop respawning it and let another source take over.
+                self.quickExits = Date().timeIntervalSince(started) < 3 ? self.quickExits + 1 : 0
+                if self.quickExits >= 3 {
+                    self.bridgeFailed = true
+                    DiagnosticLog.write("media", "now playing bridge keeps exiting (status \(finished.terminationStatus))")
+                    self.publishEmpty()
+                    return
+                }
+                self.publishEmpty()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    guard !self.stopping, self.process == nil, !self.bridgeFailed else { return }
+                    self.launchBridge()
+                }
+            }
+        }
+
+        do {
+            try process.run()
+            self.process = process
+        } catch {
+            bridgeFailed = true
+            DiagnosticLog.write("media", "now playing bridge failed to start: \(error.localizedDescription)")
+        }
+    }
+
+    private func publishEmpty() {
+        guard !current.isEmpty || current.isPlaying else { return }
+        current = TrackInfo()
+        onUpdate?(current)
+    }
+
+    /// Splits the pipe's bytes into lines and reads each as one snapshot.
+    private func consume(_ data: Data) {
+        lineBuffer.append(data)
+        while let newline = lineBuffer.firstIndex(of: 0x0A) {
+            let line = lineBuffer.subdata(in: lineBuffer.startIndex ..< newline)
+            lineBuffer.removeSubrange(lineBuffer.startIndex ... newline)
+            if !line.isEmpty { apply(line: line) }
+        }
+        // A runaway line would only be garbage; do not let it grow forever.
+        if lineBuffer.count > 8 << 20 { lineBuffer.removeAll() }
+    }
+
+    private func apply(line: Data) {
+        guard let root = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { return }
+        if let error = root["error"] as? String {
+            bridgeFailed = true
+            DiagnosticLog.write("media", "now playing bridge: \(error)")
+            return
+        }
+        quickExits = 0
+
+        var info = TrackInfo()
+        let title = root["title"] as? String ?? ""
+        if !title.isEmpty || !(root["artist"] as? String ?? "").isEmpty {
+            info.title = title
+            info.artist = TrackInfo.tidyArtist(root["artist"] as? String ?? "")
+            info.album = root["album"] as? String ?? ""
+            info.duration = max((root["duration"] as? NSNumber)?.doubleValue ?? 0, 0)
+            info.elapsed = max((root["elapsed"] as? NSNumber)?.doubleValue ?? 0, 0)
+            info.isPlaying = (root["playing"] as? NSNumber)?.boolValue ?? false
+            // `elapsed` was true at `timestamp`, which can be well in the past:
+            // the player only reports on a state change. The model projects
+            // forward from that moment.
+            if let stamp = (root["timestamp"] as? NSNumber)?.doubleValue, stamp > 0 {
+                info.timestamp = Date(timeIntervalSince1970: stamp)
+            } else {
+                info.timestamp = Date()
+            }
+            let bundle = root["bundle"] as? String ?? ""
+            info.bundleIdentifier = bundle.isEmpty ? nil : bundle
+
+            let id = root["artworkID"] as? String ?? ""
+            if let encoded = root["artwork"] as? String,
+               let data = Data(base64Encoded: encoded),
+               let image = NSImage(data: data)
+            {
+                artworkID = id
+                artworkImage = image
+            } else if id != artworkID {
+                artworkID = id
+                artworkImage = nil
+            }
+            info.artwork = artworkImage
+        } else {
+            artworkID = ""
+            artworkImage = nil
+        }
+
+        current = info
+        onUpdate?(info)
+    }
+
+    // MARK: Transport
+
+    private func send(_ command: MRCommand) {
+        if Self.usesBridge {
+            runOneShot(environment: ["FN_MR_COMMAND": String(command.rawValue)])
+        } else {
+            _ = sendCommand?(command.rawValue, nil)
+        }
+    }
+
+    private func runOneShot(environment: [String: String]) {
+        guard let process = makeProcess(function: "fn_send", environment: environment) else { return }
+        process.standardOutput = FileHandle.nullDevice
+        try? process.run()
+    }
+
+    func togglePlayPause() { send(.togglePlayPause) }
+    func play() { send(.play) }
+    func pause() { send(.pause) }
+    func nextTrack() { send(.nextTrack) }
+    func previousTrack() { send(.previousTrack) }
 
     func seek(to time: TimeInterval) {
-        setElapsedTime?(time)
+        if Self.usesBridge {
+            runOneShot(environment: ["FN_MR_POSITION": String(time)])
+        } else {
+            setElapsedTime?(time)
+        }
         current.elapsed = time
         current.timestamp = Date()
         onUpdate?(current)

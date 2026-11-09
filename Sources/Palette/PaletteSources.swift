@@ -93,8 +93,25 @@ final class PaletteAppIndex: ObservableObject {
         let roots = [
             "/Applications", "/System/Applications", "\(home)/Applications",
             "/System/Cryptexes/App/System/Applications",
+            // Screen Sharing, Directory Utility, Wireless Diagnostics and friends.
+            "/System/Library/CoreServices/Applications",
         ]
+        // Finder lives in CoreServices next to dozens of background helpers, so
+        // it is added by path instead of scanning that folder.
+        let singles = ["/System/Library/CoreServices/Finder.app"]
         var byName: [String: PaletteApp] = [:]
+
+        func add(_ url: URL) {
+            var name = FileManager.default.displayName(atPath: url.path)
+            if name.hasSuffix(".app") { name.removeLast(4) }
+            // The first root wins, so /Applications beats a stray copy elsewhere.
+            guard byName[name] == nil else { return }
+            // The name on disk too: a Polish display name must not hide "System Settings".
+            let fileName = url.deletingPathExtension().lastPathComponent
+            let searchable = fileName == name ? name : "\(name) \(fileName)"
+            byName[name] = PaletteApp(name: name, folded: PaletteMatch.fold(searchable), url: url)
+        }
+
         for root in roots {
             guard let walker = FileManager.default.enumerator(
                 at: URL(fileURLWithPath: root),
@@ -105,13 +122,11 @@ final class PaletteAppIndex: ObservableObject {
                 // Folders like Utilities hold apps one level down; go no deeper.
                 if walker.level > 3 { walker.skipDescendants(); continue }
                 guard url.pathExtension == "app" else { continue }
-                var name = FileManager.default.displayName(atPath: url.path)
-                if name.hasSuffix(".app") { name.removeLast(4) }
-                // The first root wins, so /Applications beats a stray copy elsewhere.
-                if byName[name] == nil {
-                    byName[name] = PaletteApp(name: name, folded: PaletteMatch.fold(name), url: url)
-                }
+                add(url)
             }
+        }
+        for path in singles where FileManager.default.fileExists(atPath: path) {
+            add(URL(fileURLWithPath: path))
         }
         return byName.values.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
@@ -169,9 +184,14 @@ final class PaletteFileSearch {
 
     private func start(words: [String]) {
         let query = NSMetadataQuery()
-        query.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: words.map {
+        let wordPredicates = words.map {
             NSPredicate(format: "%K CONTAINS[cd] %@", NSMetadataItemFSNameKey, $0)
-        })
+        }
+        // NSMetadataQuery throws (and the app dies) on an AND of a single
+        // predicate, so one word is passed as it is.
+        query.predicate = wordPredicates.count == 1
+            ? wordPredicates[0]
+            : NSCompoundPredicate(andPredicateWithSubpredicates: wordPredicates)
         query.searchScopes = [NSMetadataQueryUserHomeScope]
         // Recently used first: those are the files someone is likely to want.
         query.sortDescriptors = [NSSortDescriptor(key: NSMetadataItemLastUsedDateKey, ascending: false)]

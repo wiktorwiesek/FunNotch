@@ -136,6 +136,7 @@ enum LRCLibClient {
 
     static func fetch(title: String, artist: String, album: String, duration: TimeInterval) async -> Outcome {
         do {
+            var unsynced: Entry?
             // The exact lookup needs the length; it is also the only one that
             // is certain to be this recording and not a live version.
             if duration > 0 {
@@ -146,25 +147,44 @@ enum LRCLibClient {
                 ]
                 if !album.isEmpty { items.insert(URLQueryItem(name: "album_name", value: album), at: 2) }
                 if let entry: Entry = try await request("get", items) {
-                    return .found(document(from: entry))
+                    // Exact, but it may be the unsynced copy while a synced
+                    // one is listed under another artist spelling.
+                    if !(entry.syncedLyrics ?? "").isEmpty || entry.instrumental == true {
+                        return .found(document(from: entry))
+                    }
+                    unsynced = entry
                 }
             }
 
             let cleaned = cleanTitle(title)
-            var searches = [[URLQueryItem(name: "track_name", value: title), URLQueryItem(name: "artist_name", value: artist)]]
+            var searches: [(items: [URLQueryItem], requireArtist: Bool)] = [
+                ([URLQueryItem(name: "track_name", value: title), URLQueryItem(name: "artist_name", value: artist)], false),
+            ]
             if cleaned != title {
-                searches.append([URLQueryItem(name: "track_name", value: cleaned), URLQueryItem(name: "artist_name", value: artist)])
+                searches.append(([URLQueryItem(name: "track_name", value: cleaned), URLQueryItem(name: "artist_name", value: artist)], false))
             }
-            // Last resort: free text, for when the artist field is "A & B" in
-            // one place and "A, B" in the other.
-            searches.append([URLQueryItem(name: "q", value: "\(artist) \(cleaned)")])
+            // Free text, for when the artist field is "A & B" in one place and
+            // "A, B" in the other.
+            searches.append(([URLQueryItem(name: "q", value: "\(artist) \(cleaned)")], false))
+            // The artist filter is an exact match, and players join a list of
+            // artists their own way: YouTube Music says "Young Igi i Żabson",
+            // LRCLIB has "Young Igi, Żabson", and neither search above finds
+            // it. By title alone it is there, so ask that way and check the
+            // artists share a name instead.
+            searches.append(([URLQueryItem(name: "track_name", value: cleaned)], true))
 
-            for query in searches {
-                guard let entries: [Entry] = try await request("search", query) else { continue }
-                if let best = pick(from: entries, title: cleaned, duration: duration) {
-                    return .found(document(from: best))
+            for search in searches {
+                guard let entries: [Entry] = try await request("search", search.items) else { continue }
+                if let best = pick(
+                    from: entries, title: cleaned, duration: duration,
+                    artist: search.requireArtist ? artist : nil
+                ) {
+                    if !(best.syncedLyrics ?? "").isEmpty { return .found(document(from: best)) }
+                    if unsynced == nil { unsynced = best }
                 }
             }
+            // Only text without timings was out there: better than nothing.
+            if let unsynced { return .found(document(from: unsynced)) }
             return .notFound
         } catch {
             return .failed
@@ -183,13 +203,25 @@ enum LRCLibClient {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    /// The words of an artist line that identify a name: "Young Igi i Żabson"
+    /// and "Young Igi, Żabson" both give {young, igi, zabson}.
+    private static func nameWords(_ artist: String) -> Set<String> {
+        let folded = artist.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        let words = folded.split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        let filler: Set<String> = ["oraz", "and", "feat", "ft", "with", "the", "i", "x"]
+        return Set(words.filter { $0.count >= 2 && !filler.contains($0) })
+    }
+
     /// Best of the search hits: must be the same song and about the same
-    /// length, and synced lyrics beat plain ones.
-    private static func pick(from entries: [Entry], title: String, duration: TimeInterval) -> Entry? {
+    /// length (and, when `artist` is given, by someone who shares a name with
+    /// it); synced lyrics beat plain ones.
+    private static func pick(from entries: [Entry], title: String, duration: TimeInterval, artist: String? = nil) -> Entry? {
         let wanted = normalise(title)
+        let wantedNames = artist.map(nameWords)
         let candidates = entries.filter { entry in
             guard let name = entry.trackName, normalise(cleanTitle(name)) == wanted else { return false }
             if duration > 0, let length = entry.duration, abs(length - duration) > 6 { return false }
+            if let wantedNames, wantedNames.isDisjoint(with: nameWords(entry.artistName ?? "")) { return false }
             return entry.instrumental == true
                 || !(entry.syncedLyrics ?? "").isEmpty
                 || !(entry.plainLyrics ?? "").isEmpty
@@ -309,6 +341,8 @@ final class LyricsManager: ObservableObject {
     private var task: Task<Void, Never>?
     private var started = false
     private var loadedKey = ""
+    private var retryTask: Task<Void, Never>?
+    private var retryCount = 0
     private var lastEnabled = MediaExtrasDefaults.lyricsEnabled
 
     /// The player's position runs a little behind what is audible, and LRC
@@ -384,9 +418,29 @@ final class LyricsManager: ObservableObject {
 
     // MARK: Loading
 
+    private static func key(for track: TrackInfo) -> String {
+        "\(track.artist.lowercased())|\(track.title.lowercased())|\(track.album.lowercased())"
+    }
+
+    /// A recording longer than this is a mix, a set or a lecture, not a song
+    /// with published lyrics; asking LRCLIB would only send it a video title.
+    private static let longestSong: TimeInterval = 15 * 60
+    /// And one shorter than this is a clip or a Short.
+    private static let shortestSong: TimeInterval = 40
+
+    /// Whether `track` can plausibly have lyrics. A hashtagged title is a
+    /// social video, whatever its length.
+    private static func looksLikeSong(_ track: TrackInfo) -> Bool {
+        if track.hasTiming, track.duration > longestSong || track.duration < shortestSong { return false }
+        return !track.title.contains(" #") && !track.title.hasPrefix("#")
+    }
+
     private func reload() {
         task?.cancel()
         task = nil
+        retryTask?.cancel()
+        retryTask = nil
+        retryCount = 0
 
         let track = music.track
         lines = []
@@ -399,28 +453,37 @@ final class LyricsManager: ObservableObject {
             return
         }
 
-        let key = "\(track.artist.lowercased())|\(track.title.lowercased())|\(track.album.lowercased())"
+        let key = Self.key(for: track)
         loadedKey = key
+
+        guard Self.looksLikeSong(track) else {
+            state = .notFound
+            return
+        }
 
         if let cached = cache.read(key) {
             apply(cached)
             return
         }
+        lookup(track: track, key: key)
+    }
 
+    private func lookup(track: TrackInfo, key: String) {
         state = .loading
         let title = track.title
         let artist = track.artist
         let album = track.album
         let duration = track.duration
         let hasDuration = track.hasTiming
+        task?.cancel()
         task = Task { [weak self] in
             let outcome = await LRCLibClient.fetch(title: title, artist: artist, album: album, duration: duration)
             guard !Task.isCancelled else { return }
-            self?.finish(key: key, hasDuration: hasDuration, outcome: outcome)
+            self?.finish(key: key, track: track, hasDuration: hasDuration, outcome: outcome)
         }
     }
 
-    private func finish(key: String, hasDuration: Bool, outcome: LRCLibClient.Outcome) {
+    private func finish(key: String, track: TrackInfo, hasDuration: Bool, outcome: LRCLibClient.Outcome) {
         guard key == loadedKey else { return }
         switch outcome {
         case let .found(document):
@@ -434,6 +497,22 @@ final class LyricsManager: ObservableObject {
         case .failed:
             state = .unavailable
             DiagnosticLog.write("lyrics", "lookup failed for \(key)")
+            scheduleRetry(track: track, key: key)
+        }
+    }
+
+    /// Offline or a server hiccup is not a verdict on the song: look again
+    /// after a while, a few times, without waiting for the next track.
+    private func scheduleRetry(track: TrackInfo, key: String) {
+        let delays: [TimeInterval] = [15, 45, 120, 300]
+        guard retryCount < delays.count else { return }
+        let delay = delays[retryCount]
+        retryCount += 1
+        retryTask?.cancel()
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            guard !Task.isCancelled, let self, self.loadedKey == key else { return }
+            self.lookup(track: track, key: key)
         }
     }
 
@@ -456,10 +535,42 @@ final class LyricsManager: ObservableObject {
         follow(music.displayedElapsed)
     }
 
+    /// Installs finished lyrics without a lookup, for snapshots.
+    func injectPreview(lines: [LyricLine], currentIndex: Int?) {
+        task?.cancel()
+        retryTask?.cancel()
+        loadedKey = Self.key(for: music.track)
+        self.lines = lines
+        plain = lines.map(\.text).joined(separator: "\n")
+        self.currentIndex = currentIndex
+        state = .synced
+    }
+
+    func clearPreview() {
+        task?.cancel()
+        retryTask?.cancel()
+        loadedKey = ""
+        lines = []
+        plain = nil
+        currentIndex = nil
+        state = .idle
+    }
+
+    func injectPreviewPlain(_ text: String) {
+        loadedKey = Self.key(for: music.track)
+        lines = []
+        plain = text
+        currentIndex = nil
+        state = .plain
+    }
+
     // MARK: Following playback
 
     private func follow(_ elapsed: TimeInterval) {
         guard state == .synced, !lines.isEmpty else { return }
+        // Between a track change and its reload the old lines are still
+        // here; they must not be followed with the new track's position.
+        guard loadedKey == Self.key(for: music.track) else { return }
         let target = elapsed + Self.lead
         // Last line whose stamp has passed. Lines are sorted, so bisect.
         var low = 0

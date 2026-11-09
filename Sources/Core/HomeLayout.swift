@@ -155,14 +155,30 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
         default: return 24
         }
     }
+
+    /// The same, for the 46-point bottom row, where a tile shows its compact
+    /// form. Without it every bottom tile could be squeezed to the floor: the
+    /// seven Quick actions buttons spilled out of a tile given a third of 150.
+    var compactMinimumWidth: CGFloat {
+        switch self {
+        case .quickActions: return 150
+        case .systemStats, .mediaScrubber: return 120
+        case .battery, .devices, .nextEvent, .diskSpace, .recentShelf, .clipboard, .focusStreak: return 100
+        case .wifi: return 90
+        case .openApp: return 56
+        case .agents, .github, .aiUsage: return 150
+        case .launcher: return 110
+        default: return 24
+        }
+    }
 }
 
 /// How a row's width is shared between its tiles.
 enum HomeRowLayout {
-    /// Top-row tiles get at least their kind's minimum; whatever is left is
-    /// shared by span. Bottom-row tiles are compact and only get `floor`.
+    /// Every tile gets at least its kind's minimum for the row it is in;
+    /// whatever is left is shared by span.
     static func minimum(of tile: HomeTile, floor: CGFloat) -> CGFloat {
-        tile.row == 0 ? max(tile.kind.minimumWidth, floor) : floor
+        max(tile.row == 0 ? tile.kind.minimumWidth : tile.kind.compactMinimumWidth, floor)
     }
 
     /// True when the minimums alone are wider than the row, so the tiles are
@@ -255,7 +271,7 @@ enum LayoutCase: String, CaseIterable, Identifiable {
     }
 }
 
-/// One tile on the grid./// One tile on the grid.
+/// One tile on the grid.
 struct HomeTile: Identifiable, Equatable {
     let id: UUID
     var kind: HomeTileKind

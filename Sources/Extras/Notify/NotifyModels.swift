@@ -108,7 +108,7 @@ final class NotifyAppDirectory {
     private init() {}
 
     nonisolated static func isMessages(bundleIdentifier: String?, name: String) -> Bool {
-        if bundleIdentifier == "com.apple.MobileSMS" { return true }
+        if bundleIdentifier?.lowercased() == "com.apple.mobilesms" { return true }
         let lowered = name.lowercased()
         return lowered == "messages" || lowered == "wiadomości" || lowered == "wiadomosci"
     }

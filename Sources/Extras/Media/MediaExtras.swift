@@ -13,6 +13,7 @@ import SwiftUI
 /// Settings for the media extras. Plain `UserDefaults` under the `extras.media`
 /// prefix, so the settings view can bind the same keys with `@AppStorage`.
 enum MediaExtrasDefaults {
+    static let autoSourceKey = "extras.media.autoSource"
     static let lyricsEnabledKey = "extras.media.lyricsEnabled"
     static let lyricsInPlayerKey = "extras.media.lyricsInPlayer"
     static let lyricsInClosedNotchKey = "extras.media.lyricsInClosedNotch"
@@ -23,6 +24,9 @@ enum MediaExtrasDefaults {
         UserDefaults.standard.object(forKey: key) as? Bool ?? fallback
     }
 
+    /// Follow whichever player started most recently instead of staying on
+    /// the source picked in settings.
+    static var autoSource: Bool { bool(autoSourceKey, true) }
     /// Fetching lyrics at all. Off means no network request is ever made.
     static var lyricsEnabled: Bool { bool(lyricsEnabledKey, true) }
     /// The current and next line under the artist in the open player.

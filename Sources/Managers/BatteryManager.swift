@@ -88,8 +88,8 @@ final class BatteryManager: ObservableObject {
     /// `IOPowerSources` does not carry it, so this drops to IOKit directly.
     private func readChargeRate() {
         guard isPluggedIn else {
-            chargeWatts = nil
-            adapterWatts = nil
+            set(\.chargeWatts, nil)
+            set(\.adapterWatts, nil)
             return
         }
 
@@ -98,8 +98,8 @@ final class BatteryManager: ObservableObject {
             IOServiceMatching("AppleSmartBattery")
         )
         guard service != 0 else {
-            chargeWatts = nil
-            adapterWatts = nil
+            set(\.chargeWatts, nil)
+            set(\.adapterWatts, nil)
             return
         }
         defer { IOObjectRelease(service) }
@@ -114,18 +114,24 @@ final class BatteryManager: ObservableObject {
         if let details = IORegistryEntryCreateCFProperty(
             service, "AdapterDetails" as CFString, kCFAllocatorDefault, 0
         )?.takeRetainedValue() as? [String: Any] {
-            adapterWatts = (details["Watts"] as? NSNumber)?.intValue
+            set(\.adapterWatts, (details["Watts"] as? NSNumber)?.intValue)
         } else {
-            adapterWatts = nil
+            set(\.adapterWatts, nil)
         }
 
         // Millivolts times milliamps is microwatts. Amperage is signed:
         // negative while discharging, which is not a charge rate.
         if let millivolts = number("Voltage"), let milliamps = number("Amperage"), milliamps > 0 {
-            chargeWatts = millivolts * milliamps / 1_000_000
+            set(\.chargeWatts, millivolts * milliamps / 1_000_000)
         } else {
-            chargeWatts = nil
+            set(\.chargeWatts, nil)
         }
+    }
+
+    /// `@Published` announces every assignment, equal value or not, so a refresh
+    /// that found nothing new would still redraw every view watching the battery.
+    private func set<Value: Equatable>(_ keyPath: ReferenceWritableKeyPath<BatteryManager, Value>, _ value: Value) {
+        if self[keyPath: keyPath] != value { self[keyPath: keyPath] = value }
     }
 
     func refresh(announce: Bool = true) {
@@ -138,21 +144,21 @@ final class BatteryManager: ObservableObject {
                 as? [String: Any] else { continue }
             guard description[kIOPSTypeKey] as? String == kIOPSInternalBatteryType else { continue }
 
-            hasBattery = true
+            set(\.hasBattery, true)
 
             let capacity = description[kIOPSCurrentCapacityKey] as? Int ?? 0
             let maximum = description[kIOPSMaxCapacityKey] as? Int ?? 100
-            level = maximum > 0 ? Float(capacity) / Float(maximum) : 0
+            set(\.level, maximum > 0 ? Float(capacity) / Float(maximum) : 0)
 
-            isCharging = description[kIOPSIsChargingKey] as? Bool ?? false
-            isCharged = description[kIOPSIsChargedKey] as? Bool ?? false
+            set(\.isCharging, description[kIOPSIsChargingKey] as? Bool ?? false)
+            set(\.isCharged, description[kIOPSIsChargedKey] as? Bool ?? false)
             let state = description[kIOPSPowerSourceStateKey] as? String
-            isPluggedIn = state == kIOPSACPowerValue
+            set(\.isPluggedIn, state == kIOPSACPowerValue)
 
             let minutes = isCharging
                 ? description[kIOPSTimeToFullChargeKey] as? Int
                 : description[kIOPSTimeToEmptyKey] as? Int
-            timeRemaining = (minutes ?? -1) > 0 ? minutes : nil
+            set(\.timeRemaining, (minutes ?? -1) > 0 ? minutes : nil)
 
             break
         }

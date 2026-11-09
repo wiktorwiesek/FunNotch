@@ -9,43 +9,51 @@
 import SwiftUI
 
 /// The current and next line, or a short note that the text is unsynced. A
-/// button: it opens the full panel. It takes no room at all while there is
-/// nothing worth showing (no lyrics, still searching, switched off), because
-/// the home tile is tight and the transport row sits below it.
+/// button: it opens the full panel. The player decides how many rows it can
+/// spare (see `PlayerControls`), so this view only ever draws what it is told
+/// to and has a fixed height for each choice — it can never push the
+/// controls under it out of their tile.
 struct LyricsPlayerBlock: View {
+    enum Rows { case one, two }
+
     @ObservedObject private var lyrics = LyricsManager.shared
-    @AppStorage(MediaExtrasDefaults.lyricsEnabledKey) private var enabled = true
-    @AppStorage(MediaExtrasDefaults.lyricsInPlayerKey) private var inPlayer = true
+    var rows: Rows = .two
 
     /// Two lines of synced text.
-    static let syncedHeight: CGFloat = 30
-    /// A single quiet note.
-    static let noteHeight: CGFloat = 14
+    static let twoHeight: CGFloat = 28
+    /// The current line alone, or a single quiet note.
+    static let oneHeight: CGFloat = 15
 
-    /// Height the block occupies for `state`, or nil when it is not shown.
-    static func height(for state: LyricsState, enabled: Bool, inPlayer: Bool) -> CGFloat? {
-        guard enabled, inPlayer else { return nil }
+    /// How many rows can be shown for `state`, no more than `requested`; nil
+    /// when there is nothing worth showing (no lyrics, still searching,
+    /// switched off).
+    static func rows(requested: Rows?, state: LyricsState, enabled: Bool, inPlayer: Bool) -> Rows? {
+        guard let requested, enabled, inPlayer else { return nil }
         switch state {
-        case .synced: return syncedHeight
-        case .plain: return noteHeight
+        case .synced: return requested
+        case .plain: return .one
         case .idle, .loading, .instrumental, .notFound, .unavailable: return nil
         }
     }
 
     var body: some View {
-        if let blockHeight = Self.height(for: lyrics.state, enabled: enabled, inPlayer: inPlayer) {
-            Button {
-                withAnimation(.notchContent) { MediaOverlayState.shared.mode = .lyrics }
-            } label: {
-                content
-                    .frame(maxWidth: .infinity, minHeight: blockHeight, maxHeight: blockHeight, alignment: .topLeading)
-                    .clipped()
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help("Pokaż cały tekst")
+        Button {
+            withAnimation(.notchContent) { MediaOverlayState.shared.mode = .lyrics }
+        } label: {
+            content
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: height, maxHeight: height,
+                    alignment: .topLeading
+                )
+                .clipped()
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .help("Pokaż cały tekst")
     }
+
+    private var height: CGFloat { rows == .two ? Self.twoHeight : Self.oneHeight }
 
     @ViewBuilder
     private var content: some View {
@@ -58,10 +66,12 @@ struct LyricsPlayerBlock: View {
                     .lineLimit(1)
                     .id(lyrics.currentIndex)
                     .transition(.opacity)
-                Text(lyrics.nextText ?? " ")
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .lineLimit(1)
+                if rows == .two {
+                    Text(lyrics.nextText ?? " ")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .lineLimit(1)
+                }
             }
             .animation(.easeOut(duration: 0.2), value: lyrics.currentIndex)
         case .plain:
@@ -138,6 +148,11 @@ struct LyricsFullView: View {
                 guard let index else { return }
                 withAnimation(.easeInOut(duration: 0.35)) { proxy.scrollTo(index, anchor: .center) }
             }
+            // A new song reuses the same row ids, so without this the list
+            // stays scrolled to wherever the previous one was.
+            .onChange(of: lyrics.lines) { _, _ in
+                proxy.scrollTo(lyrics.currentIndex ?? 0, anchor: .center)
+            }
             .onAppear {
                 if let index = lyrics.currentIndex { proxy.scrollTo(index, anchor: .center) }
             }
@@ -208,13 +223,13 @@ struct MediaPlayerButtons: View {
     var body: some View {
         HStack(spacing: 0) {
             if lyricsEnabled {
-                HoverButton(systemName: "text.quote", size: 11, padding: 3) {
+                HoverButton(systemName: "text.quote", size: 11, padding: 2) {
                     withAnimation(.notchContent) { MediaOverlayState.shared.mode = .lyrics }
                 }
                 .help("Tekst piosenki")
             }
             if mixerEnabled {
-                HoverButton(systemName: "slider.vertical.3", size: 11, padding: 3) {
+                HoverButton(systemName: "slider.vertical.3", size: 11, padding: 2) {
                     withAnimation(.notchContent) { MediaOverlayState.shared.mode = .mixer }
                 }
                 .help("Mikser dźwięku")

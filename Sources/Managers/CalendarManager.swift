@@ -45,9 +45,11 @@ struct AgendaItem: Identifiable, Equatable {
         return false
     }
 
-    /// True when the event is happening right now.
+    /// True when the event is happening right now. An all-day event spans the
+    /// whole day, so it is never "now": that made every birthday show a "teraz"
+    /// badge from midnight to midnight.
     var isCurrent: Bool {
-        guard let start, let end else { return false }
+        guard !isAllDay, let start, let end else { return false }
         // The film clock, when rendering a video, so the labels agree with
         // the time on screen rather than the time the video was made.
         let now = Motion.filmDate ?? Date()
@@ -56,7 +58,7 @@ struct AgendaItem: Identifiable, Equatable {
 
     /// "in 5m" / "now" for something coming up soon, else nil.
     var countdownText: String? {
-        guard let start else { return nil }
+        guard !isAllDay, let start else { return nil }
         if isCurrent { return "teraz" }
         let seconds = start.timeIntervalSince(Motion.filmDate ?? Date())
         guard seconds > 0, seconds < 6 * 3600 else { return nil }
@@ -118,10 +120,21 @@ final class CalendarManager: ObservableObject {
 
     private init() {}
 
+    /// The day the agenda last treated as today, so midnight can be noticed.
+    private var trackedToday = Calendar.current.startOfDay(for: Date())
+
     func start() {
+        // Safe to call twice: a second call would stack duplicate observers.
+        guard timer == nil else { return }
+
         NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: store)
             .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
-            .sink { [weak self] _ in self?.reload() }
+            .sink { [weak self] _ in
+                guard let self else { return }
+                // A calendar added or removed in Calendar.app has to show up in Settings too.
+                if self.hasEventAccess { self.refreshCalendars() }
+                self.reload()
+            }
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: .settingsChanged)
@@ -138,6 +151,20 @@ final class CalendarManager: ObservableObject {
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+    }
+
+    private func refreshCalendars() {
+        let current = store.calendars(for: .event)
+        if current.map(\.calendarIdentifier) != calendars.map(\.calendarIdentifier) { calendars = current }
+    }
+
+    /// The app can run for days. When midnight passes, a selection that was
+    /// "today" moves to the new today; a day the user browsed to on purpose stays.
+    private func rollOverDayIfNeeded() {
+        let today = Calendar.current.startOfDay(for: Date())
+        guard today != trackedToday else { return }
+        if selectedDate == trackedToday { selectedDate = today }
+        trackedToday = today
     }
 
     func requestAccess() {
@@ -168,14 +195,19 @@ final class CalendarManager: ObservableObject {
     /// cosmetic and harmless; telling someone at a glance that they have a
     /// meeting in ten minutes when they do not is neither.
     var nextItem: AgendaItem? {
-        Self.next(in: items, now: Date())
+        // `items` belongs to whichever day is selected; browsing tomorrow must
+        // not put tomorrow's first meeting in the collapsed notch.
+        guard Calendar.current.isDateInToday(selectedDate) else { return nil }
+        return Self.next(in: items, now: Date())
     }
 
     /// Split out from `nextItem` so the rule can be exercised directly rather
     /// than only through whatever happens to be in the real calendar today.
     static func next(in items: [AgendaItem], now: Date) -> AgendaItem? {
         items.first { item in
-            guard !item.isSample, !item.isCompleted else { return false }
+            // An all-day event spans the whole day, so it would count as "current"
+            // from midnight and hide every timed meeting behind it.
+            guard !item.isSample, !item.isCompleted, !item.isAllDay else { return false }
             guard let start = item.start else { return false }
             return item.isCurrent || start >= now
         }
@@ -187,6 +219,7 @@ final class CalendarManager: ObservableObject {
     }
 
     func reload() {
+        rollOverDayIfNeeded()
         var collected: [AgendaItem] = []
 
         if hasEventAccess {
@@ -393,9 +426,10 @@ final class CalendarManager: ObservableObject {
 
     /// The next thing today that has a call attached.
     var nextMeeting: AgendaItem? {
+        guard Calendar.current.isDateInToday(selectedDate) else { return nil }
         let now = Date()
         return items.first { item in
-            guard item.meetingURL != nil, let start = item.start else { return false }
+            guard !item.isAllDay, item.meetingURL != nil, let start = item.start else { return false }
             return item.isCurrent || start >= now
         }
     }

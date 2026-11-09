@@ -103,6 +103,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         MouseTracker.shared.stop()
         WebcamManager.shared.stop()
+        // A note typed in the last second is still waiting on its debounce.
+        NotesManager.current?.flushPendingSave()
     }
 
     /// Reopening from Finder or a second launch just shows the settings window.

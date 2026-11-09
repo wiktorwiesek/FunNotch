@@ -2,8 +2,16 @@
 //  MusicManager.swift
 //  FunNotch
 //
-//  Owns whichever media backend is active, publishes the current track to the
-//  UI, and fires the "sneak peek" when the song changes.
+//  Owns the media backends, decides which of them the notch shows, publishes
+//  the current track to the UI, and fires the "sneak peek" when the song
+//  changes.
+//
+//  Backends do not exclude each other. With automatic source selection (the
+//  default) every usable one runs at once and the notch follows whichever
+//  *started playing* most recently: pressing play in a YouTube tab takes over
+//  from a paused Kaset, pressing play in Kaset takes it back, and a source that
+//  is merely open and paused never holds the display while another is playing.
+//  The source picked in settings only breaks ties.
 //
 
 import AppKit
@@ -24,14 +32,34 @@ final class MusicManager: ObservableObject {
     /// True while the user is dragging the scrubber, so updates do not fight them.
     @Published var isScrubbing = false
 
-    private var controller: MediaController?
-    private var fallbackControllers: [MediaController] = []
+    /// One running backend and the last thing it said.
+    private final class Slot {
+        let type: MediaControllerType
+        let controller: MediaController
+        var info = TrackInfo()
+        /// When this backend last went from not playing to playing.
+        var playingSince: Date?
+        /// Set while the backend reports nothing but its last track is still held.
+        var emptySince: Date?
+
+        init(type: MediaControllerType, controller: MediaController) {
+            self.type = type
+            self.controller = controller
+        }
+
+        var isPlaying: Bool { info.isPlaying && !info.isEmpty }
+    }
+
+    private var slots: [MediaControllerType: Slot] = [:]
+    private var displayed: MediaControllerType?
     private var tickTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
     private var lastTrackKey = ""
     private var lastArtworkPointer: NSImage?
-    /// When the active backend first went quiet, for the re-pick above.
-    private var emptySince: Date?
+
+    /// A later start wins only by more than this, so two sources that began
+    /// within a poll of each other do not trade places.
+    private static let takeoverMargin: TimeInterval = 1.5
 
     private let settings = Settings.shared
 
@@ -53,17 +81,30 @@ final class MusicManager: ObservableObject {
     func start() {
         NotificationCenter.default.publisher(for: .mediaControllerChanged)
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.activateController() }
+            .sink { [weak self] _ in self?.activateControllers() }
             .store(in: &cancellables)
 
         // Apps launching or quitting can change which backend is usable.
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)
             .merge(with: NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification))
             .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
-            .sink { [weak self] _ in self?.activateController() }
+            .sink { [weak self] _ in self?.activateControllers() }
             .store(in: &cancellables)
 
-        activateController()
+        // The automatic-source switch lives in UserDefaults; this fires for
+        // every key, so only act when ours actually changed.
+        var lastAuto = MediaExtrasDefaults.autoSource
+        NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                let auto = MediaExtrasDefaults.autoSource
+                guard auto != lastAuto else { return }
+                lastAuto = auto
+                self?.activateControllers()
+            }
+            .store(in: &cancellables)
+
+        activateControllers()
 
         let timer = Timer(timeInterval: 0.2, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -73,65 +114,80 @@ final class MusicManager: ObservableObject {
     }
 
     private func tick() {
-        if !isScrubbing {
-            let elapsed = track.interpolatedElapsed
-            // Assigning an unchanged value still fires `objectWillChange`, and
-            // that redraws and re-lays-out the whole notch. Five times a second
-            // with nothing playing, this was the busiest thing the app did.
-            if abs(elapsed - displayedElapsed) > 0.05 {
-                displayedElapsed = elapsed
-            }
-        }
-
-        // Whichever backend is live may simply have nothing to say — the user
-        // switched from Music to a YouTube tab, say. Re-pick periodically so
-        // that move is picked up without any intervention.
-        guard track.isEmpty else {
-            emptySince = nil
-            return
-        }
-        let now = Date()
-        guard let since = emptySince else {
-            emptySince = now
-            return
-        }
-        if now.timeIntervalSince(since) > 4 {
-            emptySince = now
-            activateController()
+        guard !isScrubbing else { return }
+        let elapsed = track.interpolatedElapsed
+        // Assigning an unchanged value still fires `objectWillChange`, and
+        // that redraws and re-lays-out the whole notch. Five times a second
+        // with nothing playing, this was the busiest thing the app did.
+        if abs(elapsed - displayedElapsed) > 0.05 {
+            displayedElapsed = elapsed
         }
     }
 
     // MARK: - Backend selection
 
-    private func activateController() {
-        let desired = settings.mediaController
-        let candidate = makeController(for: desired)
+    /// Which backends should be running right now.
+    private func wantedTypes() -> [MediaControllerType] {
+        let preferred = settings.mediaController
 
-        // If the chosen backend cannot see anything (app not running, or
-        // MediaRemote locked down) fall through to one that can.
-        let chosen: MediaController
-        if candidate.isAvailable {
-            chosen = candidate
-        } else if let alternative = firstAvailableFallback(excluding: desired) {
-            chosen = alternative
-        } else {
-            chosen = candidate
+        guard MediaExtrasDefaults.autoSource else {
+            // One backend, as chosen. If it cannot see anything (app not
+            // running, MediaRemote locked down) fall through to one that can.
+            if makeController(for: preferred).isAvailable { return [preferred] }
+            for candidate in MediaControllerType.allCases where candidate != preferred {
+                if makeController(for: candidate).isAvailable { return [candidate] }
+            }
+            return [preferred]
         }
 
-        if let existing = controller, existing.type == chosen.type {
-            existing.refresh()
-            return
+        var types: [MediaControllerType] = []
+        for type in [MediaControllerType.kaset, .appleMusic, .spotify]
+        where ScriptedMediaController.isInstalled(type) {
+            types.append(type)
         }
-
-        controller?.stop()
-        controller = chosen
-        chosen.onUpdate = { [weak self] info in
-            MainActor.assumeIsolated { self?.handle(info) }
+        // System-wide Now Playing sees every browser tab and any other player
+        // with full metadata, so reading tabs one by one is only the fallback.
+        if NowPlayingController.usesBridge || !NowPlayingController.isDeprecated {
+            types.append(.nowPlaying)
         }
-        chosen.start()
+        if !NowPlayingController.usesBridge || preferred == .browser {
+            types.append(.browser)
+        }
+        if !types.contains(preferred) { types.append(preferred) }
+        return types
     }
 
+    private func activateControllers() {
+        let wanted = wantedTypes()
+
+        for (type, slot) in slots where !wanted.contains(type) {
+            slot.controller.stop()
+            slots[type] = nil
+        }
+        for type in wanted where slots[type] == nil {
+            let controller = makeController(for: type)
+            let slot = Slot(type: type, controller: controller)
+            slots[type] = slot
+            controller.onUpdate = { [weak self] info in
+                MainActor.assumeIsolated { self?.ingest(type, info) }
+            }
+            controller.start()
+        }
+        for slot in slots.values where wanted.contains(slot.type) {
+            slot.controller.refresh()
+        }
+
+        let before = displayed
+        reselect()
+        if displayed != before { publishDisplayed() }
+    }
+
+    /// Replaces the real backends, so the choice between sources can be
+    /// checked with scripted ones (see `MediaPreviewScenes`).
+    var controllerFactory: ((MediaControllerType) -> MediaController)?
+
     private func makeController(for type: MediaControllerType) -> MediaController {
+        if let controllerFactory { return controllerFactory(type) }
         switch type {
         case .nowPlaying:
             return NowPlayingController()
@@ -144,20 +200,132 @@ final class MusicManager: ObservableObject {
         }
     }
 
-    private func firstAvailableFallback(excluding type: MediaControllerType) -> MediaController? {
-        for candidate in MediaControllerType.allCases where candidate != type {
-            let controller = makeController(for: candidate)
-            if controller.isAvailable { return controller }
-        }
-        return nil
+    /// The backend the notch is showing, which can differ from the user's choice.
+    var activeControllerType: MediaControllerType? {
+        if let displayed, slots[displayed] != nil { return displayed }
+        return slots[settings.mediaController] != nil ? settings.mediaController : slots.keys.first
     }
 
-    /// The backend actually in use, which can differ from the user's choice.
-    var activeControllerType: MediaControllerType? { controller?.type }
+    private var displayedController: MediaController? {
+        activeControllerType.flatMap { slots[$0]?.controller }
+    }
 
     /// Forces an immediate re-read, used after a media key is pressed.
     func refreshNow() {
-        controller?.refresh()
+        slots.values.forEach { $0.controller.refresh() }
+    }
+
+    // MARK: - Choosing the displayed source
+
+    /// A system-wide report about an app that has its own backend adds nothing
+    /// but less detail (no likes, shuffle, seeking), so the app's own wins.
+    private func isShadowed(_ slot: Slot) -> Bool {
+        guard slot.type == .nowPlaying, let bundle = slot.info.bundleIdentifier else { return false }
+        return slots.values.contains {
+            $0.type != .nowPlaying && $0.type != .browser
+                && !$0.info.isEmpty && $0.info.bundleIdentifier == bundle
+        }
+    }
+
+    private func isEligible(_ slot: Slot) -> Bool {
+        !slot.info.isEmpty && !isShadowed(slot)
+    }
+
+    /// How long a source that reports nothing keeps its last track on screen.
+    /// YouTube clears its media session for a moment between videos and
+    /// Shorts, and the system reports nothing in between; without this the
+    /// notch dropped to whatever paused player was open, then jumped back.
+    private static let emptyGrace: TimeInterval = 4
+
+    /// Records what a backend reported and, if that changes who is showing,
+    /// switches.
+    private func ingest(_ type: MediaControllerType, _ incoming: TrackInfo) {
+        guard let slot = slots[type] else { return }
+        var info = incoming
+
+        if info.isEmpty, !slot.info.isEmpty {
+            let now = Date()
+            if let since = slot.emptySince {
+                // Still empty after the grace period: it really stopped.
+                if now.timeIntervalSince(since) < Self.emptyGrace { return }
+            } else {
+                // First empty report: hold the last track, but no longer
+                // claim it is playing, and look again once the grace is up.
+                slot.emptySince = now
+                var held = slot.info
+                held.elapsed = held.interpolatedElapsed
+                held.timestamp = now
+                held.isPlaying = false
+                info = held
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.emptyGrace + 0.1) { [weak self, weak slot] in
+                    guard let self, let slot, slot.emptySince != nil, self.slots[type] === slot else { return }
+                    self.ingest(type, TrackInfo())
+                }
+            }
+        } else {
+            slot.emptySince = nil
+        }
+
+        let wasPlaying = slot.isPlaying
+        slot.info = info
+        if slot.isPlaying {
+            if !wasPlaying { slot.playingSince = Date() }
+        } else {
+            slot.playingSince = nil
+        }
+
+        let before = displayed
+        reselect()
+        if displayed != before || displayed == type {
+            publishDisplayed()
+        }
+    }
+
+    private func reselect() {
+        let preferred = settings.mediaController
+        let candidates = slots.values.filter(isEligible)
+        let playing = candidates.filter(\.isPlaying)
+        let current = displayed.flatMap { slots[$0] }
+
+        func started(_ slot: Slot) -> Date { slot.playingSince ?? .distantPast }
+
+        /// Latest starter; sources that started together go to the preferred one.
+        func newest(_ pool: [Slot]) -> Slot? {
+            guard let latest = pool.map(started).max() else { return nil }
+            let close = pool.filter { latest.timeIntervalSince(started($0)) <= Self.takeoverMargin }
+            return close.first { $0.type == preferred } ?? close.max { started($0) < started($1) }
+        }
+
+        var choice: Slot?
+        if let current, isEligible(current), current.isPlaying {
+            // Staying is the default; only a source that began playing clearly
+            // after this one takes over.
+            let later = playing.filter {
+                $0 !== current && started($0).timeIntervalSince(started(current)) > Self.takeoverMargin
+            }
+            choice = newest(later) ?? current
+        } else if let best = newest(playing) {
+            choice = best
+        } else if let current, isEligible(current) {
+            choice = current
+        } else {
+            // Nothing is playing and the display has nothing: show the
+            // preferred source's paused track, else any other.
+            choice = candidates.first { $0.type == preferred } ?? candidates.first
+        }
+
+        displayed = (choice ?? slots[preferred] ?? slots.values.first)?.type
+    }
+
+    /// Pushes the displayed backend's latest report to the UI.
+    private func publishDisplayed() {
+        guard let displayed, let slot = slots[displayed] else {
+            handle(TrackInfo())
+            return
+        }
+        // A backend that is shown only because nothing better exists may be
+        // empty; that is how "nothing is playing" reaches the UI.
+        handle(isEligible(slot) ? slot.info : TrackInfo())
     }
 
     /// Installs a fixed track without touching any backend, for snapshots.
@@ -187,13 +355,22 @@ final class MusicManager: ObservableObject {
 
     // MARK: - Incoming updates
 
-    private func handle(_ info: TrackInfo) {
-        let key = "\(info.title)|\(info.artist)|\(info.album)"
-        let isNewTrack = !key.isEmpty && key != lastTrackKey && !info.title.isEmpty
+    private func handle(_ incoming: TrackInfo) {
+        var info = incoming
+        info.artist = TrackInfo.tidyArtist(info.artist)
 
-        track = info
+        let key = "\(info.title)|\(info.artist)|\(info.album)"
+        let isNewTrack = !info.title.isEmpty && key != lastTrackKey
+
+        // Every backend reports about once a second; most reports change
+        // nothing the UI shows, and each assignment redraws the notch. The
+        // position counts as a change only if it drifted off the projection.
+        if info != track || abs(info.interpolatedElapsed - track.interpolatedElapsed) > 0.6 {
+            track = info
+        }
         if !isScrubbing {
-            displayedElapsed = info.interpolatedElapsed
+            let elapsed = info.interpolatedElapsed
+            if abs(elapsed - displayedElapsed) > 0.05 { displayedElapsed = elapsed }
         }
 
         if info.artwork !== lastArtworkPointer {
@@ -205,13 +382,22 @@ final class MusicManager: ObservableObject {
         if isNewTrack {
             lastTrackKey = key
             announceTrackChange()
-        } else if key.isEmpty {
+        } else if info.isEmpty {
             lastTrackKey = ""
         }
     }
 
+    /// A browser feed of Shorts, or a page that fills in its title and then
+    /// its artist a moment later, changes the track many times in a few
+    /// seconds. One peek per burst is enough.
+    private static let minimumPeekGap: TimeInterval = 6
+    private var lastPeekAt = Date.distantPast
+
     private func announceTrackChange() {
-        guard settings.enableSneakPeek, track.isPlaying else { return }
+        guard settings.enableSneakPeek, track.isPlaying,
+              Date().timeIntervalSince(lastPeekAt) >= Self.minimumPeekGap
+        else { return }
+        lastPeekAt = Date()
         NotchWindowManager.shared.broadcast { viewModel in
             guard viewModel.notchState == .closed else { return }
             viewModel.showSneakPeek(type: .music)
@@ -231,65 +417,57 @@ final class MusicManager: ObservableObject {
 
     // MARK: - Transport
 
+    private func refreshSoon() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.displayedController?.refresh()
+        }
+    }
+
     func togglePlayPause() {
-        controller?.togglePlayPause()
+        displayedController?.togglePlayPause()
         // Optimistically flip so the button feels instant.
         track.isPlaying.toggle()
         track.timestamp = Date()
         track.elapsed = displayedElapsed
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.controller?.refresh()
-        }
+        refreshSoon()
     }
 
     func nextTrack() {
-        controller?.nextTrack()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.controller?.refresh()
-        }
+        displayedController?.nextTrack()
+        refreshSoon()
     }
 
     func previousTrack() {
-        controller?.previousTrack()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.controller?.refresh()
-        }
+        displayedController?.previousTrack()
+        refreshSoon()
     }
 
     func seek(to time: TimeInterval) {
-        controller?.seek(to: time)
+        displayedController?.seek(to: time)
         displayedElapsed = time
     }
 
     func toggleShuffle() {
-        controller?.toggleShuffle()
+        displayedController?.toggleShuffle()
         track.isShuffled.toggle()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.controller?.refresh()
-        }
+        refreshSoon()
     }
 
     func cycleRepeat() {
-        controller?.cycleRepeat()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.controller?.refresh()
-        }
+        displayedController?.cycleRepeat()
+        refreshSoon()
     }
 
     func toggleLike() {
-        controller?.toggleLike()
+        displayedController?.toggleLike()
         track.likeStatus = track.likeStatus == .liked ? LikeStatus.none : .liked
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.controller?.refresh()
-        }
+        refreshSoon()
     }
 
     func toggleDislike() {
-        controller?.toggleDislike()
+        displayedController?.toggleDislike()
         track.likeStatus = track.likeStatus == .disliked ? LikeStatus.none : .disliked
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.controller?.refresh()
-        }
+        refreshSoon()
     }
 
     /// Brings the playing app to the front, like clicking the artwork does.

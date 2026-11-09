@@ -571,7 +571,13 @@ enum ShelfConversionWork {
             let rect = CGRect(x: 0, y: 0, width: width, height: height)
             context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
             context.fill(rect)
-            context.concatenate(page.getDrawingTransform(.cropBox, rect: rect, rotate: 0, preserveAspectRatio: true))
+            // getDrawingTransform never scales a page up: handed the big canvas
+            // it drew the page at 1:1 in the middle of it. So it maps the crop
+            // box (rotation included) onto a rect of the page's own size, and
+            // the context is scaled up to the canvas separately.
+            context.scaleBy(x: scale, y: scale)
+            let natural = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
+            context.concatenate(page.getDrawingTransform(.cropBox, rect: natural, rotate: 0, preserveAspectRatio: true))
             context.drawPDFPage(page)
 
             guard let image = context.makeImage() else { throw ShelfConversionError.unreadable }
@@ -764,14 +770,20 @@ enum ShelfConversionWork {
 
     static func zip(_ sources: [URL], name: String, staging: URL) async throws -> URL {
         let output = staging.appendingPathComponent("\(name).zip")
-        // --keepParent puts the item itself at the archive's root, as Finder
-        // does; --sequesterRsrc keeps resource forks in __MACOSX.
-        let flags = ["-c", "-k", "--sequesterRsrc", "--keepParent"]
+        // --sequesterRsrc keeps resource forks in __MACOSX.
+        var flags = ["-c", "-k", "--sequesterRsrc"]
 
         if sources.count == 1 {
+            // --keepParent puts a *folder* at the archive's root, as Finder
+            // does. For a plain file ditto would embed the file's containing
+            // folder instead ("Desktop/Screenshot.png"), so it is left off.
+            var isDirectory: ObjCBool = false
+            FileManager.default.fileExists(atPath: sources[0].path, isDirectory: &isDirectory)
+            if isDirectory.boolValue { flags.append("--keepParent") }
             try await ditto(flags + [sources[0].path, output.path])
             return output
         }
+        flags.append("--keepParent")
 
         // ditto archives exactly one source, so several items are gathered in
         // a folder named like the archive first (copies are clones on APFS).

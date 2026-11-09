@@ -187,6 +187,14 @@ final class Settings: ObservableObject {
         set { write("extendHoverArea", newValue); postGeometryChange() }
     }
 
+    /// Tucks the closed notch's wings away while the pointer is in the menu
+    /// bar beside the cutout, so the frontmost app's menus and status items
+    /// stay clickable. No geometry broadcast: the notch reads it live.
+    var hideWingsAtMenuBar: Bool {
+        get { bool("hideWingsAtMenuBar", true) }
+        set { write("hideWingsAtMenuBar", newValue) }
+    }
+
     var notchHeightMode: WindowHeightMode {
         get { option("notchHeightMode", WindowHeightMode.matchRealNotchSize) }
         set { write("notchHeightMode", newValue.rawValue); postGeometryChange() }
@@ -953,7 +961,7 @@ final class Settings: ObservableObject {
     private static let allKeys = [
         "menubarIcon", "showOnAllDisplays", "automaticallySwitchDisplay", "preferredScreenName",
         "launchAtLogin", "openNotchOnHover", "minimumHoverDuration", "enableHaptics",
-        "extendHoverArea", "notchHeightMode", "nonNotchHeightMode", "notchHeight", "nonNotchHeight",
+        "extendHoverArea", "hideWingsAtMenuBar", "notchHeightMode", "nonNotchHeightMode", "notchHeight", "nonNotchHeight",
         "notchWidthPadding", "showOnLockScreen", "hideFromScreenRecording", "showEmojis",
         "showMirror", "mirrorShape", "showNotHumanFace", "showCalendar", "sliderColor",
         "playerColorTinting", "useMusicVisualizer", "useCustomAccentColor", "customAccentColorData",

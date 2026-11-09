@@ -618,6 +618,10 @@ private struct WiFiPanel: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        // Nothing else reads the Wi-Fi state unless a weather view is on screen,
+        // so without this the tile showed "Wyłączone" until one appeared.
+        .onAppear { weather.addSubscriber() }
+        .onDisappear { weather.removeSubscriber() }
     }
 }
 

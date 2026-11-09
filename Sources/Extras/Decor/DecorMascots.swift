@@ -9,6 +9,74 @@
 
 import SwiftUI
 
+// MARK: - Animation clock
+
+private struct DecorAnimationsPausedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// True while nothing the user can see should animate: the notch is
+    /// hidden for a fullscreen video, say. The root of the notch sets it.
+    var decorAnimationsPaused: Bool {
+        get { self[DecorAnimationsPausedKey.self] }
+        set { self[DecorAnimationsPausedKey.self] = newValue }
+    }
+}
+
+enum DecorClock {
+    /// Every decoration redraws at this rate and no faster. These are 20×14
+    /// pixel animals and a bouncing GIF beside the camera; a display-rate
+    /// timeline made SwiftUI re-evaluate them (and everything it reports up to)
+    /// 30–60 times a second, which showed up as a steady share of a core.
+    static let framesPerSecond = 12.0
+
+    /// A schedule that ticks on the same grid for everybody, so views that
+    /// appear at different moments still land on shared frame boundaries.
+    static var schedule: PeriodicTimelineSchedule {
+        .periodic(from: Date(timeIntervalSinceReferenceDate: 0), by: 1 / framesPerSecond)
+    }
+}
+
+/// One mascot drawn at a fixed size. The timeline lives inside this view and
+/// only its canvas changes between frames, so a frame costs a 20×14 draw and
+/// never reaches layout; `drawingGroup` keeps even that in its own layer.
+struct DecorMascotCanvas: View {
+    let mascot: DecorMascot
+    /// False freezes the animation, e.g. when a countdown is paused.
+    var isMoving = true
+    var scale: CGFloat = 1
+
+    static let grid = CGSize(width: 20, height: 14)
+
+    @Environment(\.decorAnimationsPaused) private var paused
+
+    var body: some View {
+        Group {
+            if isMoving && !paused {
+                TimelineView(DecorClock.schedule) { context in
+                    canvas(time: context.date.timeIntervalSinceReferenceDate)
+                }
+            } else {
+                canvas(time: 0)
+            }
+        }
+        .frame(width: Self.grid.width * scale, height: Self.grid.height * scale)
+        .drawingGroup()
+        .accessibilityHidden(true)
+    }
+
+    private func canvas(time: Double) -> some View {
+        Canvas { context, _ in
+            context.scaleBy(x: scale, y: scale)
+            DecorMascotArt.draw(mascot, in: &context, time: time)
+        }
+        .frame(width: Self.grid.width * scale, height: Self.grid.height * scale)
+    }
+}
+
+// MARK: - Views
+
 /// A mascot walking along a thin track; how far it has got is how much of the
 /// countdown has gone.
 struct DecorMascotTrack: View {
@@ -21,7 +89,9 @@ struct DecorMascotTrack: View {
 
     static let width: CGFloat = 56
     static let height: CGFloat = 20
-    private static let figure = CGSize(width: 20, height: 14)
+    /// Gap between the camera cutout and the track in the closed notch.
+    static let cameraGap: CGFloat = 6
+    private static let figure = DecorMascotCanvas.grid
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -34,7 +104,7 @@ struct DecorMascotTrack: View {
                 .frame(width: max(Self.width * clamped, 2), height: 2)
 
             if mascot != .none {
-                figureView
+                DecorMascotCanvas(mascot: mascot, isMoving: isMoving)
                     .offset(x: (Self.width - Self.figure.width) * clamped, y: -3)
             }
         }
@@ -42,24 +112,12 @@ struct DecorMascotTrack: View {
         .accessibilityHidden(true)
     }
 
-    private var clamped: CGFloat { CGFloat(min(max(progress, 0), 1)) }
-
-    @ViewBuilder
-    private var figureView: some View {
-        if isMoving {
-            TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
-                canvas(time: context.date.timeIntervalSinceReferenceDate)
-            }
-        } else {
-            canvas(time: 0)
-        }
-    }
-
-    private func canvas(time: Double) -> some View {
-        Canvas { context, _ in
-            DecorMascotArt.draw(mascot, in: &context, time: time)
-        }
-        .frame(width: Self.figure.width, height: Self.figure.height)
+    /// Progress to the nearest 1/200 of the track (a quarter of a point).
+    /// The timer manager publishes `remaining` thirty times a second while a
+    /// timer runs; unquantised, the track moved 30 times a second by amounts
+    /// no pixel can show.
+    private var clamped: CGFloat {
+        CGFloat((min(max(progress, 0), 1) * 200).rounded() / 200)
     }
 }
 
@@ -69,15 +127,7 @@ struct DecorMascotFigure: View {
     var scale: CGFloat = 1.6
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
-            Canvas { drawing, _ in
-                DecorMascotArt.draw(mascot, in: &drawing, time: context.date.timeIntervalSinceReferenceDate)
-            }
-            .frame(width: 20, height: 14)
-            .scaleEffect(scale)
-            .frame(width: 20 * scale, height: 14 * scale)
-        }
-        .accessibilityHidden(true)
+        DecorMascotCanvas(mascot: mascot, scale: scale)
     }
 }
 

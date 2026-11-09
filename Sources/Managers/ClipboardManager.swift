@@ -31,12 +31,15 @@ struct ClipboardEntry: Identifiable, Equatable {
         return false
     }
 
-    /// One-line description for the tile.
+    /// One-line description for the tile. Capped, because tiles redraw on every
+    /// hover and laying out several MB of copied log as a `Text` is slow.
     var preview: String {
         switch payload {
         case let .text(value):
-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.replacingOccurrences(of: "\n", with: " ")
+            let head = value.drop(while: { $0.isWhitespace }).prefix(600)
+            let trimmed = String(head).trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.replacingOccurrences(of: "\r\n", with: " ")
+                .replacingOccurrences(of: "\n", with: " ")
         case .image:
             return "Obraz"
         case let .files(urls):
@@ -44,6 +47,13 @@ struct ClipboardEntry: Identifiable, Equatable {
                 ? urls[0].lastPathComponent
                 : Polish.count(urls.count, "plik", "pliki", "plików")
         }
+    }
+
+    /// What the clipboard search looks through: the text itself (to 200k
+    /// characters, so a keystroke stays cheap), not the capped preview.
+    var searchText: String {
+        if case let .text(value) = payload { return String(value.prefix(200_000)) }
+        return preview
     }
 
     var symbol: String {
@@ -182,8 +192,13 @@ final class ClipboardManager: ObservableObject {
         // Copying the same thing twice should move it up, not duplicate it.
         if let index = entries.firstIndex(where: { $0.payload == payload }) {
             let existing = entries.remove(at: index)
+            // The pin has to survive: copying a pinned snippet again used to
+            // drop it from the pinned list and quietly make it expirable.
             entries.insert(
-                ClipboardEntry(id: existing.id, payload: payload, copiedAt: Date(), sourceApp: source),
+                ClipboardEntry(
+                    id: existing.id, payload: payload, copiedAt: Date(),
+                    sourceApp: source ?? existing.sourceApp, isPinned: existing.isPinned
+                ),
                 at: 0
             )
         } else {
@@ -294,14 +309,21 @@ final class ClipboardManager: ObservableObject {
     func filtered(by query: String) -> [ClipboardEntry] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         // Case and diacritics are ignored so "zolty" finds "żółty", which
-        // matters most for text read out of screenshots.
+        // matters most for text read out of screenshots. "ł" is a letter of its
+        // own, not an "l" with a mark, so `.diacriticInsensitive` leaves it
+        // alone and it has to be folded by hand.
+        func fold(_ text: String) -> String {
+            text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+                .replacingOccurrences(of: "ł", with: "l")
+        }
+        let needle = fold(trimmed)
         func contains(_ haystack: String) -> Bool {
-            haystack.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+            fold(haystack).contains(needle)
         }
         let matches = trimmed.isEmpty
             ? entries
             : entries.filter { entry in
-                contains(entry.preview) || (ClipboardOCRIndex.shared.text(for: entry.id).map(contains) ?? false)
+                contains(entry.searchText) || (ClipboardOCRIndex.shared.text(for: entry.id).map(contains) ?? false)
             }
         return matches.sorted { lhs, rhs in
             if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
@@ -353,8 +375,11 @@ final class ClipboardManager: ObservableObject {
         // an entry's age survives a relaunch. Without the timestamp everything
         // came back as `.distantPast`, which the expiry sweep would delete on
         // sight — the history would empty itself every launch.
+        // UserDefaults is a property list that is rewritten whole on every
+        // copy; a pasted log or CSV of several MB would stall each save, so
+        // oversized text stays in memory for the session only.
         let rows: [[Any]] = entries.compactMap { entry in
-            guard case let .text(value) = entry.payload else { return nil }
+            guard case let .text(value) = entry.payload, value.utf8.count <= 200_000 else { return nil }
             return [value, entry.copiedAt.timeIntervalSince1970]
         }
         UserDefaults.standard.set(Array(rows.prefix(50)), forKey: storageKey)

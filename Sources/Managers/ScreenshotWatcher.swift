@@ -125,7 +125,8 @@ final class ScreenshotWatcher: ObservableObject {
 
         let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
         let fresh = names.filter { !seen.contains($0) }
-        seen.formUnion(names)
+        // Replaced, not merged, so a re-created file of the same name counts again.
+        seen = Set(names)
 
         for name in fresh {
             guard !name.hasPrefix(".") else { continue }

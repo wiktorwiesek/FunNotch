@@ -74,7 +74,7 @@ final class FocusManager: ObservableObject {
         let clamped = max(remaining, 0)
         let minutes = Int(clamped) / 60
         if minutes >= 60 {
-            return "\(minutes / 60)h\(minutes % 60)"
+            return "\(minutes / 60)h\(String(format: "%02d", minutes % 60))"
         }
         if minutes >= 1 {
             return "\(minutes) min"
@@ -461,6 +461,9 @@ final class FocusManager: ObservableObject {
         BrowserTarget(bundleIdentifier: "com.brave.Browser", applicationName: "Brave Browser", isChromeFamily: true),
         BrowserTarget(bundleIdentifier: "com.microsoft.edgemac", applicationName: "Microsoft Edge", isChromeFamily: true),
         BrowserTarget(bundleIdentifier: "company.thebrowser.Browser", applicationName: "Arc", isChromeFamily: true),
+        BrowserTarget(bundleIdentifier: "net.imput.helium", applicationName: "Helium", isChromeFamily: true),
+        BrowserTarget(bundleIdentifier: "com.vivaldi.Vivaldi", applicationName: "Vivaldi", isChromeFamily: true),
+        BrowserTarget(bundleIdentifier: "com.operasoftware.Opera", applicationName: "Opera", isChromeFamily: true),
     ]
 
     private func enforce() {

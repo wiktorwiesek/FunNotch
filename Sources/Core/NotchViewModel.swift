@@ -87,6 +87,16 @@ final class NotchViewModel: ObservableObject {
     /// Mirrored from the agent sessions manager so geometry can react to it.
     @Published private(set) var agentActivity = AgentActivity()
 
+    /// The pointer is in the menu-bar strip, off the cutout itself (see
+    /// `NotchWindowController.isPointerOverMenuBarWings`). Set by the window
+    /// manager from the pointer events it already receives, and released only
+    /// after a short delay so a stray flick off the bar does not make the
+    /// wings flicker back under the pointer.
+    @Published private(set) var pointerOverMenuBar = false
+    private var wingsRestoreWorkItem: DispatchWorkItem?
+    /// How long the pointer must stay off the menu bar before the wings return.
+    static let wingsRestoreDelay: TimeInterval = 0.4
+
     init(screen: NSScreen?) {
         screenIdentifier = screen?.displayIdentifier ?? ""
         closedNotchSize = measureClosedNotch(for: screen)
@@ -205,6 +215,48 @@ final class NotchViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Menu bar tucking
+
+    /// Reports whether the pointer is over the menu bar beside the cutout.
+    /// Entering collapses at once — the same move event must already see the
+    /// small hover rect, or brushing past a wing would open the notch — while
+    /// leaving waits `wingsRestoreDelay`.
+    func setPointerOverMenuBar(_ over: Bool) {
+        if over && settings.hideWingsAtMenuBar {
+            wingsRestoreWorkItem?.cancel()
+            wingsRestoreWorkItem = nil
+            guard !pointerOverMenuBar else { return }
+            withAnimation(.notchContent) { pointerOverMenuBar = true }
+        } else {
+            // Called on every pointer move; bail out cheaply when idle.
+            guard pointerOverMenuBar, wingsRestoreWorkItem == nil else { return }
+            let work = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                self.wingsRestoreWorkItem = nil
+                withAnimation(.notchContent) { self.pointerOverMenuBar = false }
+            }
+            wingsRestoreWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.wingsRestoreDelay, execute: work)
+        }
+    }
+
+    /// True while the closed notch is drawn as the plain cutout, wings and
+    /// all live activities beside it dropped. Never during a drag — the drop
+    /// zone has to stay a big target — and never for the open notch.
+    var wingsTucked: Bool {
+        pointerOverMenuBar && settings.hideWingsAtMenuBar
+            && notchState == .closed && !dragDetectorTargeting
+    }
+
+    /// Size of the area that takes the pointer (hover and clicks), as opposed
+    /// to the drawn size. Announcements (HUD, track peek) still play in full
+    /// while tucked — they are transient and the user asked for them — but
+    /// only the plain cutout is interactive, so they never swallow clicks
+    /// meant for the menus beneath their wings.
+    var interactiveSize: CGSize {
+        wingsTucked ? closedNotchSize : contentSize
+    }
+
     /// Sets state directly, bypassing animation. Used by the snapshot renderer.
     func setPreviewState(_ state: NotchState) {
         notchState = state
@@ -218,6 +270,11 @@ final class NotchViewModel: ObservableObject {
     /// Forces the focus live activity on, for snapshots.
     func setPreviewFocusActivity(_ active: Bool) {
         focusIsActive = active
+    }
+
+    /// Forces the menu-bar tuck, for snapshots.
+    func setPreviewPointerOverMenuBar(_ over: Bool) {
+        pointerOverMenuBar = over
     }
 
     /// Forces the agent live activity, for snapshots.
@@ -271,8 +328,9 @@ final class NotchViewModel: ObservableObject {
 
     /// Width added on each side of the cutout for the music live activity.
     static let musicActivityInset: CGFloat = MusicPlayerImageSizes.size.closed.width + 12
-    /// Width the countdown needs beside the cutout.
-    static let focusActivityInset: CGFloat = 46
+    /// Width the countdown needs beside the cutout: "45 min" is about 38
+    /// points, and it needs a margin against the rounded corner.
+    static let focusActivityInset: CGFloat = 54
     /// The agent light beside other activities, and its width with a count.
     static let agentPipWidth: CGFloat = 32
     static let agentPipWidthWithCount: CGFloat = 43
@@ -408,8 +466,13 @@ final class NotchViewModel: ObservableObject {
     /// it. Beside a clock and a battery, the working-agent light was hidden
     /// that way.
     var closedWingWidth: CGFloat {
+        guard !wingsTucked else { return 0 }
         let insets = closedActivityInsets
-        return max(insets.leading, insets.trailing)
+        // The window has a fixed width. Past it, a notch would have its sides
+        // sliced off by the window's edge instead of ending in its rounded
+        // corners, so extra widgets overflow into the clip rather than widen it.
+        let room = max((windowSize.width - closedNotchSize.width) / 2, 0)
+        return min(max(insets.leading, insets.trailing), room)
     }
 
     private static func estimatedWidth(of widgets: [NotchWidget]) -> CGFloat {
@@ -418,6 +481,9 @@ final class NotchViewModel: ObservableObject {
 
     /// Widths reported by the widgets currently on screen.
     func updateMeasuredWidgetWidths(_ widths: [NotchSide: CGFloat]) {
+        // While tucked the widgets are gone and report nothing; keeping the
+        // last measurement avoids a width jump when they come back.
+        guard !wingsTucked else { return }
         let widgets = activeWidgets
         var filtered = widths
         if widgets.leading.isEmpty { filtered[.leading] = nil }

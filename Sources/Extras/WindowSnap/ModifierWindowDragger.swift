@@ -194,6 +194,13 @@ final class ModifierWindowDragger: ObservableObject {
               let frame = WindowFrame.read(window)
         else { return false }
 
+        // A full-screen window cannot be moved or resized; swallowing the click
+        // for a drag that does nothing would only break clicking in it.
+        var fullScreen: CFTypeRef?
+        if AXUIElementCopyAttributeValue(window, "AXFullScreen" as CFString, &fullScreen) == .success,
+           let fullScreen, CFGetTypeID(fullScreen) == CFBooleanGetTypeID(), CFBooleanGetValue((fullScreen as! CFBoolean)) // type checked above
+        { return false }
+
         let mode: Mode = type == .leftMouseDown
             ? .move
             : .resize(left: point.x < frame.midX, top: point.y < frame.midY)
@@ -210,20 +217,25 @@ final class ModifierWindowDragger: ObservableObject {
 
         switch gesture.mode {
         case .move:
-            applier.submit(window: gesture.window, origin: CGPoint(x: start.minX + dx, y: start.minY + dy), size: nil)
+            applier.submit(.init(
+                window: gesture.window, origin: CGPoint(x: start.minX + dx, y: start.minY + dy),
+                size: nil, rightEdge: nil, bottomEdge: nil
+            ))
 
         case let .resize(left, top):
             let minimum = Self.minimumSize
             let width = max(minimum.width, left ? start.width - dx : start.width + dx)
             let height = max(minimum.height, top ? start.height - dy : start.height + dy)
-            // The edge that is not being dragged stays where it was.
-            let x = left ? start.maxX - width : start.minX
-            let y = top ? start.maxY - height : start.minY
-            applier.submit(
+            // The edge that is not being dragged stays where it was. When the
+            // window refuses the size (its own minimum is larger), the applier
+            // places the origin from the size the window really took.
+            applier.submit(.init(
                 window: gesture.window,
-                origin: (left || top) ? CGPoint(x: x, y: y) : nil,
-                size: CGSize(width: width, height: height)
-            )
+                origin: start.origin,
+                size: CGSize(width: width, height: height),
+                rightEdge: left ? start.maxX : nil,
+                bottomEdge: top ? start.maxY : nil
+            ))
         }
     }
 }
@@ -235,10 +247,16 @@ final class ModifierWindowDragger: ObservableObject {
 /// a window; applying each one in order would make the window trail the
 /// pointer by seconds.
 private final class FrameApplier: @unchecked Sendable {
-    private struct Request {
+    struct Request {
         let window: AXUIElement
-        let origin: CGPoint?
+        /// Where the window's top-left goes. For a resize this is the starting
+        /// origin, and only the axes without an anchored edge below keep it.
+        let origin: CGPoint
         let size: CGSize?
+        /// Edges that must stay put while the window resizes towards the
+        /// opposite side (left-edge or top-edge resizes).
+        let rightEdge: CGFloat?
+        let bottomEdge: CGFloat?
     }
 
     private let lock = NSLock()
@@ -246,9 +264,9 @@ private final class FrameApplier: @unchecked Sendable {
     private var pending: Request?
     private var working = false
 
-    func submit(window: AXUIElement, origin: CGPoint?, size: CGSize?) {
+    func submit(_ request: Request) {
         lock.lock()
-        pending = Request(window: window, origin: origin, size: size)
+        pending = request
         let needsWorker = !working
         working = true
         lock.unlock()
@@ -265,12 +283,27 @@ private final class FrameApplier: @unchecked Sendable {
             }
             pending = nil
             lock.unlock()
+            Self.apply(request)
+        }
+    }
 
-            // Size first, then position: shrinking from the left would
-            // otherwise push the old, larger window off the screen edge for
-            // an instant and have the system clamp the position.
-            if let size = request.size { WindowFrame.setSize(request.window, size) }
-            if let origin = request.origin { WindowFrame.setPosition(request.window, origin) }
+    /// Size first, then position: shrinking from the left would otherwise push
+    /// the old, larger window off the screen edge for an instant and have the
+    /// system clamp the position.
+    static func apply(_ request: Request) {
+        var origin = request.origin
+        if let size = request.size {
+            WindowFrame.setSize(request.window, size)
+            if request.rightEdge != nil || request.bottomEdge != nil,
+               let actual = WindowFrame.read(request.window)?.size
+            {
+                if let right = request.rightEdge { origin.x = right - actual.width }
+                if let bottom = request.bottomEdge { origin.y = bottom - actual.height }
+            }
+        }
+        // A plain resize from the bottom-right corner leaves the origin alone.
+        if request.size == nil || request.rightEdge != nil || request.bottomEdge != nil {
+            WindowFrame.setPosition(request.window, origin)
         }
     }
 }

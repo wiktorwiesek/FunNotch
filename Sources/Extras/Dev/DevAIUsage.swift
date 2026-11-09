@@ -75,6 +75,10 @@ private final class AIUsageScanner: @unchecked Sendable {
         let output_tokens: Int?
         let cache_read_input_tokens: Int?
         let cache_creation_input_tokens: Int?
+        let cache_creation: CacheCreation?
+        /// How much of the cache writes used the 1-hour cache, which costs
+        /// twice the base input price instead of 1.25 times.
+        struct CacheCreation: Decodable { let ephemeral_1h_input_tokens: Int? }
     }
 
     private struct MessageJSON: Decodable {
@@ -197,7 +201,10 @@ private final class AIUsageScanner: @unchecked Sendable {
             guard modified >= cutoff else { continue }
 
             let path = url.path
-            let start = offsets[path] ?? 0
+            // A file that shrank was rewritten, so its old offset means nothing
+            // (the de-duplication keeps a second read from double counting).
+            let known = offsets[path] ?? 0
+            let start = UInt64(size) < known ? 0 : known
             guard UInt64(size) > start else { continue }
             offsets[path] = readNewLines(in: url, from: start, source: source)
         }
@@ -266,10 +273,13 @@ private final class AIUsageScanner: @unchecked Sendable {
             guard tokens > 0 else { return }
             var bucket = Bucket(tokens: tokens)
             if let rate = Self.rate(for: message.model ?? "") {
+                let written = usage.cache_creation_input_tokens ?? 0
+                let writtenForAnHour = min(usage.cache_creation?.ephemeral_1h_input_tokens ?? 0, written)
                 bucket.cost = (Double(usage.input_tokens ?? 0) * rate.input
                     + Double(usage.output_tokens ?? 0) * rate.output
                     + Double(usage.cache_read_input_tokens ?? 0) * rate.cacheRead
-                    + Double(usage.cache_creation_input_tokens ?? 0) * rate.cacheWrite) / 1_000_000
+                    + Double(written - writtenForAnHour) * rate.cacheWrite
+                    + Double(writtenForAnHour) * rate.input * 2) / 1_000_000
                 bucket.estimated = true
             }
             // A repeat of a message already seen replaces it: the streamed
@@ -310,6 +320,10 @@ private final class AIUsageScanner: @unchecked Sendable {
 
     private static func rate(for model: String) -> Rate? {
         let name = model.lowercased()
+        // Opus 4 and 4.1 were priced three times higher than Opus 4.5 onward.
+        if name.contains("opus-4-1") || name.contains("opus-4-2025") || name.contains("opus-4-0") || name.contains("3-opus") {
+            return Rate(input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75)
+        }
         if name.contains("opus") { return Rate(input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25) }
         if name.contains("sonnet") { return Rate(input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75) }
         if name.contains("haiku") { return Rate(input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25) }
@@ -374,6 +388,12 @@ final class AIUsageManager: ObservableObject {
     func removeSubscriber() {
         subscribers = max(subscribers - 1, 0)
         stopIfIdle()
+    }
+
+    /// Preview renderer only: shows `snapshot` as if it had just been scanned.
+    func injectPreview(_ snapshot: AIUsageSnapshot) {
+        self.snapshot = snapshot
+        hasScanned = true
     }
 
     /// Visible: look every 15 s. Not visible: only look every two minutes,
@@ -466,7 +486,8 @@ final class AIUsageManager: ObservableObject {
     static func tokens(_ value: Int) -> String {
         switch value {
         case ..<1_000: return "\(value)"
-        case ..<1_000_000: return "\(Int((Double(value) / 1_000).rounded())) tys."
+        // 999 500 and up would round to "1000 tys."; that is "1,0 mln".
+        case ..<999_500: return "\(Int((Double(value) / 1_000).rounded())) tys."
         default:
             let millions = Double(value) / 1_000_000
             let text = String(format: millions >= 100 ? "%.0f" : "%.1f", millions)

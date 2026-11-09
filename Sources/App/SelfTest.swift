@@ -501,6 +501,68 @@ enum SelfTest {
         )
         widgetModel.setPreviewMusicActivity(false)
         widgetModel.updateMeasuredWidgetWidths([:])
+
+        // MARK: Menu bar tucking
+        let savedHideWings = settings.hideWingsAtMenuBar
+        settings.hideWingsAtMenuBar = true
+        let wingedWidth = widgetModel.contentSize.width
+        let wingProbe = NSPoint(
+            x: windowSize.width / 2 + widgetModel.closedNotchSize.width / 2 + 8,
+            y: windowSize.height - 10
+        )
+        let tuckView = controller.panel.contentView
+        check("with wings out, a wing is clickable", tuckView?.hitTest(wingProbe) != nil)
+        widgetModel.setPointerOverMenuBar(true)
+        check("the pointer on the menu bar tucks the wings at once", widgetModel.wingsTucked)
+        check(
+            "the tucked notch is the plain cutout",
+            abs(widgetModel.contentSize.width - widgetModel.closedNotchSize.width) < 0.5
+                && wingedWidth > widgetModel.closedNotchSize.width + 16,
+            detail: "\(Int(wingedWidth)) → \(Int(widgetModel.contentSize.width))"
+        )
+        check("its hover area shrinks with it", controller.hoverRect.width < wingedWidth)
+        check("and a click on the old wing falls through", tuckView?.hitTest(wingProbe) == nil)
+        check(
+            "the cutout itself still takes the pointer",
+            tuckView?.hitTest(NSPoint(x: windowSize.width / 2, y: windowSize.height - 10)) != nil
+        )
+        widgetModel.updateMeasuredWidgetWidths([.leading: 11, .trailing: 11])
+        check("measurements are ignored while tucked", widgetModel.closedActivityInsets.leading != 11)
+        widgetModel.setPointerOverMenuBar(false)
+        check("leaving the bar does not bring the wings back at once", widgetModel.wingsTucked)
+        widgetModel.setPreviewPointerOverMenuBar(false)
+        check("with the pointer gone the wings return", abs(widgetModel.contentSize.width - wingedWidth) < 0.5)
+        settings.hideWingsAtMenuBar = false
+        widgetModel.setPreviewPointerOverMenuBar(true)
+        check("the setting off keeps the wings out", !widgetModel.wingsTucked)
+        widgetModel.setPreviewPointerOverMenuBar(false)
+        settings.hideWingsAtMenuBar = savedHideWings
+
+        // The strip test, on a notched 1470-point display (cutout 179 pt, bar 33 pt).
+        let notchedScreen = CGRect(x: 0, y: 0, width: 1470, height: 956)
+        func overWings(_ x: CGFloat, _ y: CGFloat, frame: CGRect = notchedScreen, cutout: CGFloat = 185) -> Bool {
+            NotchWindowController.isOverMenuBarWings(
+                CGPoint(x: x, y: y), screenFrame: frame, barHeight: 33, cutoutWidth: cutout
+            )
+        }
+        check("the strip beside the cutout is wing territory", overWings(500, 950) && overWings(1000, 940))
+        check("the cutout itself is not", !overWings(735, 950) && !overWings(735 + 92, 950) && !overWings(735 - 92, 950))
+        check("just past the cutout's edge is", overWings(735 + 93, 950) && overWings(735 - 93, 950))
+        check("below the menu bar is not", !overWings(500, 956 - 34))
+        check("the bar's last row is", overWings(500, 956 - 33) && overWings(500, 956))
+        check("another display is not", !overWings(2500, 950))
+        let external = CGRect(x: 1470, y: 100, width: 2560, height: 1440)
+        check(
+            "an external display's bar is judged against its own frame",
+            overWings(1470 + 300, 1535, frame: external, cutout: 120)
+                && !overWings(1470 + 1280, 1535, frame: external, cutout: 120)
+        )
+        check(
+            "a hidden menu bar has no strip",
+            !NotchWindowController.isOverMenuBarWings(
+                CGPoint(x: 500, y: 950), screenFrame: notchedScreen, barHeight: 0, cutoutWidth: 185
+            )
+        )
         settings.idleWidgetsEnabled = savedWidgets.idle
         settings.idleLeftWidgets = savedWidgets.idleLeft
         settings.idleRightWidgets = savedWidgets.idleRight
@@ -716,9 +778,10 @@ enum SelfTest {
         check("and the time is kept on the session", finished.lastTurnDuration == 194)
         check(
             "durations read naturally",
-            AgentSessionsManager.duration(194) == "3m 14s"
-                && AgentSessionsManager.duration(45) == "45s"
-                && AgentSessionsManager.duration(3900) == "1h 5m"
+            AgentSessionsManager.duration(194) == "3 min 14 s"
+                && AgentSessionsManager.duration(45) == "45 s"
+                && AgentSessionsManager.duration(180) == "3 min"
+                && AgentSessionsManager.duration(3900) == "1 godz. 5 min"
         )
         check(
             "a working clock reads naturally",
@@ -726,7 +789,13 @@ enum SelfTest {
         )
         check(
             "a waiting reason becomes a sentence",
-            AgentSessionsManager.waitingText("permission prompt") == "Needs your permission"
+            AgentSessionsManager.waitingText("permission prompt") == "Potrzebuje zgody"
+                && AgentSessionsManager.waitingText("input needed") == "Czeka na Ciebie"
+        )
+        check(
+            "Polish nouns take the right form after a number",
+            [0, 1, 2, 5, 12, 14, 22, 101, 102, 111, 112].map { Polish.plural($0, "plik", "pliki", "plików") }
+                == ["plików", "plik", "pliki", "plików", "plików", "plików", "pliki", "plików", "pliki", "plików", "plików"]
         )
         check(
             "a folder with a space in it keeps its name",
@@ -819,6 +888,17 @@ enum SelfTest {
             "but a real event still does",
             CalendarManager.next(in: samples + [realItem], now: sampleDay)?.id == "real"
         )
+        // An all-day event spans the whole day and must never stand in front of
+        // the timed meeting that is actually coming up.
+        let holiday = AgendaItem(
+            id: "holiday", title: "Święto", start: sampleDay, end: sampleDay.addingTimeInterval(86_399),
+            isAllDay: true, calendarColor: .red, calendarTitle: "Święta", kind: .event,
+            location: nil, externalIdentifier: nil, meetingURL: nil
+        )
+        check(
+            "an all-day event does not hide the next timed one",
+            CalendarManager.next(in: [holiday, realItem], now: sampleDay)?.id == "real"
+        )
         // Toggling the setting has to rebuild the agenda. Without this the
         // switch appears to do nothing until the next minute tick.
         check(
@@ -863,7 +943,7 @@ enum SelfTest {
         })
         check(
             "the report can be copied as text",
-            report.plainText.contains("Fun Notch diagnostics") && report.plainText.count > 200
+            report.plainText.contains("Fun Notch — diagnostyka") && report.plainText.count > 200
         )
         info("diagnostics rows", "\(report.sections.reduce(0) { $0 + $1.rows.count })")
 

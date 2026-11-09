@@ -112,19 +112,24 @@ struct DecorAnimationView: View {
     let speed: Double
     let size: CGSize
 
+    @Environment(\.decorAnimationsPaused) private var paused
+
     var body: some View {
         Group {
-            if animation.isStatic {
+            if animation.isStatic || paused {
                 image(animation.frames[0])
             } else {
-                // 24 fps is more than any GIF asks for and keeps the idle
-                // notch from costing a full 60 Hz redraw.
-                TimelineView(.animation(minimumInterval: 1.0 / 24)) { context in
+                // The shared decoration clock (12 fps) rather than the display
+                // rate: GIFs are authored at 10 frames a second or fewer, and a
+                // faster timeline only made SwiftUI re-evaluate the view for
+                // frames that look identical.
+                TimelineView(DecorClock.schedule) { context in
                     image(animation.frame(at: context.date.timeIntervalSinceReferenceDate, speed: speed))
                 }
             }
         }
         .frame(width: size.width, height: size.height)
+        .drawingGroup()
         .accessibilityHidden(true)
     }
 

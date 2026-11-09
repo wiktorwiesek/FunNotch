@@ -56,8 +56,11 @@ final class SystemStatsManager: ObservableObject {
         guard timer == nil else { return }
         refresh()
         let timer = Timer(timeInterval: 3.0, repeats: true) { [weak self] _ in
+            // Nobody is looking behind a lock screen or a sleeping display.
+            guard !SystemActivityMonitor.isScreenIdle else { return }
             MainActor.assumeIsolated { self?.refresh() }
         }
+        timer.tolerance = 1
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
     }

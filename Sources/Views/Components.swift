@@ -65,6 +65,9 @@ struct MarqueeText: View {
     var font: Font = .body
     var speed: Double = 30
     var pause: Double = 1.6
+    /// The row is a fixed height so the text never reflows its neighbours;
+    /// compact layouts ask for less than the default.
+    var lineHeight: CGFloat = 18
 
     @State private var textWidth: CGFloat = 0
     @State private var containerWidth: CGFloat = 0
@@ -102,7 +105,6 @@ struct MarqueeText: View {
     }
 
     private var gap: CGFloat { 40 }
-    private var lineHeight: CGFloat { 18 }
 
     private var label: some View {
         Text(text)

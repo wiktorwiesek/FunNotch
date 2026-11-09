@@ -24,12 +24,23 @@ enum DevShellActivity {
     static let minimumSecondsKey = "extras.dev.shell.minSeconds"
     static let defaultMinimumSeconds = 10
 
+    /// Why a file is left alone, in the words of the settings screen.
+    private struct NotUTF8: LocalizedError {
+        var errorDescription: String? { "plik nie jest zapisany w UTF-8, więc go nie ruszam." }
+    }
+
     /// Resolved through symlinks, so a dotfiles-managed ~/.zshrc is edited in
     /// place instead of being replaced by a regular file.
     private static var zshrc: URL {
-        FileManager.default.homeDirectoryForCurrentUser
+        let resolved = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".zshrc")
             .resolvingSymlinksInPath()
+        // A dangling link is left as it is by the call above, and writing to
+        // it would replace the link itself; aim at what it points to instead.
+        if let target = try? FileManager.default.destinationOfSymbolicLink(atPath: resolved.path) {
+            return URL(fileURLWithPath: target, relativeTo: resolved.deletingLastPathComponent()).standardizedFileURL
+        }
+        return resolved
     }
 
     private static var backup: URL {
@@ -52,9 +63,11 @@ enum DevShellActivity {
     static func install(minimumSeconds: Int) throws {
         // A read failure must not look like an empty file, or the install would
         // replace the user's .zshrc without a backup. It surfaces as an error.
-        let current = FileManager.default.fileExists(atPath: zshrc.path)
-            ? try String(contentsOf: zshrc, encoding: .utf8)
-            : ""
+        var current = ""
+        if FileManager.default.fileExists(atPath: zshrc.path) {
+            guard let text = String(data: try Data(contentsOf: zshrc), encoding: .utf8) else { throw NotUTF8() }
+            current = text
+        }
         // One copy of the user's original, taken before the first change.
         if !FileManager.default.fileExists(atPath: backup.path), !current.isEmpty {
             try current.write(to: backup, atomically: true, encoding: .utf8)
@@ -90,14 +103,17 @@ enum DevShellActivity {
         \(beginMarker)
         # Zarządzane przez Fun Notch (Ustawienia > Dodatki > Terminal). Wyłącz tam
         # funkcję albo usuń cały ten blok, żeby przestała działać.
-        if [[ -o interactive && -z "$FUNNOTCH_HOOK_LOADED" ]]; then
+        if [[ -o interactive && -z "${FUNNOTCH_HOOK_LOADED-}" ]]; then
           FUNNOTCH_HOOK_LOADED=1
           zmodload zsh/datetime 2>/dev/null
           : ${FUNNOTCH_MIN_SECONDS:=\(minimumSeconds)}
           typeset -g _funnotch_cmd="" _funnotch_start=0
-          _funnotch_preexec() { _funnotch_cmd=$1; _funnotch_start=$EPOCHSECONDS }
+          # `emulate -L zsh` first: the user's own options (nounset, ksharrays,
+          # errexit…) must not be able to break or noisily fail the hook.
+          _funnotch_preexec() { emulate -L zsh; _funnotch_cmd=$1; _funnotch_start=$EPOCHSECONDS }
           _funnotch_precmd() {
             local code=$?
+            emulate -L zsh
             [[ -n $_funnotch_cmd ]] || return 0
             local cmd=$_funnotch_cmd elapsed=$(( EPOCHSECONDS - _funnotch_start ))
             _funnotch_cmd=""
@@ -106,8 +122,12 @@ enum DevShellActivity {
             (( code == 130 )) && return 0
             local name="" word
             for word in ${(z)cmd}; do
-              [[ $word == *=* || $word == (sudo|time|noglob|nocorrect|command|builtin|exec) ]] && continue
-              name=${word:t}
+              # A subshell's "(" or a group's "{" is not part of the name, and
+              # neither are the options of a wrapper such as `sudo -n make`.
+              word=${word#[\\(\\{]}
+              [[ -z $word || $word == -* || $word == *=* ]] && continue
+              case $word in sudo|time|noglob|nocorrect|command|builtin|exec) continue ;; esac
+              name=${${(Q)word}:t}
               break
             done
             [[ -n $name ]] || return 0
@@ -139,8 +159,13 @@ enum DevShellActivity {
                 -d "$json" http://127.0.0.1:\(LocalAPIManager.port)/island >/dev/null 2>&1
             ) &!
           }
-          preexec_functions+=(_funnotch_preexec)
-          precmd_functions=(_funnotch_precmd $precmd_functions)
+          # Registered under default options too: with ksharrays `$precmd_functions`
+          # is only its first element, and with nounset it may not exist yet.
+          () {
+            emulate -L zsh
+            preexec_functions+=(_funnotch_preexec)
+            precmd_functions=(_funnotch_precmd $precmd_functions)
+          }
         fi
         \(endMarker)
 

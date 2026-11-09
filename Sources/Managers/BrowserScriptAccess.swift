@@ -174,15 +174,15 @@ final class BrowserScriptAccess: ObservableObject {
         }
 
         let element = AXUIElementCreateApplication(application.processIdentifier)
-        // Chrome-family browsers file it under View → Developer; Safari puts it
-        // straight in its Develop menu.
-        let path = target.isChromeFamily
-            ? ["View", "Developer", "Allow JavaScript from Apple Events"]
-            : ["Develop", "Allow JavaScript from Apple Events"]
-
-        guard let item = Self.menuItem(in: element, path: path) else {
+        // The item sits under View → Developer in Chrome-family browsers and
+        // under Develop in Safari — but under whatever those are called in
+        // the browser's language ("Widok → Deweloper → Zezwól na kod
+        // JavaScript z Apple Events"). Titles in English only found nothing
+        // on a Polish browser, so the item is recognised by what it says
+        // rather than by where it is.
+        guard let item = Self.javaScriptMenuItem(in: element) else {
             outcome = target.isChromeFamily
-                ? .failed("Nie znaleziono pozycji View → Developer → Allow JavaScript from Apple Events w przeglądarce \(target.name).")
+                ? .failed("Nie znaleziono w menu przeglądarki \(target.name) pozycji „Allow JavaScript from Apple Events” (po polsku: „Zezwól na kod JavaScript z Apple Events”).")
                 : .needsSafariDevelopMenu
             return
         }
@@ -235,22 +235,26 @@ final class BrowserScriptAccess: ObservableObject {
 
     // MARK: - Menu walking
 
-    /// Follows a menu path by title. Every menu bar item owns a single menu, so
-    /// each step is "find the titled child, then step into its menu".
-    static func menuItem(in application: AXUIElement, path: [String]) -> AXUIElement? {
-        guard var current = copyElement(application, attribute: kAXMenuBarAttribute) else { return nil }
+    /// The "Allow JavaScript from Apple Events" item, in any language: a menu
+    /// item mentioning both "JavaScript" and "Apple Events", found by walking
+    /// the menu bar four levels deep.
+    static func javaScriptMenuItem(in application: AXUIElement) -> AXUIElement? {
+        guard let bar = copyElement(application, attribute: kAXMenuBarAttribute) else { return nil }
 
-        for (index, title) in path.enumerated() {
-            guard let children = copyChildren(current) else { return nil }
-            guard let match = children.first(where: { copyString($0, attribute: kAXTitleAttribute) == title })
-            else { return nil }
-
-            if index == path.count - 1 { return match }
-            // Step into the submenu this item owns.
-            guard let submenu = copyChildren(match)?.first else { return nil }
-            current = submenu
+        func search(_ element: AXUIElement, depth: Int) -> AXUIElement? {
+            guard depth > 0, let children = copyChildren(element) else { return nil }
+            for child in children {
+                if let title = copyString(child, attribute: kAXTitleAttribute),
+                   title.localizedCaseInsensitiveContains("JavaScript"),
+                   title.localizedCaseInsensitiveContains("Apple Events")
+                {
+                    return child
+                }
+                if let found = search(child, depth: depth - 1) { return found }
+            }
+            return nil
         }
-        return nil
+        return search(bar, depth: 4)
     }
 
     static func isChecked(_ item: AXUIElement) -> Bool {

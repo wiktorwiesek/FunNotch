@@ -44,6 +44,11 @@ struct NotchWidgetStack: View {
                 NotchWidgetButton(widget: widget)
             }
         }
+        // Laid out at its ideal width, whatever the slot offers. Otherwise the
+        // first (estimated) slot squeezes the wide widgets, the squeezed width
+        // is what gets measured, and the notch creeps outwards one layout pass
+        // at a time with the text flush against its rounded corners meanwhile.
+        .fixedSize(horizontal: true, vertical: false)
         .background(
             GeometryReader { proxy in
                 Color.clear.preference(

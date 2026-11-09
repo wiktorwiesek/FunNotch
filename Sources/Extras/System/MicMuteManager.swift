@@ -178,7 +178,9 @@ final class MicMuteManager: ObservableObject {
                     device, kAudioDevicePropertyVolumeScalar, to: Float32(0), scope: inputScope, element: element
                 ) && succeeded
             } else {
-                let restore = Float32(saved[key] ?? 1)
+                // Nothing remembered (the level was already zero, or the saved
+                // value was lost): macOS's usual default, not full gain.
+                let restore = Float32(saved[key] ?? 0.75)
                 succeeded = AudioObjects.set(
                     device, kAudioDevicePropertyVolumeScalar, to: restore, scope: inputScope, element: element
                 ) && succeeded

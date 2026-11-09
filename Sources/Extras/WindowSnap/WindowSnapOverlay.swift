@@ -73,7 +73,8 @@ enum WindowSnapLayout {
     static let padding: CGFloat = 10
     static let gap: CGFloat = 6
     static let rowHeight: CGFloat = 46
-    static let width: CGFloat = 480
+    // Wide enough for "Prawa górna" in the quarter row, whose four cells are the narrowest.
+    static let width: CGFloat = 540
 
     /// Rows of cells: halves and full, thirds, quarters.
     private static let rows: [[WindowSnapZone]] = [
@@ -117,7 +118,7 @@ final class WindowSnapOverlayModel: ObservableObject {
     @Published var hovered: WindowSnapZone?
 }
 
-private struct WindowSnapOverlayView: View {
+struct WindowSnapOverlayView: View {
     @ObservedObject var model: WindowSnapOverlayModel
 
     var body: some View {
