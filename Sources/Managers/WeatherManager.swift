@@ -37,6 +37,8 @@ final class WeatherManager: NSObject, ObservableObject {
     private var timer: Timer?
     private var subscribers = 0
     private var lastFetch: Date?
+    private var isFetching = false
+    private var retryPending = false
 
     private override init() {
         super.init()
@@ -115,9 +117,12 @@ final class WeatherManager: NSObject, ObservableObject {
     }
 
     private func fetch(for location: CLLocation) {
-        // Open-Meteo is rate-limited by courtesy, so keep it to a slow trickle.
+        // Open-Meteo is rate-limited by courtesy, so keep it to a slow trickle —
+        // but only after a fetch that worked. Counting a failed one here left
+        // the pane on "Pobieranie pogody…" for ten minutes after a single 503.
         if let lastFetch, Date().timeIntervalSince(lastFetch) < 300 { return }
-        lastFetch = Date()
+        guard !isFetching else { return }
+        isFetching = true
 
         let latitude = location.coordinate.latitude
         let longitude = location.coordinate.longitude
@@ -128,29 +133,35 @@ final class WeatherManager: NSObject, ObservableObject {
             URLQueryItem(name: "current", value: "temperature_2m,weather_code,is_day"),
             URLQueryItem(name: "timezone", value: "auto"),
         ]
-        guard let url = components.url else { return }
+        guard let url = components.url else {
+            isFetching = false
+            return
+        }
 
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+        struct Response: Decodable {
+            struct Current: Decodable {
+                let temperature_2m: Double
+                let weather_code: Int
+                let is_day: Int
+            }
+            let current: Current
+        }
+
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             guard let self else { return }
-            guard let data, error == nil else {
-                DispatchQueue.main.async {
-                    MainActor.assumeIsolated { self.lastError = "Pogoda niedostępna" }
-                }
-                return
-            }
-
-            struct Response: Decodable {
-                struct Current: Decodable {
-                    let temperature_2m: Double
-                    let weather_code: Int
-                    let is_day: Int
-                }
-                let current: Current
-            }
-
-            guard let decoded = try? JSONDecoder().decode(Response.self, from: data) else { return }
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let decoded = data.flatMap { try? JSONDecoder().decode(Response.self, from: $0) }
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
+                    self.isFetching = false
+                    guard error == nil, (200 ..< 300).contains(status), let decoded else {
+                        let reason = error?.localizedDescription ?? "HTTP \(status)"
+                        DiagnosticLog.write("weather", "fetch failed: \(reason); retrying in 60 s")
+                        self.lastError = "Pogoda chwilowo niedostępna"
+                        self.scheduleRetry()
+                        return
+                    }
+                    self.lastFetch = Date()
                     self.lastError = nil
                     self.conditions = Conditions(
                         temperatureCelsius: decoded.current.temperature_2m,
@@ -167,6 +178,20 @@ final class WeatherManager: NSObject, ObservableObject {
             guard let name = placemarks?.first?.locality else { return }
             DispatchQueue.main.async {
                 MainActor.assumeIsolated { self?.conditions?.placeName = name }
+            }
+        }
+    }
+
+    /// One retry a minute after a failed fetch, instead of waiting for the
+    /// ten-minute refresh.
+    private func scheduleRetry() {
+        guard !retryPending else { return }
+        retryPending = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.retryPending = false
+                if self.subscribers > 0 { self.refresh() }
             }
         }
     }
