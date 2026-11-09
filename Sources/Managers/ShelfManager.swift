@@ -245,6 +245,9 @@ final class ShelfManager: NSObject, ObservableObject {
         missingOnRestore = missing
         if !missing.isEmpty {
             DiagnosticLog.write("shelf", "dropped \(missing.count) item(s) whose file had moved: \(missing.joined(separator: ", "))")
+            // Forget them for good, or the same files are reported missing
+            // again on every launch.
+            persist()
         }
         loadThumbnails()
     }
