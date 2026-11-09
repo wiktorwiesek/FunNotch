@@ -35,7 +35,9 @@ VERSION="1.3"
 BUILD_NUMBER="6"
 MIN_MACOS="14.0"
 
-BUILD_DIR="build"
+# Overridable so several checkouts or agents can build at once without
+# clobbering each other: BUILD_DIR=/tmp/fn-a ./build.sh
+BUILD_DIR="${BUILD_DIR:-build}"
 APP_DIR="$BUILD_DIR/$APP_NAME.app"
 MACOS_DIR="$APP_DIR/Contents/MacOS"
 RESOURCES_DIR="$APP_DIR/Contents/Resources"
