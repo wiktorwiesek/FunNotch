@@ -90,7 +90,7 @@ struct CalendarPane: View {
             Image(systemName: "calendar")
                 .font(.system(size: 16))
                 .foregroundStyle(.white.opacity(0.35))
-            Text("No events")
+            Text("Brak wydarzeń")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.4))
         }
@@ -99,11 +99,11 @@ struct CalendarPane: View {
 
     private var permissionPrompt: some View {
         VStack(spacing: 5) {
-            Text("Calendar access needed")
+            Text("Potrzebny dostęp do kalendarza")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
-            Button("Grant Access") { manager.requestAccess() }
+            Button("Zezwól na dostęp") { manager.requestAccess() }
                 .buttonStyle(.plain)
                 .font(.system(size: 10, weight: .medium))
                 .padding(.horizontal, 8)
@@ -142,6 +142,7 @@ private struct DayCell: View {
 
     private var weekdaySymbol: String {
         let formatter = DateFormatter()
+        formatter.locale = Polish.locale
         formatter.dateFormat = "EEEEE"
         return formatter.string(from: date)
     }
@@ -188,7 +189,7 @@ private struct AgendaRow: View {
                     // decoration that cannot be told apart from a real meeting
                     // is a way to miss one.
                     if item.isSample {
-                        Text("Sample")
+                        Text("Przykład")
                             .font(.system(size: 7, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.55))
                             .padding(.horizontal, 3)
@@ -220,7 +221,7 @@ private struct AgendaRow: View {
                         .background(Capsule().fill(settings.accentColor))
                 }
                 .buttonStyle(.plain)
-                .help("Join the meeting")
+                .help("Dołącz do spotkania")
             }
         }
         .padding(.vertical, 2)

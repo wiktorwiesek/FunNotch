@@ -88,13 +88,13 @@ final class BreakoutGame {
 
         var name: String {
             switch self {
-            case .wide: return "Wide"
-            case .multiball: return "Multiball"
-            case .slow: return "Slow-mo"
-            case .fireball: return "Fireball"
-            case .laser: return "Lasers"
-            case .shield: return "Shield"
-            case .shrink: return "Shrunk!"
+            case .wide: return "Szeroka"
+            case .multiball: return "Wiele piłek"
+            case .slow: return "Zwolnienie"
+            case .fireball: return "Ognista kula"
+            case .laser: return "Lasery"
+            case .shield: return "Tarcza"
+            case .shrink: return "Zmniejszona"
             }
         }
 
@@ -410,7 +410,7 @@ final class BreakoutGame {
         guard boardSize.width > 0 else { return }
         let board = BreakoutLevels.board(for: level)
         layBricks(board.rows, toughening: BreakoutLevels.toughening(for: level), dropping: true)
-        show("Level \(level) · \(board.name)", for: 2.2)
+        show("Poziom \(level) · \(board.name)", for: 2.2)
     }
 
     /// Turns a board's text into bricks. Dropping, they fall in row by row,
@@ -1005,7 +1005,7 @@ final class BreakoutGame {
             }
         } else {
             beginServe()
-            show(lives == 1 ? "Last ball" : "\(lives) balls left", for: 1.4)
+            show(lives == 1 ? "Ostatnia piłka" : "Zostało piłek: \(lives)", for: 1.4)
         }
     }
 
@@ -1020,7 +1020,7 @@ final class BreakoutGame {
         buildLevel()
         popups.append(Popup(
             position: CGPoint(x: boardSize.width / 2, y: boardSize.height * 0.78),
-            text: "Board clear +\(bonus)", color: Color(red: 0.5, green: 1, blue: 0.6),
+            text: "Plansza wyczyszczona +\(bonus)", color: Color(red: 0.5, green: 1, blue: 0.6),
             life: 1.6, maxLife: 1.6
         ))
     }
@@ -1030,7 +1030,7 @@ final class BreakoutGame {
         // not news.
         if bestAtStart > 0, score > bestAtStart, !beatHighScore {
             beatHighScore = true
-            show("New high score!", for: 1.6, tone: .record)
+            show("Nowy rekord", for: 1.6, tone: .record)
             sound.play(.highScore)
         }
         if score > highScore { highScore = score }
@@ -1133,18 +1133,18 @@ final class BreakoutGame {
     }
 
     var overlayTitle: String? {
-        if isPaused { return "Paused" }
+        if isPaused { return "Pauza" }
         switch phase {
-        case .over: return beatHighScore ? "New high score!" : "Game over"
+        case .over: return beatHighScore ? "Nowy rekord" : "Koniec gry"
         case .intro, .serving, .running: return nil
         }
     }
 
     var overlaySubtitle: String {
         if phase == .over, !isPaused {
-            return "\(score.formatted()) points · level \(level) · click to play again"
+            return "\(score.formatted()) \(Polish.plural(score, "punkt", "punkty", "punktów")) · poziom \(level) · kliknij, aby zagrać ponownie"
         }
-        return "Move the pointer to steer · click to resume"
+        return "Poruszaj kursorem, aby sterować · kliknij, aby wznowić"
     }
 
     // MARK: - Preview and testing

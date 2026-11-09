@@ -68,14 +68,14 @@ enum WeatherScene {
 
     var label: String {
         switch self {
-        case .clearDay:   return "Clear"
-        case .clearNight: return "Clear"
-        case .cloudy:     return "Cloudy"
-        case .fog:        return "Fog"
-        case .drizzle:    return "Drizzle"
-        case .rain:       return "Rain"
-        case .storm:      return "Storm"
-        case .snow:       return "Snow"
+        case .clearDay:   return "Bezchmurnie"
+        case .clearNight: return "Bezchmurnie"
+        case .cloudy:     return "Pochmurno"
+        case .fog:        return "Mgła"
+        case .drizzle:    return "Mżawka"
+        case .rain:       return "Deszcz"
+        case .storm:      return "Burza"
+        case .snow:       return "Śnieg"
         }
     }
 }

@@ -281,8 +281,8 @@ struct AgentPip: View {
         let working = agents.workingCount
         let waiting = agents.waitingCount
         var parts: [String] = []
-        if working > 0 { parts.append("\(working) working") }
-        if waiting > 0 { parts.append("\(waiting) waiting for you") }
+        if working > 0 { parts.append("\(working) \(working == 1 ? "pracuje" : "pracują")") }
+        if waiting > 0 { parts.append("\(waiting) \(waiting == 1 ? "czeka" : "czekają") na Ciebie") }
         return parts.joined(separator: ", ")
     }
 }

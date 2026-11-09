@@ -107,13 +107,13 @@ final class DiagnosticsReport: ObservableObject {
         #endif
 
         return Section(title: "Fun Notch", rows: [
-            Row(label: "Version", verdict: .good("\(version) (\(build)) · \(architecture)")),
+            Row(label: "Wersja", verdict: .good("\(version) (\(build)) · \(architecture)")),
             Row(label: "macOS", verdict: .good(ProcessInfo.processInfo.operatingSystemVersionString)),
             Row(
-                label: "Displays with a notch",
+                label: "Ekrany z notchem",
                 verdict: NSScreen.screens.contains(where: \.hasPhysicalNotch)
-                    ? .good("yes")
-                    : .unknown("none — the panel is drawn where the notch would be")
+                    ? .good("tak")
+                    : .unknown("brak — panel jest rysowany w miejscu notcha")
             ),
         ])
     }
@@ -127,30 +127,30 @@ final class DiagnosticsReport: ObservableObject {
         let active = music.activeControllerType
         if let active, active != chosen {
             rows.append(Row(
-                label: "Backend",
-                verdict: .unknown("set to \(chosen.rawValue), actually reading \(active.rawValue)"),
-                remedy: "\(chosen.rawValue) had nothing to report, so Fun Notch fell through to one that did."
+                label: "Źródło",
+                verdict: .unknown("ustawione: \(chosen.title), faktycznie odczyt z: \(active.title)"),
+                remedy: "\(chosen.title) nic nie zgłosiło, więc Fun Notch przełączył się na źródło, które coś zgłosiło."
             ))
         } else {
-            rows.append(Row(label: "Backend", verdict: .good(active?.rawValue ?? chosen.rawValue)))
+            rows.append(Row(label: "Źródło", verdict: .good((active ?? chosen).title)))
         }
 
         let track = music.track
         rows.append(Row(
-            label: "Now playing",
+            label: "Teraz odtwarzane",
             verdict: track.isEmpty
-                ? .unknown("nothing")
+                ? .unknown("nic")
                 : .good("\(track.title)\(track.artist.isEmpty ? "" : " — \(track.artist)")")
         ))
 
         rows.append(Row(
-            label: "Playback position",
+            label: "Pozycja odtwarzania",
             verdict: track.isEmpty
-                ? .unknown("nothing playing")
-                : (track.hasTiming ? .good("known") : .missing("not reported")),
+                ? .unknown("nic nie jest odtwarzane")
+                : (track.hasTiming ? .good("znana") : .missing("brak danych")),
             remedy: track.isEmpty || track.hasTiming
                 ? nil
-                : "Needs the browser's \"Allow JavaScript from Apple Events\"; see the Media tab."
+                : "Wymaga opcji przeglądarki „Allow JavaScript from Apple Events”; zobacz kartę Multimedia."
         ))
 
         for browser in BrowserMediaController.scriptableBrowsers {
@@ -160,83 +160,83 @@ final class DiagnosticsReport: ObservableObject {
                 label: browser.name,
                 verdict: {
                     switch mode {
-                    case .some(true): return .good("reading the page — title, artist, artwork, position")
-                    case .some(false): return .missing("reading the tab title only")
-                    case nil: return .unknown("running, no media tab seen yet")
+                    case .some(true): return .good("odczyt ze strony — tytuł, wykonawca, okładka, pozycja")
+                    case .some(false): return .missing("odczyt tylko tytułu karty")
+                    case nil: return .unknown("działa, nie wykryto jeszcze karty z multimediami")
                     }
                 }(),
                 remedy: mode == false
-                    ? "Turn on page access in the Media tab for artist, artwork and the progress bar."
+                    ? "Włącz dostęp do stron w karcie Multimedia, aby zobaczyć wykonawcę, okładkę i pasek postępu."
                     : nil
             ))
         }
 
-        return Section(title: "Media", rows: rows)
+        return Section(title: "Multimedia", rows: rows)
     }
 
     private func buildPermissions() -> Section {
         var rows: [Row] = []
 
         rows.append(Row(
-            label: "Calendars",
+            label: "Kalendarze",
             verdict: Self.verdict(
                 for: EKEventStore.authorizationStatus(for: .event),
-                granted: "the agenda and next-event widget work"
+                granted: "agenda i widżet następnego wydarzenia działają"
             ),
-            remedy: "Privacy & Security → Calendars"
+            remedy: "Prywatność i ochrona → Kalendarze"
         ))
         rows.append(Row(
-            label: "Reminders",
+            label: "Przypomnienia",
             verdict: Self.verdict(
                 for: EKEventStore.authorizationStatus(for: .reminder),
-                granted: "reminders appear in the agenda"
+                granted: "przypomnienia pojawiają się w agendzie"
             ),
-            remedy: "Privacy & Security → Reminders"
+            remedy: "Prywatność i ochrona → Przypomnienia"
         ))
 
         let camera = AVCaptureDevice.authorizationStatus(for: .video)
         rows.append(Row(
-            label: "Camera",
+            label: "Kamera",
             verdict: {
                 switch camera {
-                case .authorized: return .good("the mirror works")
-                case .notDetermined: return .unknown("not asked yet — only needed for the mirror")
-                default: return .missing("denied — the mirror cannot run")
+                case .authorized: return .good("lusterko działa")
+                case .notDetermined: return .unknown("jeszcze nie zapytano — potrzebna tylko do lusterka")
+                default: return .missing("odmowa — lusterko nie może działać")
                 }
             }(),
-            remedy: camera == .denied ? "Privacy & Security → Camera" : nil
+            remedy: camera == .denied ? "Prywatność i ochrona → Kamera" : nil
         ))
 
         let location = WeatherManager.shared.authorization
         rows.append(Row(
-            label: "Location",
+            label: "Lokalizacja",
             verdict: {
                 switch location {
-                case .authorized, .authorizedAlways: return .good("weather and the Wi-Fi name work")
-                case .notDetermined: return .unknown("not asked yet")
-                default: return .missing("denied — no weather, and no Wi-Fi network name")
+                case .authorized, .authorizedAlways: return .good("pogoda i nazwa sieci Wi‑Fi działają")
+                case .notDetermined: return .unknown("jeszcze nie zapytano")
+                default: return .missing("odmowa — brak pogody i nazwy sieci Wi‑Fi")
                 }
             }(),
-            remedy: "macOS hides the Wi-Fi network name behind location access too."
+            remedy: "macOS ukrywa nazwę sieci Wi‑Fi także za dostępem do lokalizacji."
         ))
 
         rows.append(Row(
-            label: "Accessibility",
+            label: "Dostępność",
             verdict: AXIsProcessTrusted()
-                ? .good("the \"Turn on page access\" button can work")
-                : .unknown("not granted — only needed for that one button"),
-            remedy: "Privacy & Security → Accessibility"
+                ? .good("przycisk „Włącz dostęp do stron” może działać")
+                : .unknown("brak zgody — potrzebna tylko do tego przycisku"),
+            remedy: "Prywatność i ochrona → Dostępność"
         ))
 
         rows.append(Row(
-            label: "Automation",
+            label: "Automatyzacja",
             verdict: BrowserReadModes.modes.isEmpty && MusicManager.shared.track.isEmpty
-                ? .unknown("not exercised yet — play something to find out")
-                : .good("Fun Notch can talk to the player it is reading"),
-            remedy: "Privacy & Security → Automation, if a player is running but never appears here."
+                ? .unknown("jeszcze nie sprawdzono — odtwórz coś, aby się przekonać")
+                : .good("Fun Notch może komunikować się z odtwarzaczem, z którego czyta"),
+            remedy: "Prywatność i ochrona → Automatyzacja, jeśli odtwarzacz działa, ale nigdy się tu nie pojawia."
         ))
 
-        return Section(title: "Permissions", rows: rows)
+        return Section(title: "Uprawnienia", rows: rows)
     }
 
     /// The failures the app used to hide. An error here names the exact reason
@@ -244,12 +244,12 @@ final class DiagnosticsReport: ObservableObject {
     private func buildScriptErrors() -> Section {
         let failures = ScriptErrors.current
         guard !failures.isEmpty else {
-            return Section(title: "Scripting", rows: [
-                Row(label: "Last error", verdict: .good("none since launch")),
+            return Section(title: "Skrypty", rows: [
+                Row(label: "Ostatni błąd", verdict: .good("brak od uruchomienia")),
             ])
         }
 
-        return Section(title: "Scripting", rows: failures.map { failure in
+        return Section(title: "Skrypty", rows: failures.map { failure in
             Row(
                 label: failure.application,
                 verdict: .missing(failure.message),
@@ -261,59 +261,59 @@ final class DiagnosticsReport: ObservableObject {
     private static func remedy(for message: String) -> String? {
         let lowered = message.lowercased()
         if lowered.contains("not allowed") || lowered.contains("-1743") {
-            return "Automation access. Privacy & Security → Automation."
+            return "Dostęp do automatyzacji. Prywatność i ochrona → Automatyzacja."
         }
         if lowered.contains("-1728") || lowered.contains("can’t get") || lowered.contains("can't get") {
-            return "The app answered but not with what was asked for — usually a window or tab that has since closed."
+            return "Aplikacja odpowiedziała, ale nie tym, o co pytano — zwykle chodzi o okno lub kartę, która została już zamknięta."
         }
         return nil
     }
 
     private func buildActivity() -> Section {
-        Section(title: "Activity", rows: [
+        Section(title: "Aktywność", rows: [
             Row(
-                label: "Screen",
+                label: "Ekran",
                 verdict: SystemActivityMonitor.shared.isIdle
-                    ? .unknown("locked or asleep — polling has backed off to every 30s")
-                    : .good("awake")
+                    ? .unknown("zablokowany lub uśpiony — odpytywanie zwolniło do co 30 s")
+                    : .good("aktywny")
             ),
             Row(
-                label: "Focus session",
+                label: "Sesja Skupienia",
                 verdict: FocusManager.shared.isActive
-                    ? .good("running — \(FocusManager.shared.compactRemainingText) left, the game is hidden")
-                    : .unknown("not running")
+                    ? .good("trwa — zostało \(FocusManager.shared.compactRemainingText), gra jest ukryta")
+                    : .unknown("nie trwa")
             ),
             Row(
                 label: "HUD",
                 verdict: {
-                    guard Settings.shared.hudEnabled else { return .unknown("off") }
+                    guard Settings.shared.hudEnabled else { return .unknown("wyłączony") }
                     return HUDManager.shared.isIntercepting
-                        ? .good("intercepting the media keys")
-                        : .missing(HUDManager.shared.lastError ?? "not intercepting")
+                        ? .good("przechwytuje klawisze multimedialne")
+                        : .missing(HUDManager.shared.lastError ?? "nie przechwytuje")
                 }(),
                 remedy: Settings.shared.hudEnabled && !HUDManager.shared.isIntercepting
-                    ? "Privacy & Security → Accessibility, then re-enable it in Settings → Live Activities."
+                    ? "Prywatność i ochrona → Dostępność, a potem włącz go ponownie w Ustawienia → Aktywności na żywo."
                     : nil
             ),
             Row(
-                label: "Brightness control",
+                label: "Sterowanie jasnością",
                 verdict: DisplayBrightness.isAvailable
-                    ? .good("available")
-                    : .missing("this Mac does not expose it")
+                    ? .good("dostępne")
+                    : .missing("ten Mac go nie udostępnia")
             ),
             Row(
-                label: "Keyboard backlight",
+                label: "Podświetlenie klawiatury",
                 verdict: KeyboardBacklight.isAvailable
-                    ? .good("available")
-                    : .unknown("not present or not exposed")
+                    ? .good("dostępne")
+                    : .unknown("brak lub niedostępne")
             ),
             Row(
                 label: "AirDrop",
                 verdict: ShelfManager.canAirDrop
-                    ? .good("available from the shelf")
-                    : .missing("macOS is not offering the AirDrop service")
+                    ? .good("dostępny z Półki")
+                    : .missing("macOS nie udostępnia usługi AirDrop")
             ),
-            Row(label: "Log file", verdict: .good(DiagnosticLog.fileURL.path)),
+            Row(label: "Plik dziennika", verdict: .good(DiagnosticLog.fileURL.path)),
         ])
     }
 
@@ -322,9 +322,9 @@ final class DiagnosticsReport: ObservableObject {
     private static func verdict(for status: EKAuthorizationStatus, granted: String) -> Verdict {
         switch status {
         case .fullAccess, .authorized: return .good(granted)
-        case .writeOnly: return .missing("write-only — Fun Notch cannot read your events")
-        case .notDetermined: return .unknown("not asked yet")
-        default: return .missing("denied")
+        case .writeOnly: return .missing("tylko zapis — Fun Notch nie może czytać Twoich wydarzeń")
+        case .notDetermined: return .unknown("jeszcze nie zapytano")
+        default: return .missing("odmowa")
         }
     }
 
@@ -340,7 +340,7 @@ final class DiagnosticsReport: ObservableObject {
 
     /// The whole report as plain text, for pasting into a bug report.
     var plainText: String {
-        var out = "Fun Notch diagnostics — \(generated.formatted())\n"
+        var out = "Fun Notch diagnostics — \(generated.formatted(.dateTime.locale(Polish.locale)))\n"
         for section in sections {
             out += "\n## \(section.title)\n"
             for row in section.rows {

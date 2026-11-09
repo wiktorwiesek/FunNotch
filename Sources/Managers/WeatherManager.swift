@@ -92,7 +92,7 @@ final class WeatherManager: NSObject, ObservableObject {
         readWiFi()
 
         guard isLocationAuthorized else {
-            lastError = "Location access needed"
+            lastError = "Wymagany dostęp do lokalizacji"
             return
         }
         locationManager.requestLocation()
@@ -134,7 +134,7 @@ final class WeatherManager: NSObject, ObservableObject {
             guard let self else { return }
             guard let data, error == nil else {
                 DispatchQueue.main.async {
-                    MainActor.assumeIsolated { self.lastError = "Weather unavailable" }
+                    MainActor.assumeIsolated { self.lastError = "Pogoda niedostępna" }
                 }
                 return
             }
@@ -275,7 +275,7 @@ extension WeatherManager: CLLocationManagerDelegate {
                 // unavailable" would tell the user it is broken at exactly the
                 // moment they are being asked to allow it.
                 guard self.authorization != .notDetermined else { return }
-                self.lastError = "Location unavailable"
+                self.lastError = "Lokalizacja niedostępna"
             }
         }
     }
@@ -308,14 +308,14 @@ enum MoonPhase {
 
     static func name(on date: Date = Date()) -> String {
         switch fraction(on: date) {
-        case ..<0.0625, 0.9375...: return "New"
-        case ..<0.1875: return "Waxing crescent"
-        case ..<0.3125: return "First quarter"
-        case ..<0.4375: return "Waxing gibbous"
-        case ..<0.5625: return "Full"
-        case ..<0.6875: return "Waning gibbous"
-        case ..<0.8125: return "Last quarter"
-        default: return "Waning crescent"
+        case ..<0.0625, 0.9375...: return "Nów"
+        case ..<0.1875: return "Sierp przybywający"
+        case ..<0.3125: return "Pierwsza kwadra"
+        case ..<0.4375: return "Garb przybywający"
+        case ..<0.5625: return "Pełnia"
+        case ..<0.6875: return "Garb ubywający"
+        case ..<0.8125: return "Ostatnia kwadra"
+        default: return "Sierp ubywający"
         }
     }
 }

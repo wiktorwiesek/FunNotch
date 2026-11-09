@@ -39,15 +39,15 @@ final class BrowserScriptAccess: ObservableObject {
         var message: String {
             switch self {
             case .idle: return ""
-            case .working: return "Checking…"
-            case let .alreadyOn(name): return "\(name) already allows it — progress and artwork should be live."
-            case let .turnedOn(name): return "Turned on in \(name). Progress and artwork are live now."
+            case .working: return "Sprawdzam…"
+            case let .alreadyOn(name): return "\(name) już na to pozwala — postęp i okładka powinny działać."
+            case let .turnedOn(name): return "Włączono w przeglądarce \(name). Postęp i okładka działają."
             case .needsAccessibility:
-                return "macOS needs to allow Fun Notch to control other apps first. Grant it under Privacy & Security → Accessibility, then press this again."
+                return "Najpierw zezwól Fun Notch na sterowanie innymi aplikacjami w Ustawienia systemowe → Prywatność i ochrona → Dostępność, a potem naciśnij to jeszcze raz."
             case .needsSafariDevelopMenu:
-                return "Safari hides the switch until its Develop menu exists. Turn on Safari → Settings → Advanced → \"Show features for web developers\", then press this again."
-            case .noBrowser: return "No supported browser is running."
-            case let .noWindows(name): return "Open a tab in \(name) first."
+                return "Safari ukrywa ten przełącznik, dopóki nie ma menu Programowanie. Włącz w Safari → Ustawienia → Zaawansowane opcję „Pokaż funkcje dla twórców stron internetowych”, a potem naciśnij to jeszcze raz."
+            case .noBrowser: return "Nie działa żadna obsługiwana przeglądarka."
+            case let .noWindows(name): return "Najpierw otwórz kartę w przeglądarce \(name)."
             case let .failed(reason): return reason
             }
         }
@@ -103,7 +103,7 @@ final class BrowserScriptAccess: ObservableObject {
             switch state {
             case .working: self?.outcome = .alreadyOn(target.name)
             case .noWindows: self?.outcome = .noWindows(target.name)
-            case .blocked: self?.outcome = .failed("\(target.name) is not allowing page access yet.")
+            case .blocked: self?.outcome = .failed("\(target.name) nie pozwala jeszcze na dostęp do stron.")
             }
         }
     }
@@ -182,7 +182,7 @@ final class BrowserScriptAccess: ObservableObject {
 
         guard let item = Self.menuItem(in: element, path: path) else {
             outcome = target.isChromeFamily
-                ? .failed("Could not find View → Developer → Allow JavaScript from Apple Events in \(target.name).")
+                ? .failed("Nie znaleziono pozycji View → Developer → Allow JavaScript from Apple Events w przeglądarce \(target.name).")
                 : .needsSafariDevelopMenu
             return
         }
@@ -190,13 +190,13 @@ final class BrowserScriptAccess: ObservableObject {
         if Self.isChecked(item) {
             // The menu says yes but scripts are still refused, which means the
             // block is somewhere else entirely; do not toggle it back off.
-            outcome = .failed("\(target.name) says it is on, but it is still refusing scripts. Try quitting and reopening it.")
+            outcome = .failed("\(target.name) pokazuje, że opcja jest włączona, ale nadal odrzuca skrypty. Zamknij przeglądarkę i otwórz ją ponownie.")
             return
         }
 
         let status = AXUIElementPerformAction(item, kAXPressAction as CFString)
         guard status == .success else {
-            outcome = .failed("macOS refused the click (error \(status.rawValue)). Check Privacy & Security → Accessibility.")
+            outcome = .failed("macOS odrzucił kliknięcie (błąd \(status.rawValue)). Sprawdź Prywatność i ochrona → Dostępność.")
             return
         }
 
@@ -209,7 +209,7 @@ final class BrowserScriptAccess: ObservableObject {
                         MusicManager.shared.refreshNow()
                     } else {
                         self?.outcome = .failed(
-                            "The switch was clicked in \(target.name) but scripts are still refused. Reload the tab and try again."
+                            "Przełącznik w przeglądarce \(target.name) został kliknięty, ale skrypty są nadal odrzucane. Odśwież kartę i spróbuj ponownie."
                         )
                     }
                 }

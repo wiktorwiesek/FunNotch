@@ -35,11 +35,11 @@ struct ShelfView: View {
                 .foregroundStyle(.white.opacity(viewModel.isDropTargeted ? 0.9 : 0.4))
                 .scaleEffect(viewModel.isDropTargeted ? 1.12 : 1)
 
-            Text(viewModel.isDropTargeted ? "Drop to add" : "Drop files here")
+            Text(viewModel.isDropTargeted ? "Upuść, aby dodać" : "Upuść pliki tutaj")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.65))
 
-            Text("They stay on the shelf until you drag them out")
+            Text("Zostaną na półce, dopóki ich stąd nie wyciągniesz")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
         }
@@ -56,30 +56,30 @@ struct ShelfView: View {
 
     private var toolbar: some View {
         HStack(spacing: 8) {
-            Text("\(shelf.items.count) item\(shelf.items.count == 1 ? "" : "s")")
+            Text(Polish.count(shelf.items.count, "element", "elementy", "elementów"))
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.5))
 
             if !shelf.missingOnRestore.isEmpty {
-                Label("\(shelf.missingOnRestore.count) moved", systemImage: "questionmark.folder")
+                Label("Brakuje: \(shelf.missingOnRestore.count)", systemImage: "questionmark.folder")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.orange.opacity(0.85))
-                    .help("These files were on the shelf but have since been moved or deleted:\n" +
+                    .help("Te pliki były na półce, ale zostały przeniesione lub usunięte:\n" +
                           shelf.missingOnRestore.joined(separator: "\n"))
             }
 
             Spacer()
 
-            ShelfToolbarButton(systemName: "square.and.arrow.up", label: "Share") {
+            ShelfToolbarButton(systemName: "square.and.arrow.up", label: "Udostępnij") {
                 ShareAnchor.share(urls: shelf.shareURLs)
             }
             ShelfToolbarButton(systemName: "dot.radiowaves.right", label: "AirDrop") {
                 shelf.airDrop(shelf.shareURLs)
             }
-            ShelfToolbarButton(systemName: "doc.on.doc", label: "Copy") {
+            ShelfToolbarButton(systemName: "doc.on.doc", label: "Kopiuj") {
                 shelf.copyToPasteboard(shelf.shareURLs)
             }
-            ShelfToolbarButton(systemName: "trash", label: "Clear") {
+            ShelfToolbarButton(systemName: "trash", label: "Wyczyść") {
                 if shelf.selection.isEmpty {
                     shelf.clear()
                 } else {
@@ -175,10 +175,10 @@ private struct ShelfItemTile: View {
     /// alert with a text field.
     private func promptRename() {
         let alert = NSAlert()
-        alert.messageText = "Rename item"
-        alert.informativeText = "The file itself is renamed, so the new name follows it when you drag it back out."
-        alert.addButton(withTitle: "Rename")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = "Zmień nazwę elementu"
+        alert.informativeText = "Zmieniana jest nazwa samego pliku, więc nowa nazwa pozostanie z nim po przeciągnięciu go z powrotem."
+        alert.addButton(withTitle: "Zmień nazwę")
+        alert.addButton(withTitle: "Anuluj")
 
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
         field.stringValue = (item.name as NSString).deletingPathExtension
@@ -265,23 +265,23 @@ private struct ShelfItemTile: View {
             }
         }
         .contextMenu {
-            Button("Open") { shelf.open(item) }
-            Button("Rename…") { promptRename() }
-            Button("Quick Look") { shelf.quickLook(item) }
-            Button("Reveal in Finder") { shelf.reveal(item) }
+            Button("Otwórz") { shelf.open(item) }
+            Button("Zmień nazwę…") { promptRename() }
+            Button("Szybki podgląd") { shelf.quickLook(item) }
+            Button("Pokaż w Finderze") { shelf.reveal(item) }
             Divider()
-            Button("Share…") { ShareAnchor.share(urls: [item.url]) }
+            Button("Udostępnij…") { ShareAnchor.share(urls: [item.url]) }
             Button("AirDrop") { shelf.airDrop([item.url]) }
-            Button("Copy") { shelf.copyToPasteboard([item.url]) }
-            Button("Copy Path") { shelf.copyPath(item) }
-            Button("Copy Filename") { shelf.copyFilename(item) }
+            Button("Kopiuj") { shelf.copyToPasteboard([item.url]) }
+            Button("Kopiuj ścieżkę") { shelf.copyPath(item) }
+            Button("Kopiuj nazwę pliku") { shelf.copyFilename(item) }
             if shelf.canRecogniseText(item) {
-                Button("Copy Text from Image") {
+                Button("Kopiuj tekst z obrazu") {
                     shelf.copyTextFromImage(item) { _ in }
                 }
             }
             Divider()
-            Button("Remove from Shelf") { shelf.remove(id: item.id) }
+            Button("Usuń z półki") { shelf.remove(id: item.id) }
         }
         .help("\(item.name)\n\(formattedFileSize(item.size)) · \(item.typeDescription)")
     }
@@ -327,7 +327,7 @@ private struct FolderTargetChip: View {
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
         }
-        .help("Send the selection to \(path)")
+        .help("Wyślij zaznaczone do \(path)")
     }
 
     private func send() {

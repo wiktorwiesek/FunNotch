@@ -26,9 +26,9 @@ enum CustomizeTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .home: return "Home Screen"
-        case .closed: return "Beside the Notch"
-        case .style: return "Style"
+        case .home: return "Ekran startowy"
+        case .closed: return "Obok notcha"
+        case .style: return "Styl"
         }
     }
 
@@ -72,7 +72,7 @@ final class CustomizeWindowController: NSObject, NSWindowDelegate {
         // the bottom of a 13-inch screen.
         hosting.sizingOptions = [.minSize]
         let window = NSWindow(contentViewController: hosting)
-        window.title = "Customize"
+        window.title = "Dostosuj"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
@@ -172,7 +172,7 @@ private struct CustomizeTopBar: View {
 
             HStack {
                 Spacer()
-                Button("Done", action: onDone)
+                Button("Gotowe", action: onDone)
                     .keyboardShortcut(.defaultAction)
                     .controlSize(.large)
                     .buttonStyle(.borderedProminent)
@@ -264,16 +264,16 @@ private struct MenuBarStrip: View {
             Image(systemName: "applelogo")
                 .font(.system(size: 13 * scale, weight: .semibold))
             Text("Finder").fontWeight(.bold)
-            Text("File")
-            Text("Edit")
-            Text("View")
+            Text("Plik")
+            Text("Edycja")
+            Text("Widok")
             Spacer()
             // Magnified, the notch's own clock and battery sit right beside
             // these and say the same thing twice.
             if scale <= 1 {
                 Image(systemName: "wifi")
                 Image(systemName: "battery.75")
-                Text(Date.now.formatted(date: .omitted, time: .shortened))
+                Text(Date.now.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Polish.locale)))
             }
         }
         .font(.system(size: 12.5 * scale))
@@ -396,25 +396,25 @@ extension HomeTileKind {
 
     var blurb: String {
         switch self {
-        case .nowPlaying: return "Artwork and controls"
-        case .weather: return "A pixel-art forecast"
-        case .calendar: return "This week, and what's next"
-        case .mirror: return "A camera check before calls"
-        case .agents: return "Claude Code sessions, live"
-        case .notes: return "A quick scratchpad"
-        case .timer: return "Focus, timers and a stopwatch"
-        case .quickActions: return "One-click shortcuts"
-        case .systemStats: return "CPU and memory"
-        case .battery: return "Charge and time left"
-        case .devices: return "AirPods and other batteries"
-        case .focusStreak: return "Days in a row"
-        case .recentShelf: return "Latest files on the shelf"
-        case .clipboard: return "The last thing you copied"
-        case .wifi: return "Network and signal"
-        case .openApp: return "Launch an app you pick"
-        case .mediaScrubber: return "Scrub through the track"
-        case .nextEvent: return "Your next event"
-        case .diskSpace: return "Free space left"
+        case .nowPlaying: return "Okładka i sterowanie"
+        case .weather: return "Prognoza w stylu pixel art"
+        case .calendar: return "Ten tydzień i najbliższe wydarzenia"
+        case .mirror: return "Podgląd z kamery przed rozmową"
+        case .agents: return "Sesje Claude Code na żywo"
+        case .notes: return "Szybki notatnik"
+        case .timer: return "Skupienie, minutniki i stoper"
+        case .quickActions: return "Skróty jednym kliknięciem"
+        case .systemStats: return "CPU i RAM"
+        case .battery: return "Poziom naładowania i czas do końca"
+        case .devices: return "AirPods i baterie innych urządzeń"
+        case .focusStreak: return "Dni z rzędu"
+        case .recentShelf: return "Ostatnie pliki na półce"
+        case .clipboard: return "Ostatnio skopiowane"
+        case .wifi: return "Sieć i siła sygnału"
+        case .openApp: return "Uruchamia wybraną aplikację"
+        case .mediaScrubber: return "Przewijanie utworu"
+        case .nextEvent: return "Następne wydarzenie"
+        case .diskSpace: return "Wolne miejsce"
         }
     }
 }

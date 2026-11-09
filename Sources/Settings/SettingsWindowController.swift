@@ -36,7 +36,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         hosting.sizingOptions = [.minSize]
 
         let window = NSWindow(contentViewController: hosting)
-        window.title = "Fun Notch Settings"
+        window.title = "Ustawienia Fun Notch"
         // The sidebar runs up under the traffic lights, System Settings style.
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true

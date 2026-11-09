@@ -61,13 +61,13 @@ private struct GameBlockedDuringFocus: View {
             Image(systemName: "cup.and.saucer.fill")
                 .font(.system(size: 22))
                 .foregroundStyle(.white.opacity(0.7))
-            Text("Not while you're focusing")
+            Text("Nie podczas skupienia")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-            Text("The games come back in \(focus.compactRemainingText).")
+            Text("Gry wrócą za \(focus.compactRemainingText).")
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.55))
-            Button("Take me to the timer") {
+            Button("Przejdź do minutnika") {
                 FocusTabState.shared.mode = .focus
                 withAnimation(.notchContent) { viewModel.currentTab = .focus }
             }
@@ -127,7 +127,7 @@ struct NotchHeader: View {
                     CustomizeWindowController.shared.show(tab: .home)
                     viewModel.close()
                 }
-                .help("Customize the notch")
+                .help("Dostosuj notch")
 
                 HoverButton(systemName: "gearshape", size: 13, padding: 5) {
                     SettingsWindowController.shared.show()
@@ -183,7 +183,7 @@ private struct TabChip: View {
                 Image(systemName: tab.symbol)
                     .font(.system(size: 11, weight: .medium))
                 if showsLabel {
-                    Text(tab.rawValue)
+                    Text(tab == .focus ? "Skupienie" : tab.title)
                         .font(.system(size: 11, weight: .medium))
                 }
             }
@@ -300,7 +300,7 @@ struct PlayerControls: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Nothing playing")
+            Text("Nic nie gra")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.85))
             Text(hintText)
@@ -313,9 +313,9 @@ struct PlayerControls: View {
 
     private var hintText: String {
         if music.isNowPlayingDeprecated, settings.mediaController == .nowPlaying {
-            return "macOS no longer exposes system-wide Now Playing. Pick Music or Spotify in Settings."
+            return "macOS nie udostępnia już ogólnosystemowego „Teraz odtwarzane”. Wybierz Muzykę lub Spotify w Ustawieniach."
         }
-        return "Start playing something in \(settings.mediaController.rawValue)."
+        return "Zacznij coś odtwarzać. Źródło: \(settings.mediaController.title)."
     }
 
     /// Shown instead of the scrubber when the backend cannot report a
@@ -334,7 +334,7 @@ struct PlayerControls: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "info.circle")
-                    Text("Turn on page access for progress")
+                    Text("Włącz dostęp do strony, aby widzieć postęp")
                     Image(systemName: "chevron.right")
                         .font(.system(size: 7, weight: .bold))
                 }
@@ -344,7 +344,7 @@ struct PlayerControls: View {
             }
             .buttonStyle(.plain)
         } else {
-            Text("No position reported")
+            Text("Brak informacji o pozycji")
                 .font(.system(size: 9))
                 .foregroundStyle(.white.opacity(0.4))
                 .padding(.vertical, 6)
@@ -467,7 +467,7 @@ struct MirrorPane: View {
                         Image(systemName: webcam.hasCamera ? "web.camera" : "video.slash")
                             .font(.system(size: 18))
                             .foregroundStyle(.white.opacity(0.6))
-                        Text(webcam.hasCamera ? "Mirror" : "No camera")
+                        Text(webcam.hasCamera ? "Lusterko" : "Brak kamery")
                             .font(.system(size: 9))
                             .foregroundStyle(.white.opacity(0.45))
                     }

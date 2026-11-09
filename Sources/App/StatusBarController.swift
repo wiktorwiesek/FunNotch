@@ -145,38 +145,38 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
 
-        let nowPlaying = NSMenuItem(title: "Nothing playing", action: nil, keyEquivalent: "")
+        let nowPlaying = NSMenuItem(title: "Nic nie jest odtwarzane", action: nil, keyEquivalent: "")
         nowPlaying.tag = 100
         nowPlaying.isEnabled = false
         menu.addItem(nowPlaying)
         menu.addItem(.separator())
 
-        menu.addItem(withTitle: "Open Notch", action: #selector(openNotch), keyEquivalent: "o").target = self
-        menu.addItem(withTitle: "Close Notch", action: #selector(closeNotch), keyEquivalent: "w").target = self
+        menu.addItem(withTitle: "Otwórz notch", action: #selector(openNotch), keyEquivalent: "o").target = self
+        menu.addItem(withTitle: "Zamknij notch", action: #selector(closeNotch), keyEquivalent: "w").target = self
         menu.addItem(.separator())
 
-        let focus = NSMenuItem(title: "Start Focus", action: #selector(toggleFocus), keyEquivalent: "f")
+        let focus = NSMenuItem(title: "Rozpocznij skupienie", action: #selector(toggleFocus), keyEquivalent: "f")
         focus.target = self
         focus.tag = 102
         menu.addItem(focus)
 
-        let shelf = NSMenuItem(title: "Clear Shelf", action: #selector(clearShelf), keyEquivalent: "")
+        let shelf = NSMenuItem(title: "Wyczyść Półkę", action: #selector(clearShelf), keyEquivalent: "")
         shelf.target = self
         shelf.tag = 101
         menu.addItem(shelf)
         menu.addItem(.separator())
 
-        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
-        menu.addItem(withTitle: "Customize Notch…", action: #selector(customiseHome), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Ustawienia…", action: #selector(openSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: "Dostosuj notch…", action: #selector(customiseHome), keyEquivalent: "").target = self
 
-        let updates = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        let updates = NSMenuItem(title: "Sprawdź aktualizacje…", action: #selector(checkForUpdates), keyEquivalent: "")
         updates.target = self
         updates.isEnabled = UpdateManager.shared.canCheckForUpdates
         menu.addItem(updates)
 
-        menu.addItem(withTitle: "Restart Fun Notch", action: #selector(restart), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Uruchom ponownie Fun Notch", action: #selector(restart), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Fun Notch", action: #selector(quit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: "Zakończ Fun Notch", action: #selector(quit), keyEquivalent: "q").target = self
 
         return menu
     }
@@ -185,7 +185,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         let track = MusicManager.shared.track
         if let item = menu.item(withTag: 100) {
             if track.isEmpty {
-                item.title = "Nothing playing"
+                item.title = "Nic nie jest odtwarzane"
             } else {
                 let symbol = track.isPlaying ? "▶︎" : "❚❚"
                 item.title = "\(symbol)  \(track.title) — \(track.artist)"
@@ -193,14 +193,14 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         }
         if let item = menu.item(withTag: 101) {
             let count = ShelfManager.shared.items.count
-            item.title = count == 0 ? "Shelf is Empty" : "Clear Shelf (\(count))"
+            item.title = count == 0 ? "Półka jest pusta" : "Wyczyść Półkę (\(count))"
             item.isEnabled = count > 0
         }
         if let item = menu.item(withTag: 102) {
             let focus = FocusManager.shared
             item.title = focus.isActive
-                ? "Stop Focus (\(focus.remainingText) left)"
-                : "Start Focus (\(Settings.shared.focusDefaultMinutes) min)"
+                ? "Zatrzymaj skupienie (zostało \(focus.remainingText))"
+                : "Rozpocznij skupienie (\(Settings.shared.focusDefaultMinutes) min)"
         }
     }
 

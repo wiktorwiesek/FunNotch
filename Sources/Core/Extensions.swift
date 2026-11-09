@@ -187,6 +187,25 @@ enum AccentPreset: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    var title: String {
+        switch self {
+        case .system: return "Systemowy"
+        case .blue: return "Niebieski"
+        case .indigo: return "Indygo"
+        case .purple: return "Fioletowy"
+        case .pink: return "Różowy"
+        case .red: return "Czerwony"
+        case .orange: return "Pomarańczowy"
+        case .yellow: return "Żółty"
+        case .green: return "Zielony"
+        case .mint: return "Miętowy"
+        case .teal: return "Turkusowy"
+        case .cyan: return "Błękitny"
+        case .brown: return "Brązowy"
+        case .graphite: return "Grafitowy"
+        }
+    }
+
     var color: Color {
         switch self {
         case .system: return .accentColor

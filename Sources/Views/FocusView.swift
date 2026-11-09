@@ -31,6 +31,14 @@ enum TimeMode: String, CaseIterable, Identifiable {
         case .stopwatch: return "stopwatch.fill"
         }
     }
+
+    var title: String {
+        switch self {
+        case .focus: return "Skupienie"
+        case .timer: return "Minutnik"
+        case .stopwatch: return "Stoper"
+        }
+    }
 }
 
 /// Which mode the tab is showing. Shared rather than view state so a timer
@@ -140,7 +148,7 @@ private struct ModeSwitcher: View {
                 Image(systemName: mode.symbol)
                     .font(.system(size: 9.5, weight: .semibold))
                 if !iconsOnly {
-                    Text(mode.rawValue)
+                    Text(mode.title)
                         .font(.system(size: 10.5, weight: .semibold))
                 }
                 if isLive(mode) {
@@ -165,7 +173,7 @@ private struct ModeSwitcher: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help(mode.rawValue)
+        .help(mode.title)
     }
 
     private func isLive(_ mode: TimeMode) -> Bool {
@@ -327,7 +335,7 @@ private struct TimeDial: View {
                 fraction: 1 - focus.progress,
                 tint: tint,
                 text: focus.remainingText,
-                caption: focus.isOnBreak ? "break" : "focus",
+                caption: focus.isOnBreak ? "przerwa" : "skupienie",
                 symbol: focus.isOnBreak ? "figure.walk" : "cup.and.saucer.fill"
             )
         }
@@ -336,7 +344,7 @@ private struct TimeDial: View {
         return DialReading(
             fraction: fraction, laps: laps, tint: tint,
             text: TimerManager.clock(TimeInterval(minutes * 60)),
-            caption: isHovering ? "drag to set" : "focus",
+            caption: isHovering ? "przeciągnij" : "skupienie",
             symbol: "cup.and.saucer.fill",
             isAdjustable: true
         )
@@ -346,7 +354,7 @@ private struct TimeDial: View {
         let tint = ClockPalette.tint(for: .timer)
         if timer.finished {
             return DialReading(
-                fraction: 1, tint: tint, text: "00:00", caption: "time's up",
+                fraction: 1, tint: tint, text: "00:00", caption: "koniec czasu",
                 symbol: "bell.fill", pulses: true
             )
         }
@@ -355,7 +363,7 @@ private struct TimeDial: View {
                 fraction: timer.duration > 0 ? timer.remaining / timer.duration : 0,
                 tint: tint,
                 text: TimerManager.clock(timer.remaining),
-                caption: timer.isCountdownRunning ? "left" : "paused",
+                caption: timer.isCountdownRunning ? "zostało" : "wstrzymano",
                 symbol: timer.isCountdownRunning ? "timer" : "pause.fill"
             )
         }
@@ -363,7 +371,7 @@ private struct TimeDial: View {
         return DialReading(
             fraction: fraction, laps: laps, tint: tint,
             text: TimerManager.clock(timer.draft),
-            caption: isHovering ? "drag to set" : "timer",
+            caption: isHovering ? "przeciągnij" : "minutnik",
             symbol: "timer",
             isAdjustable: true
         )
@@ -378,7 +386,7 @@ private struct TimeDial: View {
             tint: ClockPalette.stopwatch,
             text: String(split.first ?? ""),
             fine: split.count > 1 ? "." + split[1] : nil,
-            caption: timer.laps.isEmpty ? (timer.isStopwatchRunning ? "running" : "stopwatch") : "lap \(timer.laps.count + 1)",
+            caption: timer.laps.isEmpty ? (timer.isStopwatchRunning ? "trwa" : "stoper") : "okrążenie \(timer.laps.count + 1)",
             symbol: "stopwatch.fill"
         )
     }
@@ -394,12 +402,12 @@ private struct TimeDial: View {
 
     private func helpText(_ reading: DialReading) -> String {
         switch mode {
-        case .focus: return focus.isActive ? "" : "Drag round to set the length · click to start"
+        case .focus: return focus.isActive ? "" : "Przeciągnij po tarczy, aby ustawić czas · kliknij, aby zacząć"
         case .timer:
-            if timer.finished { return "Click to dismiss" }
-            if timer.countdownIsSet { return timer.isCountdownRunning ? "Click to pause" : "Click to resume" }
-            return "Drag round to set · click to start"
-        case .stopwatch: return timer.isStopwatchRunning ? "Click to stop" : "Click to start"
+            if timer.finished { return "Kliknij, aby zamknąć" }
+            if timer.countdownIsSet { return timer.isCountdownRunning ? "Kliknij, aby wstrzymać" : "Kliknij, aby wznowić" }
+            return "Przeciągnij po tarczy, aby ustawić czas · kliknij, aby zacząć"
+        case .stopwatch: return timer.isStopwatchRunning ? "Kliknij, aby zatrzymać" : "Kliknij, aby uruchomić"
         }
     }
 
@@ -579,7 +587,7 @@ private struct FocusControls: View {
 
     private var idle: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Headline(title: "Ready to focus", detail: idleDetail)
+            Headline(title: "Czas się skupić", detail: idleDetail)
 
             HStack(spacing: 6) {
                 ClockButton(
@@ -599,20 +607,20 @@ private struct FocusControls: View {
 
             HStack(spacing: 5) {
                 ToggleChip(
-                    title: "Block sites",
+                    title: "Blokuj strony",
                     symbol: settings.focusBlockWebsites ? "hand.raised.fill" : "hand.raised.slash",
                     isOn: settings.focusBlockWebsites,
                     help: settings.focusBlockWebsites
-                        ? "Distracting sites are sent to a blocked page while you focus"
-                        : "Turn on to keep distracting sites away while you focus"
+                        ? "Rozpraszające strony są przekierowywane na stronę blokady na czas skupienia"
+                        : "Włącz, aby rozpraszające strony nie przeszkadzały w skupieniu"
                 ) {
                     settings.focusBlockWebsites.toggle()
                 }
                 ToggleChip(
-                    title: compact ? "Pomodoro" : "Pomodoro · \(settings.focusBreakMinutes) min breaks",
+                    title: compact ? "Pomodoro" : "Pomodoro · przerwy \(settings.focusBreakMinutes) min",
                     symbol: "arrow.triangle.2.circlepath",
                     isOn: settings.focusPomodoro,
-                    help: "Roll into a break at the end, then back to work"
+                    help: "Na końcu przejdź w przerwę, a potem wróć do pracy"
                 ) {
                     settings.focusPomodoro.toggle()
                 }
@@ -625,28 +633,28 @@ private struct FocusControls: View {
         if settings.focusBlockWebsites {
             let count = settings.focusBlocklist.count
             if FocusManager.supportedInstalledBrowsers.isEmpty {
-                parts.append("No supported browser to block sites in")
+                parts.append("Brak obsługiwanej przeglądarki do blokowania stron")
             } else {
-                parts.append("Blocks \(count) site\(count == 1 ? "" : "s")")
+                parts.append("Blokuje \(Polish.count(count, "stronę", "strony", "stron"))")
             }
         }
         let apps = settings.focusBlockedApps.count
-        if apps > 0 { parts.append("hides \(apps) app\(apps == 1 ? "" : "s")") }
-        if settings.focusPauseMusic { parts.append("pauses music") }
-        return parts.isEmpty ? "Just you and a countdown." : parts.joined(separator: " · ")
+        if apps > 0 { parts.append("ukrywa \(Polish.count(apps, "aplikację", "aplikacje", "aplikacji"))") }
+        if settings.focusPauseMusic { parts.append("wstrzymuje muzykę") }
+        return parts.isEmpty ? "Tylko Ty i odliczanie." : parts.joined(separator: " · ")
     }
 
     private var active: some View {
         VStack(alignment: .leading, spacing: 8) {
             Headline(
-                title: focus.isOnBreak ? "On a break" : "Focusing",
+                title: focus.isOnBreak ? "Przerwa" : "Skupienie",
                 detail: activeDetail,
                 tint: focus.isOnBreak ? ClockPalette.rest : .white
             )
 
             HStack(spacing: 6) {
                 if focus.isOnBreak {
-                    ClockButton(title: "Back to work", symbol: "forward.fill", style: .primary,
+                    ClockButton(title: "Wróć do pracy", symbol: "forward.fill", style: .primary,
                                 tint: ClockPalette.tint(for: .focus)) {
                         focus.skipBreak()
                     }
@@ -655,7 +663,7 @@ private struct FocusControls: View {
                         focus.extend(byMinutes: 5)
                     }
                 }
-                ClockButton(title: "End", symbol: "stop.fill", style: .destructive) {
+                ClockButton(title: "Zakończ", symbol: "stop.fill", style: .destructive) {
                     focus.stop()
                 }
             }
@@ -663,7 +671,7 @@ private struct FocusControls: View {
             if settings.focusPomodoro {
                 CycleDots(completed: focus.completedCycles, onBreak: focus.isOnBreak)
             } else if let host = focus.lastBlockedHost {
-                Label("Sent \(host) away", systemImage: "hand.raised.fill")
+                Label("Zablokowano: \(host)", systemImage: "hand.raised.fill")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.45))
                     .lineLimit(1)
@@ -674,10 +682,10 @@ private struct FocusControls: View {
     private var activeDetail: String {
         guard let end = focus.endDate else { return "" }
         let time = FocusView.timeText(end)
-        if focus.isOnBreak { return "Back to work at \(time)" }
-        var parts = ["Until \(time)"]
+        if focus.isOnBreak { return "Powrót do pracy o \(time)" }
+        var parts = ["Do \(time)"]
         if focus.blockedCount > 0 {
-            parts.append("\(focus.blockedCount) tab\(focus.blockedCount == 1 ? "" : "s") sent back")
+            parts.append("zablokowano \(Polish.count(focus.blockedCount, "kartę", "karty", "kart"))")
         }
         return parts.joined(separator: " · ")
     }
@@ -700,7 +708,7 @@ private struct CycleDots: View {
                           : Color.white.opacity(0.14))
                     .frame(width: index == inSet && !onBreak ? 16 : 8, height: 5)
             }
-            Text(completed == 0 ? "First round" : "\(completed) round\(completed == 1 ? "" : "s") done")
+            Text(completed == 0 ? "Pierwsza runda" : "Ukończono: \(Polish.count(completed, "runda", "rundy", "rund"))")
                 .font(.system(size: 9.5, weight: .medium))
                 .foregroundStyle(.white.opacity(0.45))
                 .padding(.leading, 3)
@@ -730,19 +738,19 @@ private struct TimerControls: View {
 
     private var idle: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Headline(title: "Set a timer", detail: "Drag the dial round, or pick a length.")
+            Headline(title: "Ustaw minutnik", detail: "Przeciągnij po tarczy lub wybierz czas.")
 
             HStack(spacing: 6) {
                 ClockButton(title: "Start", symbol: "play.fill", style: .primary, tint: ClockPalette.timer) {
                     timer.startDraft()
                 }
-                StepButton(symbol: "minus", help: "One minute less") { timer.addTime(-60) }
-                StepButton(symbol: "plus", help: "One minute more") { timer.addTime(60) }
+                StepButton(symbol: "minus", help: "Minuta mniej") { timer.addTime(-60) }
+                StepButton(symbol: "plus", help: "Minuta więcej") { timer.addTime(60) }
             }
 
             HStack(spacing: 4) {
                 ForEach(compact ? Array(presets.prefix(4)) : presets, id: \.self) { seconds in
-                    PresetChip(title: "\(Int(seconds) / 60)m", help: TimerManager.shortLength(seconds)) {
+                    PresetChip(title: "\(Int(seconds) / 60) min", help: TimerManager.shortLength(seconds)) {
                         timer.start(seconds: seconds)
                     }
                 }
@@ -753,12 +761,12 @@ private struct TimerControls: View {
     private var running: some View {
         VStack(alignment: .leading, spacing: 8) {
             Headline(
-                title: timer.isCountdownRunning ? "Timer running" : "Timer paused",
+                title: timer.isCountdownRunning ? "Minutnik działa" : "Minutnik wstrzymany",
                 detail: runningDetail
             )
             HStack(spacing: 6) {
                 ClockButton(
-                    title: timer.isCountdownRunning ? "Pause" : "Resume",
+                    title: timer.isCountdownRunning ? "Wstrzymaj" : "Wznów",
                     symbol: timer.isCountdownRunning ? "pause.fill" : "play.fill",
                     style: .primary,
                     tint: ClockPalette.timer
@@ -766,7 +774,7 @@ private struct TimerControls: View {
                     timer.toggleCountdown()
                 }
                 ClockButton(title: "1 min", symbol: "plus", style: .secondary, iconOnly: compact) { timer.addTime(60) }
-                ClockButton(title: "Cancel", symbol: "xmark", style: .destructive, iconOnly: compact) {
+                ClockButton(title: "Anuluj", symbol: "xmark", style: .destructive, iconOnly: compact) {
                     timer.resetCountdown()
                 }
             }
@@ -778,21 +786,21 @@ private struct TimerControls: View {
 
     private var runningDetail: String {
         if let end = timer.endDate {
-            return "\(TimerManager.shortLength(timer.duration)) · rings at \(FocusView.timeText(end))"
+            return "\(TimerManager.shortLength(timer.duration)) · zadzwoni o \(FocusView.timeText(end))"
         }
-        return "\(TimerManager.clock(timer.remaining)) left of \(TimerManager.shortLength(timer.duration))"
+        return "Zostało \(TimerManager.clock(timer.remaining)) z \(TimerManager.shortLength(timer.duration))"
     }
 
     private var finished: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Headline(title: "Time's up", detail: "\(TimerManager.shortLength(timer.duration)) timer",
+            Headline(title: "Koniec czasu", detail: "Minutnik: \(TimerManager.shortLength(timer.duration))",
                      tint: ClockPalette.alarm)
             HStack(spacing: 6) {
-                ClockButton(title: "Dismiss", symbol: "checkmark", style: .primary, tint: ClockPalette.alarm) {
+                ClockButton(title: "Zamknij", symbol: "checkmark", style: .primary, tint: ClockPalette.alarm) {
                     timer.acknowledge()
                 }
                 ClockButton(title: "1 min", symbol: "plus", style: .secondary, iconOnly: compact) { timer.addTime(60) }
-                ClockButton(title: "Again", symbol: "arrow.counterclockwise", style: .secondary, iconOnly: compact) {
+                ClockButton(title: "Jeszcze raz", symbol: "arrow.counterclockwise", style: .secondary, iconOnly: compact) {
                     timer.start(seconds: max(timer.duration, 60))
                 }
             }
@@ -813,7 +821,7 @@ private struct StopwatchControls: View {
 
             HStack(spacing: 6) {
                 ClockButton(
-                    title: timer.isStopwatchRunning ? "Stop" : (timer.elapsed > 0 ? "Resume" : "Start"),
+                    title: timer.isStopwatchRunning ? "Zatrzymaj" : (timer.elapsed > 0 ? "Wznów" : "Start"),
                     symbol: timer.isStopwatchRunning ? "stop.fill" : "play.fill",
                     style: timer.isStopwatchRunning ? .destructive : .primary,
                     tint: ClockPalette.stopwatch
@@ -821,16 +829,16 @@ private struct StopwatchControls: View {
                     timer.toggleStopwatch()
                 }
                 if timer.isStopwatchRunning {
-                    ClockButton(title: "Lap", symbol: "flag.fill", style: .secondary) { timer.lap() }
+                    ClockButton(title: "Okrążenie", symbol: "flag.fill", style: .secondary) { timer.lap() }
                 } else if timer.elapsed > 0 {
-                    ClockButton(title: "Reset", symbol: "arrow.counterclockwise", style: .secondary) {
+                    ClockButton(title: "Zeruj", symbol: "arrow.counterclockwise", style: .secondary) {
                         timer.resetStopwatch()
                     }
                 }
             }
 
             if compact, let last = timer.laps.first {
-                Text("Last lap \(TimerManager.stopwatchClock(last))")
+                Text("Ostatnie okrążenie: \(TimerManager.stopwatchClock(last))")
                     .font(.system(size: 10))
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.45))
@@ -839,13 +847,13 @@ private struct StopwatchControls: View {
     }
 
     private var title: String {
-        if timer.isStopwatchRunning { return "Running" }
-        return timer.elapsed > 0 ? "Stopped" : "Stopwatch"
+        if timer.isStopwatchRunning { return "Stoper działa" }
+        return timer.elapsed > 0 ? "Stoper zatrzymany" : "Stoper"
     }
 
     private var detail: String {
-        if timer.elapsed == 0 { return "Click the dial or Start. Lap marks a split." }
-        let current = "Lap \(timer.laps.count + 1) · \(TimerManager.stopwatchClock(timer.currentLap))"
+        if timer.elapsed == 0 { return "Kliknij tarczę lub Start. „Okrążenie” zapisuje międzyczas." }
+        let current = "Okrążenie \(timer.laps.count + 1) · \(TimerManager.stopwatchClock(timer.currentLap))"
         return current
     }
 }
@@ -913,7 +921,7 @@ private struct FocusWeekPanel: View {
         let top = max(week.map(\.seconds).max() ?? 0, 3600)
 
         VStack(alignment: .leading, spacing: 6) {
-            PanelTitle(title: "This week", trailing: FocusManager.duration(total))
+            PanelTitle(title: "Ten tydzień", trailing: FocusManager.duration(total))
 
             HStack(alignment: .bottom, spacing: 0) {
                 ForEach(Array(week.enumerated()), id: \.offset) { index, day in
@@ -952,10 +960,10 @@ private struct FocusWeekPanel: View {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 9))
                         .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.3))
-                    Text(focus.streak == 0 ? "No streak yet" : "\(focus.streak)-day streak")
+                    Text(focus.streak == 0 ? "Brak serii" : "Seria: \(Polish.count(focus.streak, "dzień", "dni", "dni"))")
                 }
                 Spacer(minLength: 0)
-                Text("Today \(FocusManager.duration(focus.todaySeconds))")
+                Text("Dziś \(FocusManager.duration(focus.todaySeconds))")
             }
             .font(.system(size: 9.5, weight: .medium))
             .foregroundStyle(.white.opacity(0.6))
@@ -965,12 +973,14 @@ private struct FocusWeekPanel: View {
 
     private static func letter(for day: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = Polish.locale
         formatter.setLocalizedDateFormatFromTemplate("EEEEE")
         return formatter.string(from: day)
     }
 
     private static func weekday(_ day: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = Polish.locale
         formatter.setLocalizedDateFormatFromTemplate("EEEE")
         return formatter.string(from: day)
     }
@@ -984,10 +994,10 @@ private struct RecentTimersPanel: View {
     var body: some View {
         let recent = Array(timer.recentDurations.prefix(4))
         VStack(alignment: .leading, spacing: 5) {
-            PanelTitle(title: "Recent")
+            PanelTitle(title: "Ostatnie")
 
             if recent.isEmpty {
-                Text("Timers you run show up here, ready to run again.")
+                Text("Uruchomione minutniki pojawią się tutaj i można je włączyć ponownie.")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.4))
                     .fixedSize(horizontal: false, vertical: true)
@@ -1022,7 +1032,7 @@ private struct RecentRow: View {
                     .foregroundStyle(.white.opacity(0.85))
                 Spacer(minLength: 0)
                 TimelineView(.everyMinute) { context in
-                    Text("ends \(FocusView.timeText(context.date.addingTimeInterval(seconds)))")
+                    Text("koniec o \(FocusView.timeText(context.date.addingTimeInterval(seconds)))")
                         .font(.system(size: 9.5, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.white.opacity(isHovering ? 0.6 : 0.35))
@@ -1054,10 +1064,10 @@ private struct LapsPanel: View {
         let slowest = laps.count >= 2 ? laps.max() : nil
 
         VStack(alignment: .leading, spacing: 4) {
-            PanelTitle(title: "Laps", trailing: laps.isEmpty ? nil : "\(laps.count)")
+            PanelTitle(title: "Okrążenia", trailing: laps.isEmpty ? nil : "\(laps.count)")
 
             if laps.isEmpty, !timer.isStopwatchRunning {
-                Text("Press Lap while it runs to mark a split.")
+                Text("Naciśnij „Okrążenie” podczas pomiaru, aby zapisać międzyczas.")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.4))
                     .fixedSize(horizontal: false, vertical: true)
@@ -1084,7 +1094,7 @@ private struct LapsPanel: View {
 
     private func lapRow(number: Int, time: TimeInterval, colour: Color) -> some View {
         HStack {
-            Text("Lap \(number)")
+            Text("Okrążenie \(number)")
                 .foregroundStyle(.white.opacity(0.4))
             Spacer()
             Text(TimerManager.stopwatchClock(time))
@@ -1210,7 +1220,7 @@ private struct PresetChip: View {
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
         }
-        .help("Start a \(help) timer")
+        .help("Uruchom minutnik: \(help)")
     }
 }
 
@@ -1243,7 +1253,7 @@ private struct LengthPicker: View {
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .help("\(minutes) minutes")
+                .help(Polish.count(minutes, "minuta", "minuty", "minut"))
             }
         }
         .padding(2)
@@ -1311,6 +1321,7 @@ extension FocusView {
     /// A clock time in the user's own 12- or 24-hour style.
     static func timeText(_ date: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = Polish.locale
         formatter.dateFormat = Locale.current.hasTwelveHourClock ? "h:mm a" : "HH:mm"
         return formatter.string(from: date)
     }

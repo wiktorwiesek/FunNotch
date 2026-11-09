@@ -77,9 +77,9 @@ final class FocusManager: ObservableObject {
             return "\(minutes / 60)h\(minutes % 60)"
         }
         if minutes >= 1 {
-            return "\(minutes)m"
+            return "\(minutes) min"
         }
-        return "\(Int(clamped))s"
+        return "\(Int(clamped)) s"
     }
 
     // MARK: - Session control
@@ -317,12 +317,12 @@ final class FocusManager: ObservableObject {
         return count
     }
 
-    /// "1 h 25 m", "40 m", "0 m".
+    /// "1 godz. 25 min", "40 min", "0 min".
     nonisolated static func duration(_ seconds: Int) -> String {
         let minutes = seconds / 60
-        if minutes < 60 { return "\(minutes) m" }
+        if minutes < 60 { return "\(minutes) min" }
         let rest = minutes % 60
-        return rest == 0 ? "\(minutes / 60) h" : "\(minutes / 60) h \(rest) m"
+        return rest == 0 ? "\(minutes / 60) godz." : "\(minutes / 60) godz. \(rest) min"
     }
 
     // MARK: - App blocking
@@ -430,7 +430,7 @@ final class FocusManager: ObservableObject {
         let html = """
         <!doctype html>
         <meta charset="utf-8">
-        <title>Blocked — Focus</title>
+        <title>Zablokowane — Skupienie</title>
         <style>
           :root { color-scheme: dark light; }
           body {
@@ -445,10 +445,10 @@ final class FocusManager: ObservableObject {
           .hint { margin-top: 1.75rem; font-size: .8rem; color: #71717a; }
         </style>
         <div class="card">
-          <h1>Not right now</h1>
-          <p>This site is on your blocklist while Focus is running.</p>
-          <div class="until">until \(until)</div>
-          <p class="hint">Stop the session from the notch to unblock.</p>
+          <h1>Nie teraz</h1>
+          <p>Ta strona jest na Twojej liście blokowanych, dopóki trwa Skupienie.</p>
+          <div class="until">do \(until)</div>
+          <p class="hint">Zatrzymaj sesję w notchu, aby odblokować.</p>
         </div>
         """
 

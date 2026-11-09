@@ -104,10 +104,10 @@ final class DinoGame {
 
         var name: String {
             switch self {
-            case .shield: return "Shield"
-            case .wings: return "Double jump"
-            case .magnet: return "Gem magnet"
-            case .turbo: return "Turbo!"
+            case .shield: return "Tarcza"
+            case .wings: return "Podwójny skok"
+            case .magnet: return "Magnes na klejnoty"
+            case .turbo: return "Turbo"
             }
         }
 
@@ -176,19 +176,19 @@ final class DinoGame {
     }
 
     static let skins: [Skin] = [
-        Skin(name: "Classic", unlockScore: 0,
+        Skin(name: "Klasyczny", unlockScore: 0,
              top: Color(red: 0.42, green: 0.86, blue: 0.45), bottom: Color(red: 0.16, green: 0.6, blue: 0.3),
              belly: Color(red: 0.82, green: 0.97, blue: 0.7), spikes: Color(red: 0.13, green: 0.5, blue: 0.26), glows: false),
-        Skin(name: "Ocean", unlockScore: 500,
+        Skin(name: "Morski", unlockScore: 500,
              top: Color(red: 0.4, green: 0.8, blue: 1), bottom: Color(red: 0.14, green: 0.46, blue: 0.86),
              belly: Color(red: 0.82, green: 0.94, blue: 1), spikes: Color(red: 0.1, green: 0.36, blue: 0.72), glows: false),
-        Skin(name: "Sunset", unlockScore: 1000,
+        Skin(name: "Zachód", unlockScore: 1000,
              top: Color(red: 1, green: 0.64, blue: 0.38), bottom: Color(red: 0.88, green: 0.3, blue: 0.26),
              belly: Color(red: 1, green: 0.9, blue: 0.76), spikes: Color(red: 0.72, green: 0.2, blue: 0.2), glows: false),
-        Skin(name: "Grape", unlockScore: 2000,
+        Skin(name: "Winogronowy", unlockScore: 2000,
              top: Color(red: 0.72, green: 0.58, blue: 1), bottom: Color(red: 0.42, green: 0.28, blue: 0.84),
              belly: Color(red: 0.92, green: 0.88, blue: 1), spikes: Color(red: 0.32, green: 0.2, blue: 0.66), glows: false),
-        Skin(name: "Gold", unlockScore: 4000,
+        Skin(name: "Złoty", unlockScore: 4000,
              top: Color(red: 1, green: 0.9, blue: 0.5), bottom: Color(red: 0.86, green: 0.6, blue: 0.1),
              belly: Color(red: 1, green: 0.97, blue: 0.84), spikes: Color(red: 0.7, green: 0.46, blue: 0.06), glows: true),
     ]
@@ -587,7 +587,7 @@ final class DinoGame {
         graceLeft = max(graceLeft - dt, 0)
         if turboLeft > 0 {
             turboLeft = max(turboLeft - dt, 0)
-            if turboLeft == 0 { popup("Turbo over", at: dinoCentre, color: PowerKind.turbo.tint) }
+            if turboLeft == 0 { popup("Koniec turbo", at: dinoCentre, color: PowerKind.turbo.tint) }
         }
         gemRunTimer -= dt
         if gemRunTimer <= 0 { gemRun = 0 }
@@ -888,7 +888,7 @@ final class DinoGame {
                 if obstacles[index].overlapped, obstacles[index].closest < 4.5, turboLeft == 0 {
                     closeCalls += 1
                     exactScore += 15
-                    popup("Close call +15", at: CGPoint(x: Self.dinoX + 10, y: feet - 40),
+                    popup("Na styk +15", at: CGPoint(x: Self.dinoX + 10, y: feet - 40),
                           color: Color(red: 1, green: 0.85, blue: 0.4))
                     sound.play(.closeCall)
                 }
@@ -907,7 +907,7 @@ final class DinoGame {
                 graceLeft = 1.1
                 smash(at: index)
                 sound.play(.shieldPop)
-                popup("Shield saved you", at: CGPoint(x: Self.dinoX + 10, y: feet - 42), color: PowerKind.shield.tint)
+                popup("Tarcza uratowała", at: CGPoint(x: Self.dinoX + 10, y: feet - 42), color: PowerKind.shield.tint)
                 return
             }
             let obstacle = obstacles[index]
@@ -940,7 +940,7 @@ final class DinoGame {
             ))
         }
         exactScore += 25
-        popup("Smash +25", at: CGPoint(x: centre.x, y: centre.y - 14), color: PowerKind.turbo.tint)
+        popup("Rozbicie +25", at: CGPoint(x: centre.x, y: centre.y - 14), color: PowerKind.turbo.tint)
         shake = max(shake, 2.5)
         sound.play(.smash)
     }
@@ -1059,7 +1059,7 @@ final class DinoGame {
     private func recordHighScore() {
         if bestAtStart > 0, score > bestAtStart, !beatHighScore {
             beatHighScore = true
-            show("New best!", for: 1.6)
+            show("Nowy rekord", for: 1.6)
             sound.play(.highScore)
         }
         if score > highScore { highScore = score }
@@ -1136,24 +1136,24 @@ final class DinoGame {
     // MARK: - Overlay text
 
     var overlayTitle: String? {
-        if isPaused { return "Paused" }
+        if isPaused { return "Pauza" }
         switch phase {
         case .ready: return "Dino Run"
         case .over:
-            if let unlockedSkin { return "\(unlockedSkin.name) unlocked!" }
-            return beatHighScore ? "New best!" : "Extinct!"
+            if let unlockedSkin { return "Odblokowano: \(unlockedSkin.name)" }
+            return beatHighScore ? "Nowy rekord" : "Wyginął"
         case .running, .crashed: return nil
         }
     }
 
     var overlaySubtitle: String {
-        if isPaused { return "Click or press Space to carry on" }
+        if isPaused { return "Kliknij lub naciśnij spację, aby kontynuować" }
         switch phase {
-        case .ready: return "Click or press Space to jump · hold for higher · ↓ to duck"
+        case .ready: return "Kliknij lub naciśnij spację, aby skoczyć · przytrzymaj, aby wyżej · ↓ aby się schylić"
         case .over:
-            var parts = ["\(score.formatted()) points"]
-            if gemsThisRun > 0 { parts.append("\(gemsThisRun) gem\(gemsThisRun == 1 ? "" : "s")") }
-            parts.append(overAge > 0.45 ? "click to run again" : " ")
+            var parts = ["\(score.formatted()) \(Polish.plural(score, "punkt", "punkty", "punktów"))"]
+            if gemsThisRun > 0 { parts.append(Polish.count(gemsThisRun, "klejnot", "klejnoty", "klejnotów")) }
+            parts.append(overAge > 0.45 ? "kliknij, aby biec od nowa" : " ")
             return parts.joined(separator: " · ")
         case .running, .crashed: return ""
         }

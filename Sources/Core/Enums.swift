@@ -54,9 +54,12 @@ enum NotchTab: String, CaseIterable, Identifiable {
     /// What the tab is called in its tooltip, where there is room to say it.
     var title: String {
         switch self {
-        case .focus: return "Focus & Timer"
-        case .game: return "Games"
-        default: return rawValue
+        case .home: return "Start"
+        case .shelf: return "Półka"
+        case .clipboard: return "Schowek"
+        case .focus: return "Skupienie i minutnik"
+        case .notes: return "Notatki"
+        case .game: return "Gry"
         }
     }
 }
@@ -68,6 +71,14 @@ enum WindowHeightMode: String, CaseIterable, Identifiable {
     case custom = "Custom height"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .matchMenuBar: return "Jak wysokość paska menu"
+        case .matchRealNotchSize: return "Jak rzeczywisty notch"
+        case .custom: return "Własna wysokość"
+        }
+    }
 }
 
 enum MirrorShapeEnum: String, CaseIterable, Identifiable {
@@ -75,6 +86,13 @@ enum MirrorShapeEnum: String, CaseIterable, Identifiable {
     case rectangle = "Rectangle"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .circle: return "Koło"
+        case .rectangle: return "Prostokąt"
+        }
+    }
 }
 
 enum SliderColorEnum: String, CaseIterable, Identifiable {
@@ -83,6 +101,14 @@ enum SliderColorEnum: String, CaseIterable, Identifiable {
     case accent = "Accent color"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .white: return "Biały"
+        case .albumArt: return "Jak okładka albumu"
+        case .accent: return "Kolor akcentu"
+        }
+    }
 }
 
 enum DownloadIndicatorStyle: String, CaseIterable, Identifiable {
@@ -90,6 +116,13 @@ enum DownloadIndicatorStyle: String, CaseIterable, Identifiable {
     case percentage = "Percentage"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .progress: return "Postęp"
+        case .percentage: return "Procenty"
+        }
+    }
 }
 
 enum DownloadIconStyle: String, CaseIterable, Identifiable {
@@ -98,6 +131,14 @@ enum DownloadIconStyle: String, CaseIterable, Identifiable {
     case iconAndAppIcon = "Both"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .onlyAppIcon: return "Tylko ikona aplikacji"
+        case .onlyIcon: return "Tylko ikona pobierania"
+        case .iconAndAppIcon: return "Obie ikony"
+        }
+    }
 }
 
 /// Backend used to read and control now playing information.
@@ -109,6 +150,16 @@ enum MediaControllerType: String, CaseIterable, Identifiable {
     case browser = "Browser"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .nowPlaying: return "Teraz odtwarzane"
+        case .appleMusic: return "Muzyka"
+        case .spotify: return "Spotify"
+        case .kaset: return "Kaset"
+        case .browser: return "Przeglądarka"
+        }
+    }
 
     var appBundleIdentifier: String? {
         switch self {
@@ -126,6 +177,13 @@ enum SneakPeekStyle: String, CaseIterable, Identifiable {
     case inline = "Inline"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .standard: return "Domyślny"
+        case .inline: return "W linii"
+        }
+    }
 }
 
 /// When the notch should get out of the way of fullscreen media.
@@ -135,6 +193,14 @@ enum HideNotchOption: String, CaseIterable, Identifiable {
     case never = "Never"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .always: return "Zawsze"
+        case .nowPlayingOnly: return "Tylko podczas odtwarzania multimediów"
+        case .never: return "Nigdy"
+        }
+    }
 }
 
 /// Something the collapsed notch can show beside the camera cutout, either all
@@ -156,6 +222,25 @@ enum NotchWidget: String, CaseIterable, Identifiable {
     case unread = "Unread"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .battery: return "Bateria"
+        case .clock: return "Zegar"
+        case .date: return "Data"
+        case .focusTimer: return "Minutnik skupienia"
+        case .nextEvent: return "Następne wydarzenie"
+        case .nowPlaying: return "Teraz odtwarzane"
+        case .cpu: return "CPU"
+        case .memory: return "RAM"
+        case .disk: return "Dysk"
+        case .weather: return "Pogoda"
+        case .wifi: return "Wi-Fi"
+        case .moonPhase: return "Faza księżyca"
+        case .shelfCount: return "Liczba elementów na Półce"
+        case .unread: return "Nieprzeczytane"
+        }
+    }
 
     /// First-pass estimate. The real width is measured from the rendered
     /// content, since these vary a lot by locale and by what they are showing.
@@ -216,6 +301,16 @@ enum MenuBarGlyph: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    var title: String {
+        switch self {
+        case .notch: return "Notch"
+        case .sparkle: return "Iskra"
+        case .circle: return "Koło"
+        case .bolt: return "Błyskawica"
+        case .none: return "Brak ikony"
+        }
+    }
+
     var symbol: String? {
         switch self {
         case .notch: return "rectangle.topthird.inset.filled"
@@ -237,6 +332,17 @@ enum MenuBarReadout: String, CaseIterable, Identifiable {
     case shelfCount = "Shelf items"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .nothing: return "Nic"
+        case .nowPlaying: return "Teraz odtwarzane"
+        case .battery: return "Bateria"
+        case .focusTimer: return "Odliczanie skupienia"
+        case .nextEvent: return "Następne wydarzenie"
+        case .shelfCount: return "Elementy na Półce"
+        }
+    }
 }
 
 /// Where the notch's outline takes its colour from.
@@ -246,6 +352,14 @@ enum BorderColorSource: String, CaseIterable, Identifiable {
     case albumArt = "Match album art"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .white: return "Biały"
+        case .accent: return "Kolor akcentu"
+        case .albumArt: return "Jak okładka albumu"
+        }
+    }
 }
 
 /// What the collapsed notch gives the space beside the cutout to while media is
@@ -257,6 +371,14 @@ enum ClosedMediaDisplay: String, CaseIterable, Identifiable {
     case widgetsOnly = "Only widgets"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .mediaOnly: return "Tylko multimedia"
+        case .mediaAndWidgets: return "Multimedia i widżety"
+        case .widgetsOnly: return "Tylko widżety"
+        }
+    }
 
     /// Artwork on the left, spectrum on the right.
     var showsMedia: Bool { self != .widgetsOnly }
@@ -281,6 +403,14 @@ enum RepeatMode: String {
     case off
     case all
     case one
+
+    var title: String {
+        switch self {
+        case .off: return "Nie powtarzaj"
+        case .all: return "Powtarzaj wszystko"
+        case .one: return "Powtarzaj utwór"
+        }
+    }
 
     // SF Symbols' own `repeat` / `repeat.1` glyphs ignore `foregroundStyle` on
     // macOS 26, so they can never show the "active" tint. `arrow.2.squarepath`
@@ -309,6 +439,21 @@ enum HomePanel: String, CaseIterable, Identifiable {
     case openApp = "Open app"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .quickActions: return "Szybkie akcje"
+        case .systemStats: return "Statystyki systemu"
+        case .battery: return "Bateria"
+        case .devices: return "Baterie urządzeń"
+        case .focusStreak: return "Seria skupienia"
+        case .recentShelf: return "Ostatnie pliki"
+        case .clipboard: return "Ostatnio skopiowane"
+        case .notes: return "Notatka"
+        case .wifi: return "Wi-Fi"
+        case .openApp: return "Otwórz aplikację"
+        }
+    }
 
     /// Whether the strip may hold more than one of these. Everything else says
     /// the same thing twice, but a launcher for a chosen app is only useful in
@@ -397,5 +542,12 @@ enum NonNotchStyle: String, CaseIterable, Identifiable {
     case notch = "Fake notch"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .island: return "Dynamic Island"
+        case .notch: return "Sztuczny notch"
+        }
+    }
 }
 

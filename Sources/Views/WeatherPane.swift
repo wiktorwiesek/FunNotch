@@ -76,11 +76,11 @@ struct WeatherPane: View {
                 Image(systemName: "location.slash")
                     .font(.system(size: 18, weight: .light))
                     .foregroundStyle(.white.opacity(0.35))
-                Text(weather.isLocationAuthorized ? "Getting the weather…" : "Weather needs location access")
+                Text(weather.isLocationAuthorized ? "Pobieranie pogody…" : "Pogoda wymaga dostępu do lokalizacji")
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.5))
                 if !weather.isLocationAuthorized {
-                    Button("Allow…") { weather.requestAccess() }
+                    Button("Zezwól…") { weather.requestAccess() }
                         .buttonStyle(.plain)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.blue)

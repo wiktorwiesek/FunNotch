@@ -269,7 +269,7 @@ private struct HUDReadout: View {
     var body: some View {
         Group {
             if muted {
-                Text("Muted")
+                Text("Wyciszono")
                     .font(.system(size: 11.5, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.6))
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
@@ -353,7 +353,7 @@ private struct BatteryBanner: View {
                     .modifier(WingSlide(time: time))
             } chin: {
                 ChinLine(time: time, text: headline(
-                    battery.isPluggedIn ? (battery.isCharged ? "Fully charged" : "Charging") : "On battery",
+                    battery.isPluggedIn ? (battery.isCharged ? "W pełni naładowana" : "Ładowanie") : "Na baterii",
                     battery.timeRemainingText.map { " · \($0)" } ?? ""
                 ))
             }
@@ -458,7 +458,7 @@ private struct BluetoothBanner: View {
             } chin: {
                 ChinLine(time: time, text: headline(
                     bluetooth.lastChange?.device.name ?? "Bluetooth",
-                    connected ? " connected" : " disconnected"
+                    connected ? " · połączono" : " · rozłączono"
                 ))
             }
         }
@@ -493,7 +493,7 @@ private struct ScreenshotBanner: View {
             } trailing: {
                 ShelfThumbnail(url: screenshots.lastCatch, shelf: shelf, time: time)
             } chin: {
-                ChinLine(time: time, text: headline("Screenshot", " added to the shelf"))
+                ChinLine(time: time, text: headline("Zrzut ekranu", " · dodano do półki"))
             }
         }
     }
@@ -527,7 +527,7 @@ private struct DownloadBanner: View {
                 ShelfThumbnail(url: downloads.lastDownload, shelf: shelf, time: time)
             } chin: {
                 ChinLine(time: time, text: headline(
-                    downloads.lastDownload?.lastPathComponent ?? "Download", " finished"
+                    downloads.lastDownload?.lastPathComponent ?? "Pobieranie", " · zakończono"
                 ))
             }
         }
@@ -598,7 +598,7 @@ private struct FocusBanner: View {
                 }
                 .frame(width: 24, height: 24)
             } trailing: {
-                Text(finished || !focus.isActive ? "Done" : focus.compactRemainingText)
+                Text(finished || !focus.isActive ? "Gotowe" : focus.compactRemainingText)
                     .font(.system(size: 12.5, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white)
@@ -610,9 +610,9 @@ private struct FocusBanner: View {
     }
 
     private var chinText: Text {
-        if finished { return headline("Focus", " session complete") }
-        if focus.isOnBreak { return headline("Break", " · stretch your legs") }
-        return headline("Focus", " · \(focus.remainingText) to go")
+        if finished { return headline("Skupienie", " · sesja zakończona") }
+        if focus.isOnBreak { return headline("Przerwa", " · rozprostuj nogi") }
+        return headline("Skupienie", " · zostało \(focus.remainingText)")
     }
 }
 
@@ -675,7 +675,7 @@ private struct AgentBanner: View {
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(announcement.session.agent.tint)
         case .needsInput:
-            Text("Now")
+            Text("Teraz")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(AgentPalette.waiting)
         }
@@ -685,9 +685,9 @@ private struct AgentBanner: View {
         let name = announcement.session.name
         switch announcement.event {
         case .started:
-            return headline(name, " started working")
+            return headline(name, " · zaczyna pracę")
         case .finished:
-            return headline(name, " finished")
+            return headline(name, " · zakończono")
         case let .needsInput(reason):
             let text = AgentSessionsManager.waitingText(reason)
             return headline(name, " · " + text.prefix(1).lowercased() + text.dropFirst())

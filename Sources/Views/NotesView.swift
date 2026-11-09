@@ -21,7 +21,7 @@ struct NotesView: View {
                 // The panel never becomes the active app, so the placeholder is
                 // drawn rather than relying on a real prompt.
                 if notes.isEmpty {
-                    Text(notes.isToday ? prompt : "Nothing written on this day.")
+                    Text(notes.isToday ? prompt : "Brak notatki z tego dnia.")
                         .font(.system(size: 12))
                         .foregroundStyle(.white.opacity(0.28))
                         .padding(.top, 2)
@@ -90,7 +90,7 @@ struct NotesView: View {
             .fixedSize()
 
             if !notes.isToday {
-                Button("Today") { notes.openToday() }
+                Button("Dziś") { notes.openToday() }
                     .buttonStyle(.plain)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.blue)
@@ -108,19 +108,19 @@ struct NotesView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white.opacity(0.5))
-            .help("Show this note in Finder")
+            .help("Pokaż tę notatkę w Finderze")
         }
     }
 
     @ViewBuilder
     private var status: some View {
         if let error = notes.saveError {
-            Label("Desktop copy failed", systemImage: "exclamationmark.triangle.fill")
+            Label("Nie udało się zapisać kopii na pulpicie", systemImage: "exclamationmark.triangle.fill")
                 .font(.system(size: 9.5))
                 .foregroundStyle(.orange)
-                .help("\(error)\n\nA backup copy was still written inside the app.")
+                .help("\(error)\n\nKopia zapasowa została mimo to zapisana w aplikacji.")
         } else if let at = notes.savedAt {
-            Text("Saved \(at.formatted(date: .omitted, time: .shortened))")
+            Text("Zapisano \(at.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Polish.locale)))")
                 .font(.system(size: 9.5))
                 .foregroundStyle(.white.opacity(0.35))
         }
@@ -166,24 +166,24 @@ struct NotesView: View {
 /// this is the one place in the app where nothing useful can be shown instead.
 enum NotePrompts {
     static let all = [
-        "Write it down. Your memory is a liar with good intentions.",
-        "The palest ink beats the best memory. Allegedly.",
-        "Nothing is so urgent it survives being written down.",
-        "A note now is an argument avoided later.",
-        "Your future self is not going to remember this. Be kind to them.",
-        "Half of thinking is just writing it down and looking at it.",
-        "If it matters, it deserves eight seconds of typing.",
-        "Good ideas arrive at bad times. Catch them anyway.",
-        "This is where the shower thought goes to survive.",
-        "Everything obvious right now will be mysterious by Thursday.",
-        "The best note is the one you actually took.",
-        "Say it here before you say it in a meeting.",
-        "You have had this idea before. Write it down this time.",
-        "Paper never interrupts.",
-        "Somewhere between a plan and a mess. That is fine.",
-        "Nobody is grading this.",
-        "Type badly. Edit later. Or do not.",
-        "Rough notes beat polished intentions."
+        "Zapisz to. Pamięć kłamie, choć w dobrej wierze.",
+        "Najsłabszy ołówek jest lepszy od najlepszej pamięci.",
+        "Nic nie jest tak pilne, żeby nie dało się tego zapisać.",
+        "Notatka teraz oszczędzi kłótni później.",
+        "Przyszły Ty tego nie zapamięta. Zrób mu przysługę.",
+        "Połowa myślenia to zapisanie myśli i przyjrzenie się jej.",
+        "Jeśli to ważne, warto poświęcić osiem sekund na wpisanie.",
+        "Dobre pomysły przychodzą w złych momentach. Złap je mimo to.",
+        "Tu trafiają myśli spod prysznica, żeby przetrwać.",
+        "Wszystko, co dziś jest oczywiste, w czwartek będzie zagadką.",
+        "Najlepsza notatka to ta, którą naprawdę zrobisz.",
+        "Powiedz to najpierw tutaj, a dopiero potem na spotkaniu.",
+        "Ten pomysł już Ci się zdarzał. Tym razem go zapisz.",
+        "Kartka nigdy nie przerywa.",
+        "Gdzieś między planem a bałaganem. Może być.",
+        "Nikt tego nie ocenia.",
+        "Pisz niechlujnie. Popraw później. Albo wcale.",
+        "Szybka notatka bije dopracowane zamiary."
     ]
 
     static func random() -> String {

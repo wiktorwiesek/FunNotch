@@ -175,6 +175,7 @@ private struct ClockWidget: View {
 
     private static func formatter(showsDate: Bool) -> DateFormatter {
         let formatter = DateFormatter()
+        formatter.locale = Polish.locale
         if showsDate {
             formatter.dateFormat = Locale.current.hasTwelveHourClock ? "E d MMM  h:mm a" : "E d MMM  HH:mm"
         } else {
@@ -255,7 +256,7 @@ private struct NextEventWidget: View {
                     .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                Text(calendar.hasEventAccess ? "No events" : "Calendar off")
+                Text(calendar.hasEventAccess ? "Brak wydarzeń" : "Kalendarz wyłączony")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.35))
                     .fixedSize()
@@ -270,7 +271,7 @@ private struct NowPlayingWidget: View {
     var body: some View {
         Group {
             if music.track.isEmpty {
-                Text("Nothing playing")
+                Text("Nic nie gra")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.35))
                     .fixedSize()
@@ -372,7 +373,7 @@ private struct WeatherWidget: View {
                 .foregroundStyle(.white.opacity(0.85))
         }
         .fixedSize()
-        .help(weather.lastError ?? weather.conditions?.placeName ?? "Weather")
+        .help(weather.lastError ?? weather.conditions?.placeName ?? "Pogoda")
         .onAppear { weather.addSubscriber() }
         .onDisappear { weather.removeSubscriber() }
     }
@@ -407,14 +408,14 @@ private struct WiFiWidget: View {
     // hand over the network name without location access.
     private var label: String {
         if let network = weather.wifiNetwork, !network.isEmpty { return network }
-        if !weather.isLocationAuthorized { return "Allow location" }
-        return weather.isWiFiConnected ? "Connected" : "Offline"
+        if !weather.isLocationAuthorized { return "Zezwól na lokalizację" }
+        return weather.isWiFiConnected ? "Połączono" : "Brak sieci"
     }
 
     private var helpText: String {
         weather.isLocationAuthorized
-            ? "Wi-Fi network"
-            : "macOS only reveals the network name to apps with location access — click to grant it"
+            ? "Sieć Wi‑Fi"
+            : "macOS podaje nazwę sieci tylko aplikacjom z dostępem do lokalizacji — kliknij, aby go przyznać"
     }
 }
 
@@ -457,8 +458,8 @@ private struct ShelfCountWidget: View {
         }
         .fixedSize()
         .help(shelf.items.isEmpty
-              ? "The shelf is empty"
-              : "\(shelf.items.count) item\(shelf.items.count == 1 ? "" : "s") on the shelf")
+              ? "Półka jest pusta"
+              : "\(Polish.count(shelf.items.count, "element", "elementy", "elementów")) na półce")
     }
 }
 
@@ -491,6 +492,6 @@ private struct UnreadWidget: View {
         }
         .fixedSize()
         .onAppear { unread.start() }
-        .help(unread.badges.isEmpty ? "No unread messages" : "Unread messages — click to open")
+        .help(unread.badges.isEmpty ? "Brak nieprzeczytanych wiadomości" : "Nieprzeczytane wiadomości — kliknij, aby otworzyć")
     }
 }

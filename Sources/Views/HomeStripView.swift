@@ -117,7 +117,7 @@ private struct QuickActionsPanel: View {
     var body: some View {
         HStack(spacing: 4) {
             action(focus.isActive ? "stop.fill" : "cup.and.saucer.fill",
-                   focus.isActive ? "End focus" : "Start focus",
+                   focus.isActive ? "Zakończ skupienie" : "Rozpocznij skupienie",
                    tint: focus.isActive ? .orange : nil) {
                 if focus.isActive {
                     FocusManager.shared.stop()
@@ -125,10 +125,10 @@ private struct QuickActionsPanel: View {
                     FocusManager.shared.start(minutes: settings.focusDefaultMinutes)
                 }
             }
-            action("note.text", "New note") {
+            action("note.text", "Nowa notatka") {
                 viewModel.currentTab = .notes
             }
-            action("camera.viewfinder", "Screenshot") {
+            action("camera.viewfinder", "Zrzut ekranu") {
                 // The interactive capture, the same one ⌘⇧4 runs. It lands in
                 // the shelf on its own, because the screenshot watcher is
                 // already looking for it.
@@ -137,7 +137,7 @@ private struct QuickActionsPanel: View {
                 task.arguments = ["-i", "-c"]
                 try? task.run()
             }
-            action("timer", "Timer", tint: TimerManager.shared.isActive ? .green : nil) {
+            action("timer", "Minutnik", tint: TimerManager.shared.isActive ? .green : nil) {
                 FocusTabState.shared.mode = .timer
                 viewModel.currentTab = .focus
             }
@@ -170,7 +170,7 @@ private struct SystemStatsPanel: View {
     var body: some View {
         HStack(spacing: 8) {
             graph("CPU", stats.cpuHistory, stats.cpuUsage, .cyan)
-            graph("MEM", stats.memoryHistory, stats.memoryUsage, .purple)
+            graph("RAM", stats.memoryHistory, stats.memoryUsage, .purple)
         }
         .padding(.vertical, 6)
         .onAppear { stats.addSubscriber() }
@@ -231,28 +231,28 @@ private struct BatteryPanel: View {
             // The real draw beats the adapter's rating: a 96 W brick topping up
             // a nearly full battery delivers a couple of watts.
             if let watts = battery.chargeWatts, watts >= 0.5 {
-                return String(format: "%.0f W in", watts)
+                return String(format: "Ładowanie · %.0f W", watts)
             }
             if let minutes = battery.timeRemaining, minutes > 0 {
-                return "\(minutes / 60)h \(minutes % 60)m to full"
+                return "\(minutes / 60) godz. \(minutes % 60) min do pełna"
             }
-            return "Charging"
+            return "Ładowanie"
         }
         if battery.isCharged {
-            return battery.adapterWatts.map { "Charged · \($0) W" } ?? "Charged"
+            return battery.adapterWatts.map { "Naładowana · \($0) W" } ?? "Naładowana"
         }
-        if battery.isLowPowerMode { return "Low Power Mode" }
+        if battery.isLowPowerMode { return "Tryb niskiego zużycia energii" }
         if let minutes = battery.timeRemaining, minutes > 0 {
             let hours = minutes / 60
-            return hours > 0 ? "\(hours)h \(minutes % 60)m left" : "\(minutes)m left"
+            return hours > 0 ? "Zostało \(hours) godz. \(minutes % 60) min" : "Zostało \(minutes) min"
         }
-        return battery.isPluggedIn ? "Plugged in" : "On battery"
+        return battery.isPluggedIn ? "Podłączona do zasilania" : "Na baterii"
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
-                PanelLabel(text: "Battery")
+                PanelLabel(text: "Bateria")
                 Spacer(minLength: 0)
                 Text("\(Int(battery.level * 100))%")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -427,9 +427,9 @@ private struct DevicesPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            PanelLabel(text: "Devices")
+            PanelLabel(text: "Urządzenia")
             if withBattery.isEmpty {
-                Text(bluetooth.devices.isEmpty ? "None connected" : "No battery reported")
+                Text(bluetooth.devices.isEmpty ? "Brak połączonych" : "Brak danych o baterii")
                     .font(.system(size: 8.5))
                     .foregroundStyle(.white.opacity(0.4))
                     .lineLimit(1)
@@ -460,7 +460,7 @@ private struct FocusStreakPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            PanelLabel(text: "Focus streak")
+            PanelLabel(text: "Seria skupienia")
             HStack(spacing: 3) {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 11))
@@ -469,11 +469,11 @@ private struct FocusStreakPanel: View {
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.92))
-                Text(focus.streak == 1 ? "day" : "days")
+                Text(Polish.plural(focus.streak, "dzień", "dni", "dni"))
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.white.opacity(0.45))
             }
-            Text("Today \(FocusManager.duration(focus.todaySeconds))")
+            Text("Dziś \(FocusManager.duration(focus.todaySeconds))")
                 .font(.system(size: 8.5))
                 .foregroundStyle(.white.opacity(0.45))
                 .lineLimit(1)
@@ -490,9 +490,9 @@ private struct RecentShelfPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            PanelLabel(text: "Recent")
+            PanelLabel(text: "Ostatnie")
             if shelf.items.isEmpty {
-                Text("Shelf is empty")
+                Text("Półka jest pusta")
                     .font(.system(size: 8.5))
                     .foregroundStyle(.white.opacity(0.4))
             } else {
@@ -530,7 +530,7 @@ private struct ClipboardPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            PanelLabel(text: "Last copied")
+            PanelLabel(text: "Ostatnio skopiowane")
             if let entry = clipboard.entries.first {
                 Button {
                     clipboard.copyBack(entry)
@@ -544,9 +544,9 @@ private struct ClipboardPanel: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Click to copy again")
+                .help("Kliknij, aby skopiować ponownie")
             } else {
-                Text("Nothing yet")
+                Text("Jeszcze nic")
                     .font(.system(size: 8.5))
                     .foregroundStyle(.white.opacity(0.4))
             }
@@ -573,8 +573,8 @@ private struct NotesPanel: View {
             viewModel.currentTab = .notes
         } label: {
             VStack(alignment: .leading, spacing: 1) {
-                PanelLabel(text: "Note")
-                Text(notes.isEmpty ? "Nothing written" : firstLines)
+                PanelLabel(text: "Notatka")
+                Text(notes.isEmpty ? "Nic nie napisano" : firstLines)
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(notes.isEmpty ? 0.4 : 0.8))
                     .lineLimit(2)
@@ -584,7 +584,7 @@ private struct NotesPanel: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Open the notes tab")
+        .help("Otwórz kartę Notatki")
     }
 }
 
@@ -595,12 +595,12 @@ private struct WiFiPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            PanelLabel(text: "Wi-Fi")
+            PanelLabel(text: "Wi‑Fi")
             HStack(spacing: 4) {
                 Image(systemName: weather.isWiFiConnected ? "wifi" : "wifi.slash")
                     .font(.system(size: 11))
                     .foregroundStyle(weather.isWiFiConnected ? .white.opacity(0.85) : .white.opacity(0.4))
-                Text(weather.wifiNetwork ?? (weather.isWiFiConnected ? "Connected" : "Off"))
+                Text(weather.wifiNetwork ?? (weather.isWiFiConnected ? "Połączono" : "Wyłączone"))
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.75))
                     .lineLimit(1)
@@ -608,7 +608,7 @@ private struct WiFiPanel: View {
             // macOS hides the network name behind location access, so say so
             // rather than looking broken when it is simply not permitted.
             if weather.isWiFiConnected, weather.wifiNetwork == nil, !weather.isLocationAuthorized {
-                Text("Name needs location")
+                Text("Nazwa wymaga lokalizacji")
                     .font(.system(size: 7.5))
                     .foregroundStyle(.white.opacity(0.35))
                     .lineLimit(1)
@@ -633,7 +633,7 @@ private struct OpenAppPanel: View {
     }
 
     private var name: String {
-        url?.deletingPathExtension().lastPathComponent ?? "Choose…"
+        url?.deletingPathExtension().lastPathComponent ?? "Wybierz…"
     }
 
     var body: some View {
@@ -664,7 +664,7 @@ private struct OpenAppPanel: View {
         }
         .buttonStyle(.plain)
         .disabled(icon == nil)
-        .help(icon == nil ? "Pick an app in Settings" : "Open \(name)")
+        .help(icon == nil ? "Wybierz aplikację w Ustawieniach" : "Otwórz: \(name)")
     }
 }
 
@@ -679,7 +679,7 @@ struct MediaScrubberPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             if music.track.isEmpty {
-                PanelLabel(text: "Nothing playing")
+                PanelLabel(text: "Nic nie gra")
             } else {
                 Text(music.track.title)
                     .font(.system(size: 10.5, weight: .semibold))
@@ -715,19 +715,19 @@ struct NextEventPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            PanelLabel(text: "Next")
+            PanelLabel(text: "Następne")
             if let item = calendar.nextItem, !item.isSample {
                 Text(item.title)
                     .font(.system(size: 10.5, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.9))
                     .lineLimit(1)
                 if let start = item.start {
-                    Text(start.formatted(date: .omitted, time: .shortened))
+                    Text(start.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Polish.locale)))
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.45))
                 }
             } else {
-                Text("Nothing scheduled")
+                Text("Nic w planach")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.white.opacity(0.35))
             }
@@ -748,7 +748,7 @@ struct DiskSpacePanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            PanelLabel(text: "Disk free")
+            PanelLabel(text: "Wolne na dysku")
             Text(freeText)
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .monospacedDigit()

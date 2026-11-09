@@ -55,7 +55,7 @@ struct AgentSessionsTile: View {
 
     private var header: some View {
         HStack(spacing: 5) {
-            Text("AGENTS")
+            Text("AGENCI")
                 .font(.system(size: 8, weight: .semibold, design: .monospaced))
                 .tracking(0.7)
                 .foregroundStyle(.white.opacity(0.38))
@@ -71,14 +71,14 @@ struct AgentSessionsTile: View {
         HStack(spacing: 4) {
             if agents.waitingCount > 0 {
                 Circle().fill(AgentPalette.waiting).frame(width: 5, height: 5)
-                Text("\(agents.waitingCount) need\(agents.waitingCount == 1 ? "s" : "") you")
+                Text("\(agents.waitingCount) \(agents.waitingCount == 1 ? "czeka" : "czekają") na Ciebie")
                     .foregroundStyle(AgentPalette.waiting)
             } else if agents.workingCount > 0 {
                 ClaudeSpinner(size: 8)
-                Text("\(agents.workingCount) working")
+                Text("\(agents.workingCount) \(agents.workingCount == 1 ? "pracuje" : "pracują")")
                     .foregroundStyle(AgentPalette.claude)
             } else if !agents.sessions.isEmpty {
-                Text("All quiet")
+                Text("Wszystko spokojnie")
                     .foregroundStyle(.white.opacity(0.35))
             }
             if hidden > 0 {
@@ -94,10 +94,10 @@ struct AgentSessionsTile: View {
             Image(systemName: "sparkles")
                 .font(.system(size: 15))
                 .foregroundStyle(AgentPalette.claude.opacity(0.75))
-            Text("No agents running")
+            Text("Brak uruchomionych agentów")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
-            Text("Claude Code and omp sessions show up here")
+            Text("Sesje Claude Code i omp pojawią się tutaj")
                 .font(.system(size: 9.5))
                 .foregroundStyle(.white.opacity(0.38))
         }
@@ -131,13 +131,13 @@ struct AgentSessionsTile: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Show \(session.name)")
+            .help("Pokaż: \(session.name)")
         } else {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 11))
                     .foregroundStyle(AgentPalette.claude.opacity(0.7))
-                Text("No agents running")
+                Text("Brak uruchomionych agentów")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.45))
                 Spacer(minLength: 0)
@@ -150,7 +150,7 @@ struct AgentSessionsTile: View {
         let base = AgentRow.detail(for: session)
         guard others > 0 else { return base }
         let busyOthers = agents.activeCount - (session.status.isActive ? 1 : 0)
-        return busyOthers > 0 ? "\(base) · \(busyOthers) more busy" : "\(base) · \(others) more"
+        return busyOthers > 0 ? "\(base) · jeszcze \(busyOthers) aktywne" : "\(base) · jeszcze \(others)"
     }
 }
 
@@ -191,7 +191,7 @@ private struct AgentRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help("\(session.agent.rawValue) in \(session.project) — click to show it")
+        .help("\(session.agent.rawValue), projekt \(session.project) — kliknij, aby pokazać")
     }
 
     static func detail(for session: AgentSessionsManager.Session) -> String {
@@ -201,15 +201,15 @@ private struct AgentRow: View {
             if let activity = session.activity {
                 status = activity
             } else {
-                status = session.name == session.project ? "Working" : "Working · \(session.project)"
+                status = session.name == session.project ? "Pracuje" : "Pracuje · \(session.project)"
             }
         case let .waiting(reason):
             status = AgentSessionsManager.waitingText(reason)
         case .idle:
             if let duration = session.lastTurnDuration {
-                status = "Finished in \(AgentSessionsManager.duration(duration))"
+                status = "Zakończono w \(AgentSessionsManager.duration(duration))"
             } else {
-                status = session.name == session.project ? "Idle" : "Idle · \(session.project)"
+                status = session.name == session.project ? "Bezczynny" : "Bezczynny · \(session.project)"
             }
         }
         guard let usage = session.usage else { return status }

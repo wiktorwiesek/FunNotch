@@ -34,10 +34,10 @@ struct ClipboardView: View {
             Image(systemName: "doc.on.clipboard")
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(.white.opacity(0.4))
-            Text("Clipboard history is off")
+            Text("Historia schowka jest wyłączona")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.65))
-            Text("Turn it on in Settings → Shelf & Clipboard")
+            Text("Włączysz ją w Ustawieniach → Półka i schowek")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
         }
@@ -49,10 +49,10 @@ struct ClipboardView: View {
             Image(systemName: "doc.on.clipboard")
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(.white.opacity(0.4))
-            Text("Nothing copied yet")
+            Text("Nic jeszcze nie skopiowano")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.65))
-            Text("Whatever you copy shows up here")
+            Text("Skopiowane rzeczy pojawią się tutaj")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
         }
@@ -69,7 +69,7 @@ struct ClipboardView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.4))
-                TextField("Search", text: $query)
+                TextField("Szukaj", text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 10))
                     .foregroundStyle(.white)
@@ -89,11 +89,11 @@ struct ClipboardView: View {
             .background(Capsule().fill(Color.white.opacity(0.08)))
             .frame(width: 150)
 
-            Text("\(visibleEntries.count) item\(visibleEntries.count == 1 ? "" : "s")")
+            Text(Polish.count(visibleEntries.count, "element", "elementy", "elementów"))
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.5))
             Spacer()
-            Button("Clear") { clipboard.clear() }
+            Button("Wyczyść") { clipboard.clear() }
                 .buttonStyle(.plain)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
@@ -179,13 +179,13 @@ private struct ClipboardTile: View {
             withAnimation(.easeOut(duration: 0.15)) { isHovering = hovering }
         }
         .contextMenu {
-            Button("Copy") { clipboard.copyBack(entry) }
-            Button(entry.isPinned ? "Unpin" : "Pin") { clipboard.togglePin(entry) }
-            Button("Send to Shelf") { clipboard.sendToShelf(entry) }
+            Button("Kopiuj") { clipboard.copyBack(entry) }
+            Button(entry.isPinned ? "Odepnij" : "Przypnij") { clipboard.togglePin(entry) }
+            Button("Wyślij na półkę") { clipboard.sendToShelf(entry) }
             Divider()
-            Button("Remove") { clipboard.remove(entry) }
+            Button("Usuń") { clipboard.remove(entry) }
         }
-        .help(justCopied ? "Copied" : entry.preview)
+        .help(justCopied ? "Skopiowano" : entry.preview)
     }
 
     @ViewBuilder

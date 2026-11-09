@@ -138,14 +138,14 @@ struct GameView: View {
                              beaten: game.beatHighScore, glow: game.milestoneGlow)
                 if game.phase == .running || game.isPaused {
                     HeaderButton(symbol: game.isPaused ? "play.fill" : "pause.fill",
-                                 help: game.isPaused ? "Carry on" : "Pause (P)") {
+                                 help: game.isPaused ? "Wznów" : "Pauza (P)") {
                         game.togglePause()
                     }
                 }
             }
 
             HeaderButton(symbol: settings.gameSoundEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill",
-                         help: settings.gameSoundEnabled ? "Mute" : "Sound on",
+                         help: settings.gameSoundEnabled ? "Wycisz" : "Włącz dźwięk",
                          dimmed: !settings.gameSoundEnabled) {
                 settings.gameSoundEnabled.toggle()
                 if settings.gameSoundEnabled { GameSound.shared.start() } else { GameSound.shared.stop() }
@@ -394,7 +394,7 @@ private struct BreakoutHUD: View {
     var body: some View {
         let game = BreakoutGame.shared
         HStack(spacing: 7) {
-            Text("Level \(game.level)")
+            Text("Poziom \(game.level)")
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.75))
                 .help(game.boardName)
@@ -497,9 +497,9 @@ private struct ColourButton: View {
     }
 
     @MainActor private func colourHelp(_ game: DinoGame) -> String {
-        var parts = ["Change colour"]
+        var parts = ["Zmień kolor"]
         if let next = game.nextSkin {
-            parts.append("score \(next.unlockScore.formatted()) to unlock \(next.name)")
+            parts.append("wynik \(next.unlockScore.formatted()) odblokowuje: \(next.name)")
         }
         return parts.joined(separator: " · ")
     }
@@ -525,7 +525,7 @@ private struct ScoreReadout: View {
                 .scaleEffect(1 + 0.12 * glow, anchor: .trailing)
                 .shadow(color: Color(red: 1, green: 0.8, blue: 0.3).opacity(glow * 0.8), radius: 4)
             HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text("BEST")
+                Text("REKORD")
                     .font(.system(size: 7.5, weight: .bold))
                     .tracking(0.5)
                     .foregroundStyle(.white.opacity(0.35))
@@ -625,7 +625,7 @@ private struct GameOverlayCard: View {
             return Content(
                 title: title,
                 subtitle: game.overlaySubtitle,
-                detail: over ? "Best level \(game.bestLevel) · best score \(game.highScore.formatted())" : nil,
+                detail: over ? "Najlepszy poziom: \(game.bestLevel) · rekord: \(game.highScore.formatted())" : nil,
                 celebrate: over && game.beatHighScore
             )
         case .dino:
@@ -634,9 +634,9 @@ private struct GameOverlayCard: View {
             var detail: String?
             if !game.isPaused, game.phase == .ready || game.phase == .over {
                 var parts: [String] = []
-                if game.bestScore > 0 { parts.append("Best \(game.bestScore.formatted())") }
-                if settings.dinoGemsTotal > 0 { parts.append("\(settings.dinoGemsTotal.formatted()) gems in all") }
-                if let next = game.nextSkin { parts.append("\(next.name) colour at \(next.unlockScore.formatted())") }
+                if game.bestScore > 0 { parts.append("Rekord: \(game.bestScore.formatted())") }
+                if settings.dinoGemsTotal > 0 { parts.append("klejnoty łącznie: \(settings.dinoGemsTotal.formatted())") }
+                if let next = game.nextSkin { parts.append("następny kolor (\(next.name)) przy \(next.unlockScore.formatted())") }
                 detail = parts.isEmpty ? nil : parts.joined(separator: " · ")
             }
             let over = game.phase == .over && !game.isPaused

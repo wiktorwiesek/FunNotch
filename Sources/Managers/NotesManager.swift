@@ -84,13 +84,13 @@ final class NotesManager: ObservableObject {
 
     static func today() -> String { dayFormatter.string(from: Date()) }
 
-    /// "Today", "Yesterday", or a written date.
+    /// "Dziś", "Wczoraj", or a written date.
     func displayName(for day: String) -> String {
         guard let date = Self.dayFormatter.date(from: day) else { return day }
         let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInYesterday(date) { return "Yesterday" }
-        return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+        if calendar.isDateInToday(date) { return "Dziś" }
+        if calendar.isDateInYesterday(date) { return "Wczoraj" }
+        return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(Polish.locale))
     }
 
     var isToday: Bool { day == Self.today() }

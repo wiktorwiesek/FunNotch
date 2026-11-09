@@ -22,21 +22,21 @@ enum BreakoutLevels {
     ///     $      gold, worth a hundred
     ///     ?      a mystery brick, which always drops a power-up
     static let boards: [Board] = [
-        Board(name: "Warm-up", rows: [
+        Board(name: "Rozgrzewka", rows: [
             "11111111111111",
             "1111?1111?1111",
             "11111111111111",
             "11111111111111",
         ]),
         // The wall with the notch cut out of it.
-        Board(name: "The Notch", rows: [
+        Board(name: "Notch", rows: [
             "2222......2222",
             "22222....22222",
             "11111111111111",
             "1X11?1111?11X1",
             "11111111111111",
         ]),
-        Board(name: "Checkers", rows: [
+        Board(name: "Szachownica", rows: [
             "2.2.2.2.2.2.2.",
             ".2.2.2.2.2.2.2",
             "1.1.X.1.1.X.1.",
@@ -44,7 +44,7 @@ enum BreakoutLevels {
             "1.1.1.$.1.1.1.",
         ]),
         // Its head is full of explosives.
-        Board(name: "Invader", rows: [
+        Board(name: "Najeźdźca", rows: [
             "....?.....?...",
             ".....1...1....",
             "....2222222...",
@@ -53,14 +53,14 @@ enum BreakoutLevels {
             "..1.1111111.1.",
         ]),
         // A steel floor with a way up at each wall, and the gold inside.
-        Board(name: "Fortress", rows: [
+        Board(name: "Forteca", rows: [
             "22222222222222",
             "2#2$$?XX?$$2#2",
             "2#2222222222#2",
             "2############2",
             "11111111111111",
         ]),
-        Board(name: "Diamond", rows: [
+        Board(name: "Diament", rows: [
             "......22......",
             "....221122....",
             "$.2211XX1122.$",
@@ -68,14 +68,14 @@ enum BreakoutLevels {
             "......22......",
         ]),
         // Steel with gaps: the ball has to find its way up.
-        Board(name: "Stripes", rows: [
+        Board(name: "Paski", rows: [
             "33333333333333",
             "#.##.####.##.#",
             "22222?22?22222",
             ".##.##..##.##.",
             "11111111111111",
         ]),
-        Board(name: "Heart", rows: [
+        Board(name: "Serce", rows: [
             "..222....222..",
             ".22222..22222.",
             ".2222?XX?2222.",

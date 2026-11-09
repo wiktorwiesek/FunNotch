@@ -119,12 +119,12 @@ final class AgentSessionsManager: ObservableObject {
         let contextTokens: Int?
         let contextWindow: Int?
 
-        /// "1.2M tok · $3.10 · 42% ctx", leaving out what is unknown or zero.
+        /// "1,2 mln tok. · 3,10 USD · kontekst 42%", leaving out what is unknown or zero.
         var summary: String {
-            var parts = [AgentSessionsManager.tokenCount(tokens) + " tok"]
-            if cost >= 0.005 { parts.append(String(format: "$%.2f", cost)) }
+            var parts = [AgentSessionsManager.tokenCount(tokens) + " tok."]
+            if cost >= 0.005 { parts.append(String(format: "%.2f USD", locale: Polish.locale, cost)) }
             if let contextTokens, let contextWindow, contextWindow > 0 {
-                parts.append("\(Int((Double(contextTokens) / Double(contextWindow) * 100).rounded()))% ctx")
+                parts.append("kontekst \(Int((Double(contextTokens) / Double(contextWindow) * 100).rounded()))%")
             }
             return parts.joined(separator: " · ")
         }
@@ -428,7 +428,7 @@ final class AgentSessionsManager: ObservableObject {
     func injectPreview(_ event: Event, name: String = "FunNotch", broadcast: Bool = true) {
         let now = Date()
         let session = Session(
-            id: "preview", agent: .claude, name: name, project: "untitled folder",
+            id: "preview", agent: .claude, name: name, project: "folder bez nazwy",
             status: {
                 switch event {
                 case .started: return .working
@@ -666,7 +666,7 @@ final class AgentSessionsManager: ObservableObject {
                 let created = values?.creationDate ?? modified
                 entries.append(CodexEntry(
                     fileName: url.lastPathComponent,
-                    label: "Started \(formatter.string(from: created))",
+                    label: "Rozpoczęto \(formatter.string(from: created))",
                     created: created,
                     modified: modified
                 ))
@@ -694,7 +694,7 @@ final class AgentSessionsManager: ObservableObject {
     nonisolated static func projectName(for cwd: String) -> String {
         guard !cwd.isEmpty, cwd != "?" else { return "Claude Code" }
         let url = URL(fileURLWithPath: cwd)
-        if url.path == FileManager.default.homeDirectoryForCurrentUser.path { return "Home" }
+        if url.path == FileManager.default.homeDirectoryForCurrentUser.path { return "Katalog domowy" }
         let last = url.lastPathComponent
         return last.isEmpty ? cwd : last
     }
@@ -711,40 +711,40 @@ final class AgentSessionsManager: ObservableObject {
         return String(format: "%d:%02d", minutes, seconds)
     }
 
-    /// "45s", "3m 12s", "1h 5m" — a finished duration.
+    /// "45 s", "3 min 12 s", "1 godz. 5 min" — a finished duration.
     nonisolated static func duration(_ interval: TimeInterval) -> String {
         let total = max(Int(interval.rounded()), 0)
-        if total < 60 { return "\(total)s" }
+        if total < 60 { return "\(total) s" }
         if total < 3600 {
             let seconds = total % 60
-            return seconds == 0 ? "\(total / 60)m" : "\(total / 60)m \(seconds)s"
+            return seconds == 0 ? "\(total / 60) min" : "\(total / 60) min \(seconds) s"
         }
-        return "\(total / 3600)h \((total % 3600) / 60)m"
+        return "\(total / 3600) godz. \((total % 3600) / 60) min"
     }
 
-    /// "850", "42k", "1.2M" — a token count.
+    /// "850", "42 tys.", "1,2 mln" — a token count.
     nonisolated static func tokenCount(_ count: Int) -> String {
         if count < 1000 { return "\(count)" }
-        if count < 1_000_000 { return "\(count / 1000)k" }
-        return String(format: "%.1fM", Double(count) / 1_000_000)
+        if count < 1_000_000 { return "\(count / 1000) tys." }
+        return String(format: "%.1f mln", locale: Polish.locale, Double(count) / 1_000_000)
     }
 
-    /// "now", "5m", "2h" — how long ago.
+    /// "teraz", "5 min", "2 godz." — how long ago; callers add "temu" where it reads as a sentence.
     nonisolated static func ago(_ date: Date, now: Date = Date()) -> String {
         let seconds = Int(now.timeIntervalSince(date))
-        if seconds < 60 { return "now" }
-        if seconds < 3600 { return "\(seconds / 60)m" }
-        if seconds < 86_400 { return "\(seconds / 3600)h" }
-        return "\(seconds / 86_400)d"
+        if seconds < 60 { return "teraz" }
+        if seconds < 3600 { return "\(seconds / 60) min" }
+        if seconds < 86_400 { return "\(seconds / 3600) godz." }
+        return Polish.count(seconds / 86_400, "dzień", "dni", "dni")
     }
 
     /// What a waiting session is waiting for, in plain words.
     nonisolated static func waitingText(_ reason: String) -> String {
         switch reason {
-        case "permission prompt": return "Needs your permission"
-        case "sandbox request": return "Needs sandbox access"
-        case "dialog open": return "Waiting on a dialog"
-        default: return "Needs your input"
+        case "permission prompt": return "Potrzebuje Twojej zgody"
+        case "sandbox request": return "Potrzebuje dostępu do piaskownicy"
+        case "dialog open": return "Czeka na okno dialogowe"
+        default: return "Czeka na Twoją odpowiedź"
         }
     }
 }

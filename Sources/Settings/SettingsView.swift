@@ -26,14 +26,14 @@ enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .general: return "General"
-        case .activities: return "Live Activities"
-        case .agents: return "AI Agents"
-        case .media: return "Media"
-        case .shelf: return "Shelf & Clipboard"
-        case .focus: return "Focus"
-        case .calendar: return "Calendar"
-        case .about: return "About"
+        case .general: return "Ogólne"
+        case .activities: return "Aktywności na żywo"
+        case .agents: return "Agenci AI"
+        case .media: return "Multimedia"
+        case .shelf: return "Półka i schowek"
+        case .focus: return "Skupienie"
+        case .calendar: return "Kalendarz"
+        case .about: return "Informacje"
         }
     }
 
@@ -133,7 +133,7 @@ private struct SettingsSidebar: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Fun Notch")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Version \(version)")
+                    Text("Wersja \(version)")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -200,7 +200,7 @@ private struct CustomizeSidebarButton: View {
         } label: {
             HStack(spacing: 9) {
                 SettingsIcon(symbol: "paintbrush.pointed.fill", gradient: SettingsStyle.brandGradient, size: 22)
-                Text("Customize Notch")
+                Text("Dostosuj notch")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.primary)
                 Spacer(minLength: 0)
@@ -218,7 +218,7 @@ private struct CustomizeSidebarButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help("Layout, widgets and colours, with a live preview")
+        .help("Układ, widżety i kolory z podglądem na żywo")
     }
 }
 

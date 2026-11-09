@@ -38,11 +38,11 @@ struct ClipboardEntry: Identifiable, Equatable {
             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.replacingOccurrences(of: "\n", with: " ")
         case .image:
-            return "Image"
+            return "Obraz"
         case let .files(urls):
             return urls.count == 1
                 ? urls[0].lastPathComponent
-                : "\(urls.count) files"
+                : Polish.count(urls.count, "plik", "pliki", "plików")
         }
     }
 
@@ -231,13 +231,13 @@ final class ClipboardManager: ObservableObject {
             else { return false }
             return ShelfManager.shared.addTemporary(
                 data: png,
-                preferredName: "Clipboard Image \(ShelfManager.timestampSuffix()).png"
+                preferredName: "Obraz ze schowka \(ShelfManager.timestampSuffix()).png"
             )
         case let .text(value):
             guard let data = value.data(using: .utf8) else { return false }
             return ShelfManager.shared.addTemporary(
                 data: data,
-                preferredName: "Clipboard Text \(ShelfManager.timestampSuffix()).txt"
+                preferredName: "Tekst ze schowka \(ShelfManager.timestampSuffix()).txt"
             )
         }
     }

@@ -103,7 +103,7 @@ struct HomeLayoutEditor: View {
             HStack(spacing: 5) {
                 Image(systemName: item.symbol)
                     .font(.system(size: 10, weight: .semibold))
-                Text(item.rawValue)
+                Text(item.title)
                     .font(.system(size: 11.5, weight: .medium))
                 if !hasOwn {
                     Circle()
@@ -120,7 +120,7 @@ struct HomeLayoutEditor: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help(hasOwn ? item.explanation : "Uses the Default layout until you give it its own")
+        .help(hasOwn ? item.explanation : "Używa układu domyślnego, dopóki nie dostanie własnego")
     }
 
     // MARK: Stage
@@ -162,13 +162,13 @@ struct HomeLayoutEditor: View {
             Image(systemName: editing.symbol)
                 .font(.system(size: 20))
                 .foregroundStyle(.white.opacity(0.4))
-            Text("\(editing.rawValue) uses your Default layout")
+            Text("\(editing.title): działa układ domyślny")
                 .font(.system(size: 12.5, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.85))
-            Text("Give it its own, and it takes over whenever this applies.")
+            Text("Nadaj mu własny układ, a przejmie ekran, gdy ta sytuacja wystąpi.")
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.45))
-            Button("Give It Its Own Layout") {
+            Button("Utwórz własny układ") {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                     tiles = HomeLayout.starter(for: editing)
                 }
@@ -221,7 +221,7 @@ struct HomeLayoutEditor: View {
             .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
             .foregroundStyle(.white.opacity(0.2))
             .overlay(
-                Text(row == 0 ? "Drop a widget here" : "Drop compact widgets here")
+                Text(row == 0 ? "Upuść tu widżet" : "Upuść tu małe widżety")
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.35))
             )
@@ -239,7 +239,7 @@ struct HomeLayoutEditor: View {
             Image(systemName: tile.kind.symbol)
                 .font(.system(size: large ? 20 : 12, weight: .semibold))
                 .foregroundStyle(tint)
-            Text(tile.appName ?? tile.kind.rawValue)
+            Text(tile.appName ?? tile.kind.title)
                 .font(.system(size: large ? 11 : 9.5, weight: .medium))
                 .foregroundStyle(.white.opacity(0.88))
                 .lineLimit(1)
@@ -282,7 +282,7 @@ struct HomeLayoutEditor: View {
         HStack(spacing: 6) {
             Image(systemName: kind.symbol)
                 .foregroundStyle(kind.tint)
-            Text(name ?? kind.rawValue)
+            Text(name ?? kind.title)
                 .font(.system(size: 12, weight: .medium))
         }
         .padding(.horizontal, 10)
@@ -298,11 +298,11 @@ struct HomeLayoutEditor: View {
         HStack(spacing: 12) {
             if let tile = selectedTile {
                 TintedGlyph(symbol: tile.kind.symbol, tint: tile.kind.tint, size: 24)
-                Text(tile.appName ?? tile.kind.rawValue)
+                Text(tile.appName ?? tile.kind.title)
                     .font(.system(size: 12.5, weight: .semibold))
                     .foregroundStyle(.white)
                 Divider().frame(height: 16)
-                Text("Width")
+                Text("Szerokość")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.white.opacity(0.55))
                 HStack(spacing: 0) {
@@ -320,25 +320,25 @@ struct HomeLayoutEditor: View {
                 }
                 .buttonStyle(.borderless)
                 .background(Capsule().fill(Color.white.opacity(0.08)))
-                Button(tile.row == 0 ? "Move to Strip" : "Move to Main Row") {
+                Button(tile.row == 0 ? "Przenieś do paska" : "Przenieś do głównego rzędu") {
                     move(tile, to: tile.row == 0 ? 1 : 0)
                 }
                 .controlSize(.small)
                 if tile.kind == .openApp {
-                    Button("Choose App…") { chooseApp(for: tile) }
+                    Button("Wybierz aplikację…") { chooseApp(for: tile) }
                         .controlSize(.small)
                 }
                 Spacer(minLength: 8)
             } else {
                 Image(systemName: "hand.point.up.left.fill")
                     .foregroundStyle(.white.opacity(0.4))
-                Text("Drag widgets onto the notch. Click one to resize it, drag it to move it.")
+                Text("Przeciągnij widżety na notch. Kliknij widżet, aby zmienić jego rozmiar, albo przeciągnij go, aby go przenieść.")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.white.opacity(0.5))
                 Spacer(minLength: 8)
                 slotMenu
                 if editing != .standard, layouts[editing] != nil {
-                    Button("Use Default Instead") {
+                    Button("Użyj domyślnego") {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                             layouts[editing] = nil
                             Settings.shared.clearHomeTiles(for: editing)
@@ -347,7 +347,7 @@ struct HomeLayoutEditor: View {
                     }
                     .controlSize(.small)
                 }
-                Button("Reset") {
+                Button("Przywróć") {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                         tiles = editing == .standard ? HomeLayout.default : HomeLayout.starter(for: editing)
                         selection = nil
@@ -376,13 +376,13 @@ struct HomeLayoutEditor: View {
     /// Somewhere to throw a widget you are done with. Also a button: with a
     /// widget selected, clicking it removes that one.
     private var trash: some View {
-        let label = selectedTile == nil ? "Drop to remove" : "Remove"
+        let label = selectedTile == nil ? "Upuść, aby usunąć" : "Usuń"
         return Button {
             if let tile = selectedTile { remove(tile) }
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: overTrash ? "trash.fill" : "trash")
-                Text(overTrash ? "Let go to remove" : label)
+                Text(overTrash ? "Puść, aby usunąć" : label)
             }
             .font(.system(size: 11, weight: overTrash ? .semibold : .regular))
             .foregroundStyle(overTrash || selectedTile != nil ? Color.red : Color.white.opacity(0.5))
@@ -406,7 +406,7 @@ struct HomeLayoutEditor: View {
             draggingTile = nil
             return discard(items.first)
         } isTargeted: { overTrash = $0 }
-        .help(selectedTile == nil ? "Drag a widget here to remove it" : "Remove the selected widget")
+        .help(selectedTile == nil ? "Przeciągnij tu widżet, aby go usunąć" : "Usuń zaznaczony widżet")
     }
 
     /// Removes the widget a drop carries, if it carries one.
@@ -419,7 +419,7 @@ struct HomeLayoutEditor: View {
 
     private var slotMenu: some View {
         Menu {
-            Button("Save This Layout As…") { showingSaveSlot = true }
+            Button("Zapisz ten układ jako…") { showingSaveSlot = true }
             if !slotNames.isEmpty {
                 Divider()
                 ForEach(slotNames, id: \.self) { name in
@@ -433,7 +433,7 @@ struct HomeLayoutEditor: View {
                     }
                 }
                 Divider()
-                Menu("Delete") {
+                Menu("Usuń") {
                     ForEach(slotNames, id: \.self) { name in
                         Button(name) {
                             Settings.shared.deleteLayoutSlot(name)
@@ -443,21 +443,21 @@ struct HomeLayoutEditor: View {
                 }
             }
         } label: {
-            Label("Saved Layouts", systemImage: "square.stack.3d.up")
+            Label("Zapisane układy", systemImage: "square.stack.3d.up")
                 .font(.system(size: 11.5))
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
         .popover(isPresented: $showingSaveSlot) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Name this layout")
+                Text("Nazwa układu")
                     .font(.subheadline.weight(.semibold))
-                TextField("Desk setup", text: $slotName)
+                TextField("Biurko", text: $slotName)
                     .frame(width: 200)
                     .onSubmit(commitSlot)
                 HStack {
                     Spacer()
-                    Button("Save", action: commitSlot)
+                    Button("Zapisz", action: commitSlot)
                         .buttonStyle(.borderedProminent)
                         .disabled(slotName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
@@ -470,8 +470,8 @@ struct HomeLayoutEditor: View {
 
     private var gallery: some View {
         CustomizePanel(
-            title: "Widgets",
-            subtitle: "Drag one onto the notch, or press + to add it."
+            title: "Widżety",
+            subtitle: "Przeciągnij widżet na notch albo naciśnij +, aby go dodać."
         ) {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 176), spacing: 8)], spacing: 8) {
@@ -493,7 +493,7 @@ struct HomeLayoutEditor: View {
                             .strokeBorder(Color.red.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                     )
                     .overlay(
-                        Label("Drop here to remove it", systemImage: "trash")
+                        Label("Upuść tutaj, aby usunąć", systemImage: "trash")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 14)
@@ -524,7 +524,7 @@ struct HomeLayoutEditor: View {
         return HStack(spacing: 9) {
             TintedGlyph(symbol: kind.symbol, tint: kind.tint, size: 28)
             VStack(alignment: .leading, spacing: 1) {
-                Text(kind.rawValue)
+                Text(kind.title)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -551,7 +551,7 @@ struct HomeLayoutEditor: View {
                         .background(Circle().fill(kind.tint.opacity(0.55)))
                 }
                 .buttonStyle(.plain)
-                .help("Add to the \(kind.naturalRow == 0 ? "main row" : "strip")")
+                .help(kind.naturalRow == 0 ? "Dodaj do głównego rzędu" : "Dodaj do paska")
             }
         }
         .padding(8)
@@ -667,7 +667,7 @@ struct HomeLayoutEditor: View {
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.prompt = "Choose"
+        panel.prompt = "Wybierz"
         guard panel.runModal() == .OK, let url = panel.url,
               let index = tiles.firstIndex(where: { $0.id == tile.id }) else { return }
         var updated = tiles

@@ -39,8 +39,8 @@ struct StyleEditor: View {
                 }
 
                 Picker("", selection: $showsOpen.animation(.easeInOut(duration: 0.2))) {
-                    Text("Closed").tag(false)
-                    Text("Open").tag(true)
+                    Text("Zamknięty").tag(false)
+                    Text("Otwarty").tag(true)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
@@ -76,20 +76,20 @@ struct StyleEditor: View {
 
     private var themesPanel: some View {
         CustomizePanel(
-            title: "Looks",
-            subtitle: "A colour scheme in one click.",
+            title: "Motywy",
+            subtitle: "Schemat kolorów jednym kliknięciem.",
             trailing: AnyView(
-                Button("Save Current…") { savingTheme = true }
+                Button("Zapisz bieżący…") { savingTheme = true }
                     .controlSize(.small)
                     .popover(isPresented: $savingTheme) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Name this look").font(.subheadline.weight(.semibold))
-                            TextField("Midnight", text: $themeName)
+                            Text("Nazwa motywu").font(.subheadline.weight(.semibold))
+                            TextField("Północ", text: $themeName)
                                 .frame(width: 200)
                                 .onSubmit(saveTheme)
                             HStack {
                                 Spacer()
-                                Button("Save", action: saveTheme)
+                                Button("Zapisz", action: saveTheme)
                                     .buttonStyle(.borderedProminent)
                                     .disabled(themeName.trimmingCharacters(in: .whitespaces).isEmpty)
                             }
@@ -128,7 +128,7 @@ struct StyleEditor: View {
                         .frame(width: 44, height: 13)
                 }
                 .frame(height: 38)
-                Text(theme.name)
+                Text(theme.title)
                     .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(.white.opacity(active ? 1 : 0.7))
                     .lineLimit(1)
@@ -146,7 +146,7 @@ struct StyleEditor: View {
         .buttonStyle(.plain)
         .contextMenu {
             if saved {
-                Button("Delete", role: .destructive) {
+                Button("Usuń", role: .destructive) {
                     settings.savedThemes.removeAll { $0.name == theme.name }
                 }
             }
@@ -168,7 +168,7 @@ struct StyleEditor: View {
     // MARK: Colour
 
     private var colourPanel: some View {
-        CustomizePanel(title: "Colour", subtitle: "A wash over the black.") {
+        CustomizePanel(title: "Kolor", subtitle: "Odcień nałożony na czerń.") {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 7) {
                     colourSwatch(nil)
@@ -181,7 +181,7 @@ struct StyleEditor: View {
                     }
                 }
                 CustomizeSlider(
-                    title: "Strength",
+                    title: "Intensywność",
                     value: Binding(
                         get: { Double(settings.notchTintIntensity) },
                         set: { settings.notchTintIntensity = CGFloat($0) }
@@ -221,15 +221,15 @@ struct StyleEditor: View {
                 .frame(width: 20, height: 20)
         }
         .buttonStyle(.plain)
-        .help(colour == nil ? "Black" : "Tint")
+        .help(colour == nil ? "Czarny" : "Odcień")
     }
 
     // MARK: Outline
 
     private var outlinePanel: some View {
         CustomizePanel(
-            title: "Outline",
-            subtitle: "A hairline around the notch, drawn inside its edge.",
+            title: "Obrys",
+            subtitle: "Cienka linia wokół notcha, rysowana wewnątrz jego krawędzi.",
             trailing: AnyView(
                 Toggle("", isOn: $settings.notchBorderEnabled)
                     .toggleStyle(.switch)
@@ -239,7 +239,7 @@ struct StyleEditor: View {
         ) {
             VStack(alignment: .leading, spacing: 11) {
                 CustomizeSlider(
-                    title: "Thickness",
+                    title: "Grubość",
                     value: Binding(
                         get: { Double(settings.notchBorderWidth) },
                         set: { settings.notchBorderWidth = CGFloat($0) }
@@ -249,7 +249,7 @@ struct StyleEditor: View {
                     label: { String(format: "%.1f pt", $0) }
                 )
                 CustomizeSlider(
-                    title: "Strength",
+                    title: "Intensywność",
                     value: Binding(
                         get: { Double(settings.notchBorderOpacity) },
                         set: { settings.notchBorderOpacity = CGFloat($0) }
@@ -258,20 +258,20 @@ struct StyleEditor: View {
                     label: { "\(Int($0 * 100))%" }
                 )
                 HStack {
-                    Text("Colour")
+                    Text("Kolor")
                         .font(.system(size: 11.5))
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer()
                     Picker("", selection: $settings.notchBorderColorSource) {
-                        Text("White").tag(BorderColorSource.white)
-                        Text("Accent").tag(BorderColorSource.accent)
-                        Text("Album art").tag(BorderColorSource.albumArt)
+                        Text("Biały").tag(BorderColorSource.white)
+                        Text("Akcent").tag(BorderColorSource.accent)
+                        Text("Okładka").tag(BorderColorSource.albumArt)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .fixedSize()
                 }
-                Toggle("Outline the closed notch too", isOn: $settings.notchBorderWhenClosed)
+                Toggle("Obrys także na zamkniętym notchu", isOn: $settings.notchBorderWhenClosed)
                     .toggleStyle(.checkbox)
                     .font(.system(size: 11.5))
             }
@@ -283,24 +283,24 @@ struct StyleEditor: View {
     // MARK: Size
 
     private var sizePanel: some View {
-        CustomizePanel(title: "Size", subtitle: "How tall the closed notch sits.") {
+        CustomizePanel(title: "Rozmiar", subtitle: "Wysokość zamkniętego notcha.") {
             VStack(alignment: .leading, spacing: 11) {
                 HStack {
-                    Text("Height")
+                    Text("Wysokość")
                         .font(.system(size: 11.5))
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer()
                     Picker("", selection: $settings.notchHeightMode) {
-                        Text("Match the notch").tag(WindowHeightMode.matchRealNotchSize)
-                        Text("Match the menu bar").tag(WindowHeightMode.matchMenuBar)
-                        Text("Custom").tag(WindowHeightMode.custom)
+                        Text("Jak fizyczny notch").tag(WindowHeightMode.matchRealNotchSize)
+                        Text("Jak pasek menu").tag(WindowHeightMode.matchMenuBar)
+                        Text("Własna").tag(WindowHeightMode.custom)
                     }
                     .labelsHidden()
                     .fixedSize()
                 }
                 if settings.notchHeightMode == .custom {
                     CustomizeSlider(
-                        title: "Custom height",
+                        title: "Własna wysokość",
                         value: Binding(
                             get: { Double(settings.notchHeight) },
                             set: { settings.notchHeight = CGFloat($0) }
@@ -311,7 +311,7 @@ struct StyleEditor: View {
                     )
                 }
                 CustomizeSlider(
-                    title: "Extra width",
+                    title: "Dodatkowa szerokość",
                     value: Binding(
                         get: { Double(settings.notchWidthPadding) },
                         set: { settings.notchWidthPadding = CGFloat($0) }
@@ -327,17 +327,17 @@ struct StyleEditor: View {
     // MARK: Other displays
 
     private var islandPanel: some View {
-        CustomizePanel(title: "Displays without a notch", subtitle: "External monitors, and Macs without a cutout.") {
+        CustomizePanel(title: "Ekrany bez notcha", subtitle: "Monitory zewnętrzne i Maki bez wycięcia.") {
             VStack(alignment: .leading, spacing: 11) {
                 Picker("", selection: $settings.nonNotchStyle) {
                     Text("Dynamic Island").tag(NonNotchStyle.island)
-                    Text("Fake notch").tag(NonNotchStyle.notch)
+                    Text("Sztuczny notch").tag(NonNotchStyle.notch)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 if settings.nonNotchStyle == .island {
                     CustomizeSlider(
-                        title: "Width",
+                        title: "Szerokość",
                         value: Binding(
                             get: { Double(settings.islandWidth) },
                             set: { settings.islandWidth = CGFloat($0) }
@@ -347,7 +347,7 @@ struct StyleEditor: View {
                         label: { "\(Int($0)) pt" }
                     )
                     CustomizeSlider(
-                        title: "Gap from the top",
+                        title: "Odstęp od góry",
                         value: Binding(
                             get: { Double(settings.islandTopGap) },
                             set: { settings.islandTopGap = CGFloat($0) }
@@ -364,44 +364,44 @@ struct StyleEditor: View {
     // MARK: Player
 
     private var playerPanel: some View {
-        CustomizePanel(title: "Player", subtitle: "Colours for the music controls.") {
+        CustomizePanel(title: "Odtwarzacz", subtitle: "Kolory elementów sterowania muzyką.") {
             VStack(alignment: .leading, spacing: 11) {
                 HStack {
-                    Text("Progress bar")
+                    Text("Pasek postępu")
                         .font(.system(size: 11.5))
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer()
                     Picker("", selection: $settings.sliderColor) {
-                        Text("White").tag(SliderColorEnum.white)
-                        Text("Album art").tag(SliderColorEnum.albumArt)
-                        Text("Accent").tag(SliderColorEnum.accent)
+                        Text("Biały").tag(SliderColorEnum.white)
+                        Text("Okładka").tag(SliderColorEnum.albumArt)
+                        Text("Akcent").tag(SliderColorEnum.accent)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .fixedSize()
                 }
                 HStack {
-                    Toggle("Coloured spectrum", isOn: $settings.coloredSpectrogram)
+                    Toggle("Kolorowe spektrum", isOn: $settings.coloredSpectrogram)
                         .toggleStyle(.checkbox)
                         .font(.system(size: 11.5))
                     Spacer()
                     Picker("", selection: $settings.spectrumColor) {
-                        Text("Album art").tag(SliderColorEnum.albumArt)
-                        Text("Accent").tag(SliderColorEnum.accent)
-                        Text("White").tag(SliderColorEnum.white)
+                        Text("Okładka").tag(SliderColorEnum.albumArt)
+                        Text("Akcent").tag(SliderColorEnum.accent)
+                        Text("Biały").tag(SliderColorEnum.white)
                     }
                     .labelsHidden()
                     .fixedSize()
                     .disabled(!settings.coloredSpectrogram)
                 }
                 HStack {
-                    Text("Camera mirror")
+                    Text("Lusterko")
                         .font(.system(size: 11.5))
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer()
                     Picker("", selection: $settings.mirrorShape) {
-                        Text("Rounded").tag(MirrorShapeEnum.rectangle)
-                        Text("Circle").tag(MirrorShapeEnum.circle)
+                        Text("Zaokrąglone").tag(MirrorShapeEnum.rectangle)
+                        Text("Koło").tag(MirrorShapeEnum.circle)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -438,7 +438,7 @@ struct ColorPanelSwatch: View {
                 .frame(width: 20, height: 20)
         }
         .buttonStyle(.plain)
-        .help("Any colour")
+        .help("Dowolny kolor")
     }
 }
 

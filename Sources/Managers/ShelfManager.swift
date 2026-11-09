@@ -347,13 +347,13 @@ final class ShelfManager: NSObject, ObservableObject {
            let tiff = image.tiffRepresentation,
            let bitmap = NSBitmapImageRep(data: tiff),
            let png = bitmap.representation(using: .png, properties: [:]) {
-            let name = "Dropped Image \(Self.timestampSuffix()).png"
+            let name = "Upuszczony obraz \(Self.timestampSuffix()).png"
             if addTemporary(data: png, preferredName: name) { return true }
         }
 
         // Finally plain text.
         if let text = pasteboard.string(forType: .string), !text.isEmpty {
-            let name = "Dropped Text \(Self.timestampSuffix()).txt"
+            let name = "Upuszczony tekst \(Self.timestampSuffix()).txt"
             if let data = text.data(using: .utf8), addTemporary(data: data, preferredName: name) {
                 return true
             }

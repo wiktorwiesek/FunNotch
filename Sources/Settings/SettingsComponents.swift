@@ -313,7 +313,7 @@ struct PreviewInNotchButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help("Show it in the notch")
+        .help("Pokaż w notchu")
         .opacity(isEnabled ? 1 : 0.4)
     }
 }

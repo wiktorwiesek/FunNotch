@@ -212,10 +212,7 @@ final class BatteryManager: ObservableObject {
         guard let timeRemaining else { return nil }
         let hours = timeRemaining / 60
         let minutes = timeRemaining % 60
-        let suffix = isCharging ? "until full" : "remaining"
-        if hours > 0 {
-            return "\(hours)h \(minutes)m \(suffix)"
-        }
-        return "\(minutes)m \(suffix)"
+        let duration = hours > 0 ? "\(hours) godz. \(minutes) min" : "\(minutes) min"
+        return isCharging ? "\(duration) do pełnego naładowania" : "pozostało \(duration)"
     }
 }

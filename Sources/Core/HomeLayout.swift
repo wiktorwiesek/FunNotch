@@ -40,6 +40,30 @@ enum HomeTileKind: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    var title: String {
+        switch self {
+        case .nowPlaying: return "Teraz odtwarzane"
+        case .weather: return "Pogoda"
+        case .calendar: return "Kalendarz"
+        case .mirror: return "Lusterko"
+        case .agents: return "Sesje agentów"
+        case .notes: return "Notatka"
+        case .timer: return "Minutnik"
+        case .quickActions: return "Szybkie akcje"
+        case .systemStats: return "Statystyki systemu"
+        case .battery: return "Bateria"
+        case .devices: return "Baterie urządzeń"
+        case .focusStreak: return "Seria skupienia"
+        case .recentShelf: return "Ostatnie pliki"
+        case .clipboard: return "Ostatnio skopiowane"
+        case .wifi: return "Wi-Fi"
+        case .openApp: return "Otwórz aplikację"
+        case .mediaScrubber: return "Pasek odtwarzania"
+        case .nextEvent: return "Następne wydarzenie"
+        case .diskSpace: return "Miejsce na dysku"
+        }
+    }
+
     var symbol: String {
         switch self {
         case .nowPlaying:   return "music.note"
@@ -120,6 +144,16 @@ enum LayoutCase: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    var title: String {
+        switch self {
+        case .standard: return "Domyślny"
+        case .meetingSoon: return "Przed spotkaniem"
+        case .mediaPlaying: return "Odtwarzanie multimediów"
+        case .focusActive: return "Sesja skupienia"
+        case .charging: return "Ładowanie"
+        }
+    }
+
     var symbol: String {
         switch self {
         case .standard:     return "house"
@@ -132,11 +166,11 @@ enum LayoutCase: String, CaseIterable, Identifiable {
 
     var explanation: String {
         switch self {
-        case .standard:     return "Whenever nothing more specific applies."
-        case .meetingSoon:  return "In the ten minutes before a calendar event with a video link, and while it runs."
-        case .mediaPlaying: return "While something is playing."
-        case .focusActive:  return "During a focus session."
-        case .charging:     return "While plugged in."
+        case .standard:     return "Gdy nie pasuje nic bardziej szczegółowego."
+        case .meetingSoon:  return "Na dziesięć minut przed wydarzeniem z linkiem do wideorozmowy i w jego trakcie."
+        case .mediaPlaying: return "Gdy coś jest odtwarzane."
+        case .focusActive:  return "Podczas sesji skupienia."
+        case .charging:     return "Gdy komputer jest podłączony do zasilania."
         }
     }
 

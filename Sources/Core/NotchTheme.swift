@@ -21,6 +21,20 @@ struct NotchTheme: Codable, Identifiable, Equatable {
 
     var id: String { name }
 
+    /// What the theme is called on screen. Built-in names are persisted (the
+    /// active theme is remembered by name), so only the display text is Polish.
+    var title: String {
+        switch name {
+        case "Default": return "Domyślny"
+        case "Midnight": return "Północ"
+        case "Sunset": return "Zachód słońca"
+        case "Forest": return "Las"
+        case "Mono": return "Mono"
+        case "Bubblegum": return "Guma balonowa"
+        default: return name
+        }
+    }
+
     var accentColor: Color {
         accent.map(Self.decode) ?? .accentColor
     }

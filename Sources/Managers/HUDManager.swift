@@ -75,7 +75,7 @@ final class HUDManager: ObservableObject {
             // system's own HUD quietly coming back.
             if lastError == nil { DiagnosticLog.write("hud", "waiting for Accessibility access") }
             isIntercepting = false
-            lastError = "Accessibility access not granted"
+            lastError = "Brak zgody na dostęp do Dostępności"
             return
         }
         guard tap == nil else { return }
@@ -118,7 +118,7 @@ final class HUDManager: ObservableObject {
             userInfo: nil
         ) else {
             isIntercepting = false
-            lastError = "macOS refused the event tap"
+            lastError = "macOS odrzucił przechwytywanie zdarzeń"
             DiagnosticLog.write("hud", "event tap refused")
             return
         }
@@ -236,7 +236,7 @@ final class HUDManager: ObservableObject {
         guard let device = SystemAudio.defaultOutputDevice,
               let current = SystemAudio.volume(of: device)
         else {
-            lastError = "No readable audio output device"
+            lastError = "Nie można odczytać urządzenia wyjściowego audio"
             return false
         }
         let next = min(max(current + delta, 0), 1)
@@ -253,7 +253,7 @@ final class HUDManager: ObservableObject {
 
     private func toggleMute() -> Bool {
         guard let device = SystemAudio.defaultOutputDevice else {
-            lastError = "No readable audio output device"
+            lastError = "Nie można odczytać urządzenia wyjściowego audio"
             return false
         }
         let muted = !(SystemAudio.isMuted(device) ?? false)
@@ -264,7 +264,7 @@ final class HUDManager: ObservableObject {
 
     private func adjustBrightness(by delta: Float) -> Bool {
         guard let current = DisplayBrightness.value else {
-            lastError = "Display brightness is not readable on this Mac"
+            lastError = "Nie można odczytać jasności wyświetlacza na tym Macu"
             return false
         }
         let next = min(max(current + delta, 0), 1)
@@ -275,7 +275,7 @@ final class HUDManager: ObservableObject {
 
     private func adjustBacklight(by delta: Float) -> Bool {
         guard let current = KeyboardBacklight.value else {
-            lastError = "Keyboard backlight is not readable on this Mac"
+            lastError = "Nie można odczytać podświetlenia klawiatury na tym Macu"
             return false
         }
         let next = min(max(current + delta, 0), 1)

@@ -283,7 +283,7 @@ private struct DropZoneHint: View {
     @EnvironmentObject private var viewModel: NotchViewModel
 
     var body: some View {
-        Text(viewModel.isDropTargeted ? "Release to add" : "Drop here to keep it")
+        Text(viewModel.isDropTargeted ? "Upuść, aby dodać" : "Upuść tutaj, aby zachować")
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(.white.opacity(viewModel.isDropTargeted ? 1 : 0.6))
             .frame(maxWidth: .infinity)

@@ -57,19 +57,19 @@ struct AgendaItem: Identifiable, Equatable {
     /// "in 5m" / "now" for something coming up soon, else nil.
     var countdownText: String? {
         guard let start else { return nil }
-        if isCurrent { return "now" }
+        if isCurrent { return "teraz" }
         let seconds = start.timeIntervalSince(Motion.filmDate ?? Date())
         guard seconds > 0, seconds < 6 * 3600 else { return nil }
         let minutes = Int(seconds / 60)
-        if minutes < 1 { return "in under a minute" }
-        if minutes < 60 { return "in \(minutes)m" }
-        // "in 2h", not "in 2h 0m".
-        if minutes % 60 == 0 { return "in \(minutes / 60)h" }
-        return "in \(minutes / 60)h \(minutes % 60)m"
+        if minutes < 1 { return "za mniej niż minutę" }
+        if minutes < 60 { return "za \(minutes) min" }
+        // "za 2 godz.", not "za 2 godz. 0 min".
+        if minutes % 60 == 0 { return "za \(minutes / 60) godz." }
+        return "za \(minutes / 60) godz. \(minutes % 60) min"
     }
 
     var timeText: String {
-        if isAllDay { return "All day" }
+        if isAllDay { return "Cały dzień" }
         guard let start else { return "" }
         let formatter = DateFormatter()
         formatter.dateFormat = Locale.current.hasTwelveHourClock ? "h:mm a" : "HH:mm"
@@ -247,7 +247,7 @@ final class CalendarManager: ObservableObject {
                 end: start.map { $0.addingTimeInterval(TimeInterval(minutes * 60)) },
                 isAllDay: false,
                 calendarColor: color,
-                calendarTitle: "Sample",
+                calendarTitle: "Przykład",
                 kind: .event,
                 location: nil,
                 externalIdentifier: nil,
@@ -264,7 +264,7 @@ final class CalendarManager: ObservableObject {
                 end: nil,
                 isAllDay: false,
                 calendarColor: .orange,
-                calendarTitle: "Sample",
+                calendarTitle: "Przykład",
                 kind: .reminder(isCompleted: done),
                 location: nil,
                 externalIdentifier: nil,
@@ -274,14 +274,14 @@ final class CalendarManager: ObservableObject {
         }
 
         var items = [
-            event("Design review", 10, 30, minutes: 45, color: .blue),
-            event("Call with Sam", 14, 15, minutes: 30, color: .green),
-            event("Dentist", 16, 45, minutes: 60, color: .orange),
+            event("Przegląd projektu", 10, 30, minutes: 45, color: .blue),
+            event("Rozmowa z Anią", 14, 15, minutes: 30, color: .green),
+            event("Dentysta", 16, 45, minutes: 60, color: .orange),
         ]
 
         if includeReminders {
-            items.append(reminder("Renew the domain", done: false))
-            items.append(reminder("Ship 1.0", done: true))
+            items.append(reminder("Odnowić domenę", done: false))
+            items.append(reminder("Wydać wersję 1.0", done: true))
         }
         return items
     }
@@ -317,7 +317,7 @@ final class CalendarManager: ObservableObject {
             .map { event in
                 AgendaItem(
                     id: event.eventIdentifier ?? UUID().uuidString,
-                    title: event.title ?? "Untitled",
+                    title: event.title ?? "Bez tytułu",
                     start: event.startDate,
                     end: event.endDate,
                     isAllDay: event.isAllDay,
@@ -358,7 +358,7 @@ final class CalendarManager: ObservableObject {
                 .map { reminder in
                     AgendaItem(
                         id: reminder.calendarItemIdentifier,
-                        title: reminder.title ?? "Reminder",
+                        title: reminder.title ?? "Przypomnienie",
                         start: reminder.dueDateComponents?.date,
                         end: reminder.dueDateComponents?.date,
                         isAllDay: reminder.dueDateComponents?.hour == nil,

@@ -68,8 +68,8 @@ struct ClosedNotchEditor: View {
         let list = widgets(on: side)
         let targeted = targetedSide == side
         return CustomizePanel(
-            title: side == .leading ? "Left of the camera" : "Right of the camera",
-            subtitle: side == .leading ? "The last one sits closest to the camera." : "The first one sits closest to the camera."
+            title: side == .leading ? "Po lewej od kamery" : "Po prawej od kamery",
+            subtitle: side == .leading ? "Ostatni leży najbliżej kamery." : "Pierwszy leży najbliżej kamery."
         ) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
@@ -78,7 +78,7 @@ struct ClosedNotchEditor: View {
                             .transition(.scale(scale: 0.8).combined(with: .opacity))
                     }
                     if list.isEmpty {
-                        Text("Drop widgets here")
+                        Text("Przeciągnij tu widżety")
                             .font(.system(size: 11))
                             .foregroundStyle(.white.opacity(0.35))
                             .padding(.vertical, 7)
@@ -111,7 +111,7 @@ struct ClosedNotchEditor: View {
             Image(systemName: widget.symbol)
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(widget.tint)
-            Text(widget.rawValue)
+            Text(widget.title)
                 .font(.system(size: 11.5, weight: .medium))
                 .foregroundStyle(.white)
             Button {
@@ -145,7 +145,7 @@ struct ClosedNotchEditor: View {
     private func chipPreview(_ widget: NotchWidget) -> some View {
         HStack(spacing: 5) {
             Image(systemName: widget.symbol).foregroundStyle(widget.tint)
-            Text(widget.rawValue).font(.system(size: 12, weight: .medium))
+            Text(widget.title).font(.system(size: 12, weight: .medium))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -187,7 +187,7 @@ struct ClosedNotchEditor: View {
     // MARK: Palette
 
     private var palette: some View {
-        CustomizePanel(title: "Widgets", subtitle: "Drag one to a side, or use its buttons.") {
+        CustomizePanel(title: "Widżety", subtitle: "Przeciągnij widżet na wybraną stronę albo użyj jego przycisków.") {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 158), spacing: 8)], spacing: 8) {
                     ForEach(NotchWidget.allCases) { widget in
@@ -207,7 +207,7 @@ struct ClosedNotchEditor: View {
                             .strokeBorder(Color.red.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                     )
                     .overlay(
-                        Label("Drop here to remove it", systemImage: "trash")
+                        Label("Upuść tutaj, aby usunąć", systemImage: "trash")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 14)
@@ -240,7 +240,7 @@ struct ClosedNotchEditor: View {
     private func paletteCard(_ widget: NotchWidget) -> some View {
         HStack(spacing: 8) {
             TintedGlyph(symbol: widget.symbol, tint: widget.tint, size: 24)
-            Text(widget.rawValue)
+            Text(widget.title)
                 .font(.system(size: 11.5, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -271,7 +271,7 @@ struct ClosedNotchEditor: View {
                 _ = accept("widget:" + widget.rawValue, on: side, before: nil)
             }
         } label: {
-            Text(side == .leading ? "L" : "R")
+            Text(side == .leading ? "L" : "P")
                 .font(.system(size: 9.5, weight: .bold, design: .rounded))
                 .foregroundStyle(placed ? Color.white : Color.white.opacity(0.55))
                 .frame(width: 20, height: 20)
@@ -279,30 +279,30 @@ struct ClosedNotchEditor: View {
         }
         .buttonStyle(.plain)
         .help(placed
-              ? "Remove from the \(side == .leading ? "left" : "right")"
-              : "Add to the \(side == .leading ? "left" : "right")")
+              ? (side == .leading ? "Usuń z lewej strony" : "Usuń z prawej strony")
+              : (side == .leading ? "Dodaj po lewej stronie" : "Dodaj po prawej stronie"))
     }
 
     // MARK: Behaviour
 
     private var behaviour: some View {
-        CustomizePanel(title: "What shows here") {
+        CustomizePanel(title: "Co się tu pokazuje") {
             VStack(alignment: .leading, spacing: 11) {
-                Toggle("Widgets", isOn: $settings.idleWidgetsEnabled)
-                Toggle("Working AI agents", isOn: $settings.agentActivityEnabled)
-                Toggle("Focus countdown", isOn: $settings.focusShowInClosedNotch)
-                Toggle("Music spectrum", isOn: $settings.useMusicVisualizer)
+                Toggle("Widżety", isOn: $settings.idleWidgetsEnabled)
+                Toggle("Pracujący agenci AI", isOn: $settings.agentActivityEnabled)
+                Toggle("Odliczanie Skupienia", isOn: $settings.focusShowInClosedNotch)
+                Toggle("Spektrum muzyki", isOn: $settings.useMusicVisualizer)
 
                 Divider().overlay(Color.white.opacity(0.08))
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("While music plays")
+                    Text("Gdy gra muzyka")
                         .font(.system(size: 11.5, weight: .medium))
                         .foregroundStyle(.white.opacity(0.7))
                     Picker("", selection: $settings.closedMediaDisplay) {
-                        Text("Music").tag(ClosedMediaDisplay.mediaOnly)
-                        Text("Both").tag(ClosedMediaDisplay.mediaAndWidgets)
-                        Text("Widgets").tag(ClosedMediaDisplay.widgetsOnly)
+                        Text("Muzyka").tag(ClosedMediaDisplay.mediaOnly)
+                        Text("Oba").tag(ClosedMediaDisplay.mediaAndWidgets)
+                        Text("Widżety").tag(ClosedMediaDisplay.widgetsOnly)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
