@@ -202,7 +202,7 @@ struct AudioMixerPanel: View {
                     .notchControl(in: Capsule(), resting: true)
             }
             .font(.system(size: 9))
-            .foregroundStyle(.white.opacity(0.35))
+            .foregroundStyle(.white.opacity(0.4))
         }
     }
 

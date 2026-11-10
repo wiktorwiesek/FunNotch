@@ -506,14 +506,14 @@ struct PlayerControls: View {
                         .font(.system(size: 7, weight: .bold))
                 }
                 .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
                 .frame(height: Metrics.hint)
             }
             .buttonStyle(NotchPressStyle(scale: 0.97))
         } else {
             Text("Brak informacji o pozycji")
                 .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
                 .frame(height: Metrics.hint)
         }
     }

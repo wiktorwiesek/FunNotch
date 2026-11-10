@@ -167,7 +167,7 @@ struct GitHubTile: View {
                     if repo.hasPullRequests, repo.reviewRequests.isEmpty, repo.authored.isEmpty {
                         Text("Brak otwartych PR-ów")
                             .font(.system(size: 9))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.white.opacity(0.4))
                     }
                 }
             }
@@ -330,7 +330,7 @@ struct AIUsageTile: View {
                     Spacer(minLength: 0)
                     Text(AIUsageManager.tokens(provider.tokens))
                         .font(.system(size: 9))
-                        .foregroundStyle(.white.opacity(0.35))
+                        .foregroundStyle(.white.opacity(0.4))
                     Text((provider.costIsEstimate ? "~" : "") + AIUsageManager.money(provider.cost))
                         .font(.system(size: 10, weight: .medium))
                         .monospacedDigit()
@@ -341,7 +341,7 @@ struct AIUsageTile: View {
             if snapshot.providers.isEmpty, manager.hasScanned {
                 Text("Dziś nic jeszcze nie zużyto")
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
             }
             Spacer(minLength: 0)
             AIUsageBars(days: snapshot.days, showLabels: true)
@@ -382,7 +382,7 @@ private struct AIUsageBars: View {
                     if showLabels {
                         Text(Self.weekday.string(from: day.date).uppercased())
                             .font(.system(size: 7, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.white.opacity(0.4))
                     }
                 }
                 .help("\(day.date.formatted(.dateTime.locale(Polish.locale).day().month(.wide))): \(AIUsageManager.money(day.cost)), \(AIUsageManager.tokens(day.tokens)) tokenów")
@@ -574,7 +574,7 @@ struct LauncherTile: View {
                     // Moved or uninstalled since it was pinned.
                     Image(systemName: "questionmark.app.dashed")
                         .font(.system(size: size * 0.7))
-                        .foregroundStyle(.white.opacity(0.35))
+                        .foregroundStyle(.white.opacity(0.4))
                 }
             }
             .frame(width: size, height: size)

@@ -913,7 +913,7 @@ private struct PanelTitle: View {
             Text(title.uppercased())
                 .font(.system(size: 8, weight: .semibold))
                 .tracking(0.6)
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
             Spacer(minLength: 4)
             if let trailing {
                 Text(trailing)
@@ -975,7 +975,7 @@ private struct FocusWeekPanel: View {
                 HStack(spacing: 2) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 9))
-                        .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.35))
+                        .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.4))
                     Text(focus.streak == 0 ? "Brak serii" : "Seria: \(Polish.count(focus.streak, "dzień", "dni", "dni"))")
                 }
                 Spacer(minLength: 0)
@@ -1015,7 +1015,7 @@ private struct RecentTimersPanel: View {
             if recent.isEmpty {
                 Text("Tutaj pojawią się użyte minutniki, gotowe do ponownego uruchomienia.")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 VStack(spacing: 2) {
@@ -1083,7 +1083,7 @@ private struct LapsPanel: View {
             if laps.isEmpty, !timer.isStopwatchRunning {
                 Text("Naciśnij „Okrążenie” podczas pomiaru, aby zapisać międzyczas.")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             } else {
@@ -1109,7 +1109,7 @@ private struct LapsPanel: View {
     private func lapRow(number: Int, time: TimeInterval, colour: Color) -> some View {
         HStack {
             Text("Okrążenie \(number)")
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
             Spacer()
             Text(TimerManager.stopwatchClock(time))
                 .monospacedDigit()

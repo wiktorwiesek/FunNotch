@@ -58,7 +58,7 @@ struct AgentSessionsTile: View {
             Text("AGENCI")
                 .font(.system(size: 8, weight: .semibold, design: .monospaced))
                 .tracking(0.7)
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
             Spacer(minLength: 0)
             summaryBadge
         }
@@ -79,11 +79,11 @@ struct AgentSessionsTile: View {
                     .foregroundStyle(AgentPalette.claude)
             } else if !agents.sessions.isEmpty {
                 Text("Wszystko spokojnie")
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
             }
             if hidden > 0 {
                 Text("+\(hidden)")
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
             }
         }
         .font(.system(size: 9, weight: .semibold))
@@ -100,7 +100,7 @@ struct AgentSessionsTile: View {
                 .foregroundStyle(.white.opacity(0.7))
             Text("Sesje Claude Code i omp pojawią się tutaj")
                 .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -225,7 +225,7 @@ private struct AgentRow: View {
         case .idle:
             return session.lastTurnDuration != nil
                 ? AgentPalette.done.opacity(0.85)
-                : .white.opacity(0.35)
+                : .white.opacity(0.4)
         }
     }
 }
@@ -254,7 +254,7 @@ private struct AgentRowTime: View {
         switch session.status {
         case .working: return AgentPalette.claude
         case .waiting: return AgentPalette.waiting
-        case .idle: return .white.opacity(0.35)
+        case .idle: return .white.opacity(0.4)
         }
     }
 }

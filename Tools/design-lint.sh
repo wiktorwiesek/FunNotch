@@ -11,7 +11,7 @@
 #   weight          regular medium semibold bold
 #   corner radius   1 2 4 6 8 12 16 24   (a nested corner = outer − the gap)
 #   spacing/padding 0, 1 (a hairline), or an even number
-#   white           .04 .08 .12 .16 .24 (surfaces)  .35 .5 .7 .85 .95 (ink)
+#   white           .04 .08 .12 .16 .24 (surfaces)  .4 .5 .7 .85 .95 (ink)
 #   shadow          black only: a shadow in a colour is a glow
 #
 # Left out on purpose: the games, the drawn art (the cat, the mascots, the
@@ -28,7 +28,7 @@ find Sources/Views Sources/Extras -name '*.swift' \
       BEGIN {
         %type = map { $_ => 1 } qw(7 8 9 10 11 12 13 14 16 18 20 22 26 32);
         %radius = map { $_ => 1 } qw(1 2 4 6 8 12 16 24);
-        %white = map { $_ => 1 } qw(0.04 0.08 0.12 0.16 0.24 0.35 0.5 0.7 0.85 0.95 1);
+        %white = map { $_ => 1 } qw(0.04 0.08 0.12 0.16 0.24 0.4 0.5 0.7 0.85 0.95 1);
         $bad = 0;
       }
       sub flag { my ($what) = @_; print "$ARGV:$.: $what\n"; $bad++ }

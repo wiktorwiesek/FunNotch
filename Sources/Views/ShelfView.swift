@@ -44,7 +44,7 @@ struct ShelfView: View {
 
             Text("Zostają na Półce, dopóki ich stąd nie wyciągniesz")
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
@@ -109,7 +109,7 @@ struct ShelfView: View {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.down.doc")
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                 ForEach(targets, id: \.self) { path in
                     FolderTargetChip(path: path)
                 }

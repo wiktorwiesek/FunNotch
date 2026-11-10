@@ -110,7 +110,7 @@ struct QuickActionStrip: View {
             } else {
                 Text("Szybkie akcje")
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                     .transition(.opacity)
             }
         }

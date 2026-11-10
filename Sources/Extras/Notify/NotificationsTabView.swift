@@ -28,13 +28,13 @@ struct NotificationsTabView: View {
 
     private var emptyState: some View {
         VStack(spacing: 6) {
-            CatOrSymbol(systemName: "bell.slash", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.35), catSize: 42)
+            CatOrSymbol(systemName: "bell.slash", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.4), catSize: 42)
             Text("Brak powiadomień")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
             Text(emptyHint)
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -92,12 +92,12 @@ private struct NotificationRow: View {
                     HStack(spacing: 4) {
                         Text(item.appName)
                             .font(.system(size: 8, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.white.opacity(0.4))
                             .lineLimit(1)
                         Spacer(minLength: 0)
                         Text(Self.relativeTime(item.date, now: now))
                             .font(.system(size: 8))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.white.opacity(0.4))
                             .lineLimit(1)
                     }
                     Text(item.heading)

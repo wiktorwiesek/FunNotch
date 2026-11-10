@@ -250,7 +250,7 @@ private struct FocusTimerWidget: View {
     private var colour: Color {
         if focus.isActive { return focus.isOnBreak ? ClockPalette.rest : settings.accentColor }
         if showsTimer { return timer.finished ? ClockPalette.alarm : ClockPalette.timer }
-        return .white.opacity(0.35)
+        return .white.opacity(0.4)
     }
 }
 
@@ -288,7 +288,7 @@ private struct NextEventWidget: View {
             } else {
                 Text(calendar.hasEventAccess ? "Brak wydarzeń" : "Kalendarz wyłączony")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                     .fixedSize()
             }
         }
@@ -303,7 +303,7 @@ private struct NowPlayingWidget: View {
             if music.track.isEmpty {
                 Text("Nic nie gra")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                     .fixedSize()
             } else {
                 HStack(spacing: 4) {
@@ -552,7 +552,7 @@ private struct UnreadWidget: View {
             if unread.badges.isEmpty {
                 Image(systemName: "bubble.left.and.bubble.right")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
             } else {
                 ForEach(unread.badges) { badge in
                     HStack(spacing: 2) {

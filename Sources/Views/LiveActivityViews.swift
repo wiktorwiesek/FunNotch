@@ -625,7 +625,7 @@ private struct ShelfThumbnail: View {
                     .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .stroke(Color.white.opacity(0.35), lineWidth: 0.6)
+                            .stroke(Color.white.opacity(0.4), lineWidth: 0.6)
                     )
             } else {
                 Image(systemName: "doc.fill")

@@ -53,7 +53,7 @@ struct KeepAwakeWidget: View {
         HStack(spacing: 4) {
             Image(systemName: keepAwake.isActive ? KeepAwakeManager.activeSymbol : KeepAwakeManager.symbol)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(keepAwake.isActive ? Color.orange : .white.opacity(0.35))
+                .foregroundStyle(keepAwake.isActive ? Color.orange : .white.opacity(0.4))
             if let text {
                 Text(text)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -92,7 +92,7 @@ struct PrivacyWidget: View {
             if !privacy.cameraActive && !privacy.microphoneActive && !privacy.screenActive {
                 Image(systemName: "lock.shield")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
             }
             if privacy.cameraActive { dot(.green) }
             if privacy.microphoneActive { dot(.orange) }

@@ -147,7 +147,7 @@ struct NotesView: View {
             Text("Zapisano \(at.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Polish.locale)))")
                 .font(.system(size: 9))
                 .lineLimit(1)
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
         }
     }
 

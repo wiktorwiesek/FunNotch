@@ -60,7 +60,7 @@ struct PanelLabel: View {
         Text(text.uppercased())
             .font(.system(size: 7, weight: .semibold, design: .monospaced))
             .tracking(0.6)
-            .foregroundStyle(.white.opacity(0.35))
+            .foregroundStyle(.white.opacity(0.4))
             .lineLimit(1)
     }
 }
@@ -558,7 +558,7 @@ private struct DevicesPanel: View {
             if withBattery.isEmpty {
                 Text(bluetooth.devices.isEmpty ? "Brak połączonych" : "Brak danych o baterii")
                     .font(.system(size: 8))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                     .lineLimit(1)
             } else {
                 ForEach(withBattery, id: \.name) { device in
@@ -591,7 +591,7 @@ private struct FocusStreakPanel: View {
             HStack(spacing: 2) {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 11))
-                    .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.35))
+                    .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.4))
                 Text("\(focus.streak)")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .monospacedDigit()
@@ -621,7 +621,7 @@ private struct RecentShelfPanel: View {
             if shelf.items.isEmpty {
                 Text("Półka jest pusta")
                     .font(.system(size: 8))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
             } else {
                 HStack(spacing: 4) {
                     ForEach(shelf.items.prefix(4)) { item in
@@ -677,7 +677,7 @@ private struct ClipboardPanel: View {
             } else {
                 Text("Jeszcze nic")
                     .font(.system(size: 8))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -729,7 +729,7 @@ private struct WiFiPanel: View {
             HStack(spacing: 4) {
                 Image(systemName: wifi.isConnected ? "wifi" : "wifi.slash")
                     .font(.system(size: 11))
-                    .foregroundStyle(wifi.isConnected ? .white.opacity(0.85) : .white.opacity(0.35))
+                    .foregroundStyle(wifi.isConnected ? .white.opacity(0.85) : .white.opacity(0.4))
                 Text(wifi.network ?? (wifi.isConnected ? "Połączono" : "Wyłączone"))
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.7))
@@ -740,7 +740,7 @@ private struct WiFiPanel: View {
             if wifi.isConnected, wifi.network == nil, !wifi.isLocationAuthorized {
                 Text("Nazwa wymaga lokalizacji")
                     .font(.system(size: 7))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                     .lineLimit(1)
             }
         }
@@ -785,7 +785,7 @@ private struct OpenAppPanel: View {
                     // button that does nothing.
                     Image(systemName: "questionmark.app.dashed")
                         .font(.system(size: 16))
-                        .foregroundStyle(.white.opacity(0.35))
+                        .foregroundStyle(.white.opacity(0.4))
                 }
                 Text(name)
                     .font(.system(size: 8))
@@ -864,7 +864,7 @@ struct NextEventPanel: View {
             } else {
                 Text("Nic w planach")
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

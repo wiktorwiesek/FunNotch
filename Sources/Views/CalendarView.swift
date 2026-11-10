@@ -92,10 +92,10 @@ struct CalendarPane: View {
         VStack(spacing: 4) {
             Image(systemName: "calendar")
                 .font(.system(size: 16))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
             Text("Brak wydarzeń")
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

@@ -75,7 +75,7 @@ struct WeatherPane: View {
             VStack(spacing: 6) {
                 Image(systemName: "location.slash")
                     .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                 Text(weather.isLocationAuthorized ? (weather.lastError ?? "Pobieranie pogody…") : "Pogoda wymaga dostępu do lokalizacji")
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.5))

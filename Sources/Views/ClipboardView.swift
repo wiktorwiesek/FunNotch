@@ -35,26 +35,26 @@ struct ClipboardView: View {
         VStack(spacing: 6) {
             Image(systemName: "doc.on.clipboard")
                 .font(.system(size: 22, weight: .regular))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
             Text("Historia schowka jest wyłączona")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
             Text("Włącz ją w Ustawieniach → Półka i schowek")
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var emptyState: some View {
         VStack(spacing: 6) {
-            CatOrSymbol(systemName: "doc.on.clipboard", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.35), catSize: 42)
+            CatOrSymbol(systemName: "doc.on.clipboard", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.4), catSize: 42)
             Text("Nic jeszcze nie skopiowano")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
             Text("Tutaj pojawi się to, co skopiujesz")
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.white.opacity(0.4))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -68,7 +68,7 @@ struct ClipboardView: View {
             HStack(spacing: 4) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.4))
                 TextField("Szukaj", text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 10))
@@ -79,7 +79,7 @@ struct ClipboardView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 9))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.white.opacity(0.4))
                     }
                     .buttonStyle(NotchPressStyle())
                 }
@@ -177,7 +177,7 @@ private struct ClipboardTile: View {
                     if let source = entry.sourceApp {
                         Text(source)
                             .font(.system(size: 8))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.white.opacity(0.4))
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
