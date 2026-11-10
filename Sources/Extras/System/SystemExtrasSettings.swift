@@ -97,7 +97,6 @@ struct SystemExtrasSettings: View {
     private var keepAwakeSubtitle: String? {
         guard keepAwake.isActive else { return nil }
         return KeepAwakeManager.summary(until: keepAwake.endDate)
-            .replacingOccurrences(of: " · ", with: "", options: .anchored)
             .capitalizedFirst
     }
 
@@ -138,7 +137,7 @@ struct SystemExtrasSettings: View {
                 isOn: $announcePrivacy,
                 preview: {
                     IslandCenter.shared.post(Island(
-                        symbol: "video.fill", tint: .green, title: "Kamera", detail: " · w użyciu", duration: 3
+                        symbol: "video.fill", tint: .green, title: "Kamera", detail: "w użyciu", duration: 3
                     ))
                 }
             )
@@ -173,7 +172,7 @@ struct SystemExtrasSettings: View {
                 preview: {
                     IslandCenter.shared.post(Island(
                         symbol: "battery.100.bolt", tint: .green, title: "Bateria",
-                        detail: " · naładowana do \(chargeLevel)%", trailing: "\(chargeLevel)%", duration: 4
+                        detail: "naładowana do \(chargeLevel)%", trailing: "\(chargeLevel)%", duration: 4
                     ))
                 }
             )
@@ -192,7 +191,7 @@ struct SystemExtrasSettings: View {
                 preview: {
                     IslandCenter.shared.post(Island(
                         symbol: "battery.25", tint: .orange, title: "Bateria",
-                        detail: " · niski poziom", trailing: "\(lowLevel)%", duration: 4
+                        detail: "niski poziom", trailing: "\(lowLevel)%", duration: 4
                     ))
                 }
             )
@@ -218,7 +217,7 @@ struct SystemExtrasSettings: View {
                 isOn: $announceCaps,
                 preview: {
                     IslandCenter.shared.post(Island(
-                        symbol: "capslock.fill", tint: .orange, title: "Caps Lock", detail: " · włączony", duration: 1.6
+                        symbol: "capslock.fill", tint: .orange, title: "Caps Lock", detail: "włączony", duration: 1.6
                     ))
                 }
             )

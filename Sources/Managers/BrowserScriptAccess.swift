@@ -40,7 +40,7 @@ final class BrowserScriptAccess: ObservableObject {
             switch self {
             case .idle: return ""
             case .working: return "Sprawdzam…"
-            case let .alreadyOn(name): return "\(name) już na to pozwala — postęp i okładka powinny działać."
+            case let .alreadyOn(name): return "\(name) już na to pozwala. Postęp i okładka powinny działać."
             case let .turnedOn(name): return "Włączono w przeglądarce \(name). Postęp i okładka działają."
             case .needsAccessibility:
                 return "Najpierw zezwól Fun Notch na sterowanie innymi aplikacjami: Ustawienia systemowe → Prywatność i ochrona → Dostępność. Potem naciśnij ponownie."

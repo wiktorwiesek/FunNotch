@@ -86,7 +86,7 @@ final class CapsLockWatcher {
             symbol: on ? "capslock.fill" : "capslock",
             tint: on ? .orange : .white,
             title: "Caps Lock",
-            detail: on ? " · włączony" : " · wyłączony",
+            detail: on ? "włączony" : "wyłączony",
             duration: 1.6
         ))
     }
@@ -169,7 +169,7 @@ final class BatteryAlertWatcher {
                     symbol: "battery.100.bolt",
                     tint: .green,
                     title: "Bateria",
-                    detail: percent >= 100 ? " · w pełni naładowana" : " · naładowana do \(percent)%",
+                    detail: percent >= 100 ? "w pełni naładowana" : "naładowana do \(percent)%",
                     trailing: "\(percent)%",
                     duration: 4
                 ))
@@ -186,7 +186,7 @@ final class BatteryAlertWatcher {
                     symbol: percent <= 10 ? "battery.0" : "battery.25",
                     tint: percent <= 10 ? Color(red: 1, green: 0.35, blue: 0.32) : .orange,
                     title: "Bateria",
-                    detail: " · niski poziom",
+                    detail: "niski poziom",
                     trailing: "\(percent)%",
                     duration: 4
                 ))
@@ -233,7 +233,7 @@ final class VolumeMountWatcher {
             symbol: "externaldrive.fill",
             tint: SettingsStyle.blue,
             title: name,
-            detail: " · podłączony",
+            detail: "podłączony",
             action: IslandAction(title: "Wysuń") { [weak self] in
                 self?.eject(url, name: name)
             },
@@ -278,14 +278,14 @@ final class VolumeMountWatcher {
                 case .success:
                     IslandCenter.shared.post(Island(
                         symbol: "checkmark.circle.fill", tint: .green, title: name,
-                        detail: " · można bezpiecznie odłączyć", duration: 4
+                        detail: "można bezpiecznie odłączyć", duration: 4
                     ))
                 case let .failure(error):
                     DiagnosticLog.write("volumes", "eject \(name) failed: \(error.localizedDescription)")
                     let reason = (error as NSError).localizedFailureReason
                     IslandCenter.shared.post(Island(
                         symbol: "exclamationmark.triangle.fill", tint: .orange, title: name,
-                        detail: " · " + (reason ?? "nie udało się wysunąć"), duration: 5
+                        detail: (reason ?? "nie udało się wysunąć"), duration: 5
                     ))
                 }
             }

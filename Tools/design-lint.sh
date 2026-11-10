@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Checks the notch's views against the design scale, and lists every literal
-# that is off it. Exits 1 when there are any.
+# Checks the notch's views against the design scale and for the marks of a
+# generated interface, and lists every line that has one. Exits 1 when there
+# are any.
 #
 # The scale exists so that the interface reads as one thing: before it, the
 # notch used 26 text sizes (9, 9.5, 10 and 10.5 side by side), 25 corner radii
@@ -13,6 +14,13 @@
 #   spacing/padding 0, 1 (a hairline), or an even number
 #   white           .04 .08 .12 .16 .24 (surfaces)  .4 .5 .7 .85 .95 (ink)
 #   shadow          black only: a shadow in a colour is a glow
+#
+# The marks, each a habit of generated interfaces rather than a choice:
+#
+#   labels          no capitals with their letters spread apart: a label is
+#                   the body face a step smaller, in sentence case
+#   separators      no "A · B · C": a comma, a colon, a new line, or two
+#                   weights side by side
 #
 # Left out on purpose: the games, the drawn art (the cat, the mascots, the
 # weather scenes), the settings window, the glass material itself, and the
@@ -39,6 +47,8 @@ find Sources/Views Sources/Extras -name '*.swift' \
       while (/\.white\.opacity\((\d+(?:\.\d+)?)\)/g) { flag("white $1") unless $white{$1 + 0} }
       flag("weight .$1") while /weight: \.(heavy|black|light|thin|ultraLight)\b/g;
       flag("coloured shadow") if /\.shadow\(color: / && !/\.shadow\(color: (?:Color)?\.(?:black|clear)/;
+      flag("spread or capitalised label") if /\.tracking\(|\.kerning\(|textCase\(\.uppercase\)|Text\([^"]*\.uppercased\(\)\)/;
+      flag("middle-dot separator") if /"[^"]* · [^"]*"/ && !/^\s*\/\//;
       close ARGV if eof;
       END { if ($bad) { print "\n$bad value(s) off the design scale\n"; exit 1 } print "OK: every value is on the design scale\n" }
     '

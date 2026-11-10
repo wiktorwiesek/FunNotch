@@ -491,7 +491,7 @@ final class LocalAPIManager: ObservableObject {
         activities[id] = Activity(title: title, symbol: symbol, started: Date())
         runningActivities = activities.count
         IslandCenter.shared.post(Island(
-            symbol: symbol, tint: SettingsStyle.blue, title: title, detail: " · w toku", duration: 2.5
+            symbol: symbol, tint: SettingsStyle.blue, title: title, detail: "w toku", duration: 2.5
         ))
         return DevHTTPResponse(200, ["ok": true])
     }
@@ -511,7 +511,7 @@ final class LocalAPIManager: ObservableObject {
             symbol: succeeded ? "checkmark.circle.fill" : "xmark.octagon.fill",
             tint: succeeded ? SettingsStyle.green : SettingsStyle.red,
             title: activity.title,
-            detail: succeeded ? " · gotowe po \(elapsed)" : " · niepowodzenie po \(elapsed)",
+            detail: succeeded ? "gotowe po \(elapsed)" : "niepowodzenie po \(elapsed)",
             duration: succeeded ? 4 : 6
         ))
         return DevHTTPResponse(200, ["ok": true])
@@ -529,13 +529,11 @@ final class LocalAPIManager: ObservableObject {
         return String(flat.trimmingCharacters(in: .whitespacesAndNewlines).prefix(limit))
     }
 
-    /// The chin line is "bold title" + softer detail, which by convention
-    /// starts with a separator; callers should not have to know that.
+    /// The chin line is "bold title" + softer detail. A caller that still
+    /// sends the separator the line used to carry gets it taken off.
     private static func detail(_ text: String?) -> String {
         guard let text else { return "" }
-        let cleaned = clean(text, limit: 160)
-        guard !cleaned.isEmpty else { return "" }
-        return cleaned.hasPrefix("·") ? " " + cleaned : " · " + cleaned
+        return clean(text, limit: 160).trimmingCharacters(in: CharacterSet(charactersIn: "· "))
     }
 
     private static func symbol(_ name: String?, fallback: String) -> String {

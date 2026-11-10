@@ -119,7 +119,7 @@ extension PreviewRenderer {
                 )
                 let style = NotifyCenter.style(for: item)
                 IslandCenter.shared.post(Island(
-                    symbol: style.symbol, tint: style.tint, title: item.heading, detail: " · " + item.detail,
+                    symbol: style.symbol, tint: style.tint, title: item.heading, detail: item.detail,
                     action: IslandAction(title: "Otwórz") {}, cat: style.cat
                 ))
                 viewModel.expandingView = SneakPeek(show: true, type: .island, value: 0, icon: style.symbol)

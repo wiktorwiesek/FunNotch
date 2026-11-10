@@ -180,7 +180,7 @@ struct DevExtrasSettings: View {
                 SettingsStatus(text: message, symbol: "exclamationmark.triangle.fill", tint: SettingsStyle.orange)
             case .ready:
                 SettingsStatus(
-                    text: "Połączono przez gh · \(Polish.count(github.repos.count, "repozytorium", "repozytoria", "repozytoriów")).",
+                    text: "Połączono przez gh, \(Polish.count(github.repos.count, "repozytorium", "repozytoria", "repozytoriów")).",
                     symbol: "checkmark.circle.fill",
                     tint: SettingsStyle.green
                 )

@@ -121,8 +121,8 @@ final class TeleprompterController {
 
     private static let panelSize = NSSize(width: 560, height: 170)
     private static let placeholder = "Brak tekstu. Najedź kursorem na panel i wybierz ołówek, aby wpisać lub wkleić skrypt."
-    private static let deniedHint = "Brak zgody na mikrofon lub rozpoznawanie mowy — przewijam według tempa."
-    private static let unavailableHint = "Rozpoznawanie mowy jest niedostępne — przewijam według tempa."
+    private static let deniedHint = "Brak zgody na mikrofon lub rozpoznawanie mowy. Przewijam według tempa."
+    private static let unavailableHint = "Rozpoznawanie mowy jest niedostępne. Przewijam według tempa."
 
     private var panel: TeleprompterPanel?
     private var root: TeleprompterRootView?
@@ -342,7 +342,7 @@ final class TeleprompterController {
     private func play() {
         guard let root, let model, let layout = root.textView.textLayout else { return }
         if layout.words.isEmpty {
-            root.setStatus("Brak tekstu do czytania — otwórz edytor.")
+            root.setStatus("Brak tekstu do czytania. Otwórz edytor.")
             return
         }
         // Pressing play at the end starts over.

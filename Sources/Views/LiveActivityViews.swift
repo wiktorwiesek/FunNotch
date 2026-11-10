@@ -136,9 +136,12 @@ private struct ChinLine: View {
     }
 }
 
-/// "**Name** did something": the subject in white, the rest softer.
+/// "**Name** did something": the subject in white and semibold, the rest
+/// softer after a gap. The difference in weight is the separator; a middle
+/// dot between the two is the punctuation of a generated interface.
 private func headline(_ subject: String, _ rest: String) -> Text {
-    Text(subject).fontWeight(.semibold) + Text(rest).foregroundColor(.white.opacity(0.7))
+    guard !rest.isEmpty else { return Text(subject).fontWeight(.semibold) }
+    return Text(subject).fontWeight(.semibold) + Text("\u{2002}" + rest).foregroundColor(.white.opacity(0.7))
 }
 
 // MARK: - Dispatcher
@@ -424,7 +427,7 @@ private struct BatteryBanner: View {
             } chin: {
                 ChinLine(time: time, text: headline(
                     battery.isPluggedIn ? (battery.isCharged ? "W pełni naładowana" : "Ładowanie") : "Na baterii",
-                    battery.timeRemainingText.map { " · \($0)" } ?? ""
+                    battery.timeRemainingText.map { "\($0)" } ?? ""
                 ))
             }
         }
@@ -528,7 +531,7 @@ private struct BluetoothBanner: View {
             } chin: {
                 ChinLine(time: time, text: headline(
                     bluetooth.lastChange?.device.name ?? "Bluetooth",
-                    connected ? " · połączono" : " · rozłączono"
+                    connected ? "połączono" : "rozłączono"
                 ))
             }
         }
@@ -565,7 +568,7 @@ private struct ScreenshotBanner: View {
             } trailing: {
                 ShelfThumbnail(url: screenshots.lastCatch, shelf: shelf, time: time)
             } chin: {
-                ChinLine(time: time, text: headline("Zrzut ekranu", " · dodano do półki"))
+                ChinLine(time: time, text: headline("Zrzut ekranu", "dodano do półki"))
             }
         }
     }
@@ -601,7 +604,7 @@ private struct DownloadBanner: View {
                 ShelfThumbnail(url: downloads.lastDownload, shelf: shelf, time: time)
             } chin: {
                 ChinLine(time: time, text: headline(
-                    downloads.lastDownload?.lastPathComponent ?? "Pobieranie", " · zakończono"
+                    downloads.lastDownload?.lastPathComponent ?? "Pobieranie", "zakończono"
                 ))
             }
         }
@@ -684,9 +687,9 @@ private struct FocusBanner: View {
     }
 
     private var chinText: Text {
-        if finished { return headline("Skupienie", " · sesja zakończona") }
-        if focus.isOnBreak { return headline("Przerwa", " · rozprostuj nogi") }
-        return headline("Skupienie", " · zostało \(focus.remainingText)")
+        if finished { return headline("Skupienie", "sesja zakończona") }
+        if focus.isOnBreak { return headline("Przerwa", "rozprostuj nogi") }
+        return headline("Skupienie", "zostało \(focus.remainingText)")
     }
 }
 
@@ -763,12 +766,12 @@ private struct AgentBanner: View {
         let name = announcement.session.name
         switch announcement.event {
         case .started:
-            return headline(name, " · zaczyna pracę")
+            return headline(name, "zaczyna pracę")
         case .finished:
-            return headline(name, " · zakończono")
+            return headline(name, "zakończono")
         case let .needsInput(reason):
             let text = AgentSessionsManager.waitingText(reason)
-            return headline(name, " · " + text.prefix(1).lowercased() + text.dropFirst())
+            return headline(name, text.prefix(1).lowercased() + text.dropFirst())
         }
     }
 }
@@ -811,10 +814,7 @@ struct MusicPeekBanner: View {
         if MediaExtrasDefaults.lyricsInClosedNotch, let line = lyrics.currentText {
             return Text(line).fontWeight(.medium)
         }
-        return headline(
-            music.track.title,
-            music.track.artist.isEmpty ? "" : " — \(music.track.artist)"
-        )
+        return headline(music.track.title, music.track.artist)
     }
 
     private var artwork: some View {

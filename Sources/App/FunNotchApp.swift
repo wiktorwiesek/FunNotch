@@ -138,7 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             : Polish.count(added.count, "plik", "pliki", "plików")
         IslandCenter.shared.post(Island(
             symbol: "tray.and.arrow.down.fill", tint: Color(red: 0.35, green: 0.68, blue: 1),
-            title: "Półka", detail: " · " + name, duration: 3, cat: .peek
+            title: "Półka", detail: name, duration: 3, cat: .peek
         ))
     }
 }

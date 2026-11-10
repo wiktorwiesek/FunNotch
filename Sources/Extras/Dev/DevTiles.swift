@@ -81,7 +81,7 @@ struct GitHubTile: View {
     private var compactBody: some View {
         if let repo = featured {
             VStack(alignment: .leading, spacing: 2) {
-                PanelLabel(text: manager.repos.count > 1 ? "GitHub · \(manager.repos.count) repo" : "GitHub · \(repo.name)")
+                PanelLabel(text: manager.repos.count > 1 ? "GitHub, \(manager.repos.count) repo" : "GitHub, \(repo.name)")
                 if let error = repo.error, repo.run == nil {
                     Text(error)
                         .font(.system(size: 8))
@@ -136,7 +136,7 @@ struct GitHubTile: View {
         }
         .buttonStyle(NotchPressStyle(scale: 0.95))
         .notchControl(in: Capsule(), lift: 1.04, bleed: 4)
-        .help("\(help) · otwórz w przeglądarce")
+        .help("\(help). Kliknij, aby otworzyć w przeglądarce.")
     }
 
     // MARK: Expanded
@@ -224,7 +224,7 @@ struct GitHubTile: View {
 
     private func ciLine(_ repo: GitHubRepoStatus) -> String {
         guard let run = repo.run else { return "Brak przebiegów CI na \(repo.branch)" }
-        return "\(ciTitle(run)) na \(repo.branch) · \(run.title)"
+        return "\(ciTitle(run)) na \(repo.branch): \(run.title)"
     }
 
     static func tint(of run: GitHubRun?) -> Color {
@@ -380,8 +380,8 @@ private struct AIUsageBars: View {
                         }
                     }
                     if showLabels {
-                        Text(Self.weekday.string(from: day.date).uppercased())
-                            .font(.system(size: 7, weight: .semibold, design: .monospaced))
+                        Text(Self.weekday.string(from: day.date).capitalized)
+                            .font(.system(size: 7, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.4))
                     }
                 }
@@ -584,7 +584,7 @@ struct LauncherTile: View {
         .buttonStyle(NotchPressStyle(scale: 0.92))
         .notchControl(in: RoundedRectangle(cornerRadius: size * 0.26, style: .continuous), lift: 1.08, bleed: 3)
         .disabled(icon == nil)
-        .help(icon == nil ? "\(store.name(of: path)) — nie znaleziono aplikacji" : store.name(of: path))
+        .help(icon == nil ? "\(store.name(of: path)): nie znaleziono aplikacji" : store.name(of: path))
         .contextMenu {
             Button("Pokaż w Finderze") {
                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])

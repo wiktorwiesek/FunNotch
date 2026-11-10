@@ -338,7 +338,7 @@ final class ShelfConverter: ObservableObject {
             symbol: "checkmark.circle.fill",
             tint: SettingsStyle.green,
             title: title,
-            detail: " · \(conversion.doneWord)",
+            detail: "\(conversion.doneWord)",
             trailing: added.count == 1 ? formattedFileSize(added[0].size) : nil,
             duration: 3.5
         ))
@@ -362,7 +362,7 @@ final class ShelfConverter: ObservableObject {
             symbol: "exclamationmark.triangle.fill",
             tint: SettingsStyle.orange,
             title: "Nie udało się",
-            detail: " · \(message)",
+            detail: "\(message)",
             duration: 5
         ))
         scheduleRemoval(of: id, after: 12)

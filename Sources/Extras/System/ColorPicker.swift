@@ -39,7 +39,7 @@ enum ColorPicker {
                     symbol: "eyedropper.halffull",
                     tint: Color(nsColor: color),
                     title: "Kolor",
-                    detail: " · skopiowano",
+                    detail: "skopiowano",
                     trailing: hex
                 ))
                 completion?(hex)

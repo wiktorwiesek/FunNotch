@@ -36,7 +36,7 @@ struct MirroredNotification: Identifiable, Equatable {
 
     /// Subtitle and body together, for the softer line under the heading.
     var detail: String {
-        [subtitle, body].filter { !$0.isEmpty }.joined(separator: " · ")
+        [subtitle, body].filter { !$0.isEmpty }.joined(separator: ": ")
     }
 
     /// Lowercased title and body without spacing differences, used to tell

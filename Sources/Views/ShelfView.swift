@@ -321,7 +321,7 @@ private struct ShelfItemTile: View {
             Divider()
             Button("Usuń z półki") { shelf.remove(id: item.id) }
         }
-        .help("\(item.name)\n\(formattedFileSize(item.size)) · \(item.typeDescription)")
+        .help("\(item.name)\n\(formattedFileSize(item.size)), \(item.typeDescription)")
     }
 }
 

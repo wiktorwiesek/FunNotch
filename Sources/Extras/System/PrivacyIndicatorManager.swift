@@ -226,11 +226,11 @@ final class PrivacyIndicatorManager: ObservableObject {
         let island: Island
         switch (camera, microphone) {
         case (true, true):
-            island = Island(symbol: "video.fill", tint: .green, title: "Kamera i mikrofon", detail: " · w użyciu", duration: 3)
+            island = Island(symbol: "video.fill", tint: .green, title: "Kamera i mikrofon", detail: "w użyciu", duration: 3)
         case (true, false):
-            island = Island(symbol: "video.fill", tint: .green, title: "Kamera", detail: " · w użyciu", duration: 3)
+            island = Island(symbol: "video.fill", tint: .green, title: "Kamera", detail: "w użyciu", duration: 3)
         case (false, true):
-            island = Island(symbol: "mic.fill", tint: .orange, title: "Mikrofon", detail: " · w użyciu", duration: 3)
+            island = Island(symbol: "mic.fill", tint: .orange, title: "Mikrofon", detail: "w użyciu", duration: 3)
         case (false, false):
             return
         }
@@ -256,7 +256,7 @@ final class PrivacyIndicatorManager: ObservableObject {
             guard !Task.isCancelled, let self, self.screenActive else { return }
             IslandCenter.shared.post(Island(
                 symbol: "record.circle.fill", tint: .purple,
-                title: "Ekran", detail: " · jest nagrywany lub udostępniany", duration: 3
+                title: "Ekran", detail: "jest nagrywany lub udostępniany", duration: 3
             ))
         }
     }

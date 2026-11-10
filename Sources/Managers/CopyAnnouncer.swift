@@ -82,7 +82,7 @@ final class CopyAnnouncer {
             symbol: symbol,
             tint: tint,
             title: "Skopiowano",
-            detail: " · " + preview,
+            detail: preview,
             duration: islandDuration,
             isQuiet: true,
             cat: .peek

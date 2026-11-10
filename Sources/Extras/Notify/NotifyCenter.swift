@@ -147,7 +147,7 @@ final class NotifyCenter: ObservableObject {
                 IslandCenter.shared.post(Island(
                     symbol: "bell.slash.fill", tint: .orange,
                     title: "Powiadomienia nie działają",
-                    detail: " · brak zgody Dostępność",
+                    detail: "brak zgody Dostępność",
                     action: IslandAction(title: "Napraw") { NotifyCenter.shared.openAccessibilitySettings() },
                     duration: 10
                 ))
@@ -250,7 +250,7 @@ final class NotifyCenter: ObservableObject {
             island = Island(
                 symbol: "key.fill", tint: .yellow,
                 title: "Kod " + code,
-                detail: " · " + item.appName,
+                detail: item.appName,
                 action: IslandAction(title: "Kopiuj kod") { NotifyCenter.shared.copyCode(code) },
                 duration: 8
             )
@@ -261,8 +261,8 @@ final class NotifyCenter: ObservableObject {
                 symbol: style.symbol, tint: style.tint,
                 title: showPreview ? heading : item.appName,
                 detail: showPreview
-                    ? (text.isEmpty ? "" : " · " + text)
-                    : (item.isMessages ? " · nowa wiadomość" : " · nowe powiadomienie"),
+                    ? (text.isEmpty ? "" : text)
+                    : (item.isMessages ? "nowa wiadomość" : "nowe powiadomienie"),
                 duration: 5,
                 cat: style.cat
             )
@@ -328,7 +328,7 @@ final class NotifyCenter: ObservableObject {
         pasteboard.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
         IslandCenter.shared.post(Island(
             symbol: "checkmark.circle.fill", tint: .green,
-            title: "Skopiowano kod", detail: " · " + code, duration: 2
+            title: "Skopiowano kod", detail: code, duration: 2
         ))
     }
 

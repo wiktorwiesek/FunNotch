@@ -430,7 +430,7 @@ final class AIUsageManager: ObservableObject {
             symbol: "dollarsign.circle.fill",
             tint: SettingsStyle.orange,
             title: "Zużycie AI",
-            detail: " · dziś przekroczono \(Self.money(limit))",
+            detail: "dziś przekroczono \(Self.money(limit))",
             trailing: Self.money(snapshot.todayCost),
             duration: 6
         ))
@@ -488,6 +488,6 @@ final class AIUsageManager: ObservableObject {
     var summaryLine: String {
         guard hasScanned else { return "Liczenie…" }
         let prefix = snapshot.todayIsEstimate ? "ok. " : ""
-        return "\(prefix)\(Self.money(snapshot.todayCost)) · \(Self.tokens(snapshot.todayTokens)) tokenów"
+        return "\(prefix)\(Self.money(snapshot.todayCost)), \(Self.tokens(snapshot.todayTokens)) tokenów"
     }
 }

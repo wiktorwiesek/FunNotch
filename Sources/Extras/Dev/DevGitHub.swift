@@ -438,13 +438,13 @@ final class GitHubManager: ObservableObject {
         let symbol: String, tint: Color, detail: String
         switch run.state {
         case .success:
-            (symbol, tint, detail) = ("checkmark.circle.fill", SettingsStyle.green, " · CI na \(status.branch) przeszło")
+            (symbol, tint, detail) = ("checkmark.circle.fill", SettingsStyle.green, "CI na \(status.branch) przeszło")
         case .failure:
-            (symbol, tint, detail) = ("xmark.octagon.fill", SettingsStyle.red, " · CI na \(status.branch) nie przeszło")
+            (symbol, tint, detail) = ("xmark.octagon.fill", SettingsStyle.red, "CI na \(status.branch) nie przeszło")
         case .cancelled:
-            (symbol, tint, detail) = ("slash.circle.fill", SettingsStyle.gray, " · CI na \(status.branch) anulowane")
+            (symbol, tint, detail) = ("slash.circle.fill", SettingsStyle.gray, "CI na \(status.branch) anulowane")
         default:
-            (symbol, tint, detail) = ("circle.dashed", SettingsStyle.gray, " · CI na \(status.branch) zakończone")
+            (symbol, tint, detail) = ("circle.dashed", SettingsStyle.gray, "CI na \(status.branch) zakończone")
         }
         let url = run.url
         IslandCenter.shared.post(Island(

@@ -215,9 +215,9 @@ final class NotchWindowSnapper {
 
         let detail: String
         switch problem {
-        case .noWindow: detail = " · nie udało się uzyskać dostępu do okna"
-        case .cannotMove: detail = " · okno nie pozwala się przesunąć"
-        case .cannotResize: detail = " · okno nie pozwala zmienić rozmiaru"
+        case .noWindow: detail = "nie udało się uzyskać dostępu do okna"
+        case .cannotMove: detail = "okno nie pozwala się przesunąć"
+        case .cannotResize: detail = "okno nie pozwala zmienić rozmiaru"
         }
         DiagnosticLog.write("windowsnap", "\(name) not snapped (\(zone)): \(detail)")
         IslandCenter.shared.post(Island(

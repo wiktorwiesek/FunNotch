@@ -53,14 +53,16 @@ struct HomePanelChrome<Content: View>: View {
 
 // MARK: - Shared pieces
 
-/// A caption in the strip's house style.
+/// The caption of a tile or a panel: the body face a step smaller, in
+/// sentence case. It used to be 7-point monospaced capitals with their
+/// letters spread apart, which says "label" in the voice of a template and
+/// was too small to read.
 struct PanelLabel: View {
     let text: String
     var body: some View {
-        Text(text.uppercased())
-            .font(.system(size: 7, weight: .semibold, design: .monospaced))
-            .tracking(0.6)
-            .foregroundStyle(.white.opacity(0.4))
+        Text(text)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(.white.opacity(0.5))
             .lineLimit(1)
     }
 }
@@ -197,7 +199,7 @@ private struct QuickActionsPanel: View {
             list.append(QuickActionItem(
                 id: "awake",
                 symbol: keepAwake.isActive ? KeepAwakeManager.activeSymbol : KeepAwakeManager.symbol,
-                label: keepAwake.isActive ? "Nie usypia · \(keepAwake.remainingText())" : "Nie usypiaj",
+                label: keepAwake.isActive ? "Nie usypia, \(keepAwake.remainingText())" : "Nie usypiaj",
                 activeTint: keepAwake.isActive ? .yellow : nil,
                 help: keepAwake.helpText(),
                 menu: menu
@@ -209,7 +211,7 @@ private struct QuickActionsPanel: View {
                 symbol: mic.isMuted ? "mic.slash.fill" : "mic.fill",
                 label: mic.isMuted ? "Mikrofon wyciszony" : "Wycisz mikrofon",
                 activeTint: mic.isMuted ? Color(red: 1, green: 0.35, blue: 0.32) : nil,
-                help: mic.isMuted ? "Mikrofon wyciszony — kliknij, aby włączyć" : "Wycisz mikrofon"
+                help: mic.isMuted ? "Mikrofon wyciszony. Kliknij, aby włączyć." : "Wycisz mikrofon"
             ) { MicMuteManager.shared.toggle() })
         }
         if showOutput {
@@ -308,7 +310,7 @@ private struct BatteryPanel: View {
             return "Ładowanie"
         }
         if battery.isCharged {
-            return battery.adapterWatts.map { "Naładowana · \($0) W" } ?? "Naładowana"
+            return battery.adapterWatts.map { "Naładowana, \($0) W" } ?? "Naładowana"
         }
         if battery.isLowPowerMode { return "Oszczędzanie" }
         if let minutes = battery.timeRemaining, minutes > 0 {

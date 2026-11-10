@@ -290,7 +290,7 @@ struct DecorSettings: View {
                 symbol: "sparkles",
                 tint: .white,
                 title: "Podgląd",
-                detail: " · tak wygląda baner",
+                detail: "tak wygląda baner",
                 trailing: "OK",
                 duration: 3
             )

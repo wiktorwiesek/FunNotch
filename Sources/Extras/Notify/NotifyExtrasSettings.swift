@@ -102,7 +102,7 @@ struct NotifyExtrasSettings: View {
     private func previewIsland() {
         IslandCenter.shared.post(Island(
             symbol: "message.fill", tint: .green,
-            title: "Anna", detail: " · Będę za dziesięć minut",
+            title: "Anna", detail: "Będę za dziesięć minut",
             action: IslandAction(title: "Otwórz") {},
             duration: 4,
             cat: .texting

@@ -82,7 +82,7 @@ final class AudioOutputManager: ObservableObject {
         guard main else {
             DiagnosticLog.write("audio", "could not switch output to \(output.name)")
             IslandCenter.shared.post(Island(
-                symbol: "speaker.slash", tint: .orange, title: output.name, detail: " · nie udało się przełączyć", duration: 3
+                symbol: "speaker.slash", tint: .orange, title: output.name, detail: "nie udało się przełączyć", duration: 3
             ))
             return
         }
@@ -104,12 +104,12 @@ final class AudioOutputManager: ObservableObject {
     private func announce(_ output: Output) {
         guard UserDefaults.standard.bool(forKey: Self.announceKey) else { return }
         IslandCenter.shared.post(Island(
-            symbol: output.symbol, tint: .white, title: output.name, detail: " · wyjście dźwięku", duration: 2.5
+            symbol: output.symbol, tint: .white, title: output.name, detail: "wyjście dźwięku", duration: 2.5
         ))
     }
 
     var helpText: String {
-        current.map { "Wyjście dźwięku: \($0.name) — kliknij, aby zmienić" } ?? "Wyjście dźwięku: brak urządzenia"
+        current.map { "Wyjście dźwięku: \($0.name). Kliknij, aby zmienić." } ?? "Wyjście dźwięku: brak urządzenia"
     }
 
     // MARK: Icons

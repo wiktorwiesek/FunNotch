@@ -49,7 +49,7 @@ extension PreviewRenderer {
             QuickActionItem(id: "shot", symbol: "camera.viewfinder", label: "Zrzut ekranu", help: "") {},
             QuickActionItem(id: "timer", symbol: "timer", label: "Minutnik", help: "") {},
             QuickActionItem(
-                id: "awake", symbol: KeepAwakeManager.activeSymbol, label: "Nie usypia · 45 min",
+                id: "awake", symbol: KeepAwakeManager.activeSymbol, label: "Nie usypia, 45 min",
                 activeTint: .yellow, help: "", menu: menu
             ) {},
             QuickActionItem(id: "mic", symbol: "mic.fill", label: "Wycisz mikrofon", help: "") {},

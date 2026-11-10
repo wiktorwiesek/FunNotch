@@ -93,7 +93,7 @@ final class KeepAwakeManager: ObservableObject {
             isActive = false
             endDate = nil
             DiagnosticLog.write("keepawake", "could not create power assertion")
-            post(symbol: Self.symbol, detail: " · nie udało się włączyć", tint: .orange)
+            post(symbol: Self.symbol, detail: "nie udało się włączyć", tint: .orange)
             return
         }
 
@@ -104,7 +104,7 @@ final class KeepAwakeManager: ObservableObject {
     }
 
     func deactivate() {
-        finish(detail: " · wyłączone")
+        finish(detail: "wyłączone")
     }
 
     func toggle() {
@@ -134,7 +134,7 @@ final class KeepAwakeManager: ObservableObject {
 
     private func expireIfDue() {
         guard isActive, let endDate, Date() >= endDate else { return }
-        finish(detail: " · czas minął")
+        finish(detail: "czas minął")
     }
 
     private func finish(detail: String) {
@@ -190,11 +190,11 @@ final class KeepAwakeManager: ObservableObject {
         return formatter
     }()
 
-    /// " · do 18:30" or " · bez limitu".
+    /// "do 18:30" or "bez limitu".
     static func summary(until date: Date?) -> String {
-        guard let date else { return " · bez limitu" }
-        if Calendar.current.isDateInToday(date) { return " · do \(clock.string(from: date))" }
-        return " · do jutra \(clock.string(from: date))"
+        guard let date else { return "bez limitu" }
+        if Calendar.current.isDateInToday(date) { return "do \(clock.string(from: date))" }
+        return "do jutra \(clock.string(from: date))"
     }
 
     /// What the closed-notch widget shows: "1:23" over an hour, "45 min",
@@ -211,10 +211,10 @@ final class KeepAwakeManager: ObservableObject {
 
     /// Longer form for tooltips: "do 18:30 (zostało 1:23)".
     func helpText(at now: Date = Date()) -> String {
-        guard isActive else { return "Nie usypiaj: wyłączone — kliknij, aby włączyć" }
-        guard let endDate else { return "Mac nie zaśnie, dopóki tego nie wyłączysz — kliknij, aby wyłączyć" }
+        guard isActive else { return "Nie usypiaj: wyłączone. Kliknij, aby włączyć." }
+        guard let endDate else { return "Mac nie zaśnie, dopóki tego nie wyłączysz. Kliknij, aby wyłączyć." }
         let remaining = remainingText(at: now)
-        return "Mac nie zaśnie do \(Self.clock.string(from: endDate)) (zostało \(remaining)) — kliknij, aby wyłączyć"
+        return "Mac nie zaśnie do \(Self.clock.string(from: endDate)) (zostało \(remaining)). Kliknij, aby wyłączyć."
     }
 
     /// The choices offered on right-click.

@@ -708,7 +708,7 @@ struct ClipboardSmartContent: View {
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Spacer(minLength: 0)
-                Text("\(characters.formatted(.number.locale(Polish.locale))) \(Polish.plural(characters, "znak", "znaki", "znaków")) · \(words.formatted(.number.locale(Polish.locale))) \(Polish.plural(words, "słowo", "słowa", "słów"))")
+                Text("\(characters.formatted(.number.locale(Polish.locale))) \(Polish.plural(characters, "znak", "znaki", "znaków")), \(words.formatted(.number.locale(Polish.locale))) \(Polish.plural(words, "słowo", "słowa", "słów"))")
                     .font(.system(size: 8))
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)

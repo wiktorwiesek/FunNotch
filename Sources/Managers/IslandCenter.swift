@@ -25,7 +25,7 @@ struct Island: Identifiable {
     var tint: Color = .white
     /// Bold part of the chin line, e.g. the app or device name.
     var title: String
-    /// Softer rest of the chin line, e.g. " · podłączono". May be empty.
+    /// Softer rest of the chin line, e.g. "podłączono". May be empty.
     var detail: String = ""
     /// Short value in the right wing when there is no action, e.g. "80%".
     var trailing: String?

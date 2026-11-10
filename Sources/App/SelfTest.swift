@@ -1178,7 +1178,7 @@ enum SelfTest {
         })
         check(
             "the report can be copied as text",
-            report.plainText.contains("Fun Notch — diagnostyka") && report.plainText.count > 200
+            !report.sections.isEmpty && report.sections.allSatisfy { report.plainText.contains($0.title) }
         )
         info("diagnostics rows", "\(report.sections.reduce(0) { $0 + $1.rows.count })")
 

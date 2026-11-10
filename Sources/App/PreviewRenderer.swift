@@ -968,23 +968,23 @@ extension PreviewRenderer {
         scenes.append(("qa-island-action", { viewModel in
             qaReset(viewModel)
             qaIsland(viewModel, symbol: "bubble.left.fill", tint: .green, title: "Anna Kowalska",
-                     detail: " · Cześć, masz chwilę na rozmowę o fakturze?", action: "Odpowiedz")
+                     detail: "Cześć, masz chwilę na rozmowę o fakturze?", action: "Odpowiedz")
         }))
         scenes.append(("qa-island-eject", { viewModel in
             qaReset(viewModel)
             qaIsland(viewModel, symbol: "externaldrive.fill", tint: .orange,
-                     title: "Dysk zewnętrzny z kopiami zapasowymi", detail: " · można bezpiecznie wysunąć",
+                     title: "Dysk zewnętrzny z kopiami zapasowymi", detail: "można bezpiecznie wysunąć",
                      action: "Wysuń")
         }))
         scenes.append(("qa-island-value", { viewModel in
             qaReset(viewModel)
-            qaIsland(viewModel, symbol: "lock.open.fill", tint: .yellow, title: "Caps Lock", detail: " · włączony",
+            qaIsland(viewModel, symbol: "lock.open.fill", tint: .yellow, title: "Caps Lock", detail: "włączony",
                      trailing: "WŁ.")
         }))
         scenes.append(("qa-island-code", { viewModel in
             qaReset(viewModel)
             qaIsland(viewModel, symbol: "number.square.fill", tint: .cyan, title: "Kod: 482 193",
-                     detail: " · Google", action: "Kopiuj")
+                     detail: "Google", action: "Kopiuj")
         }))
 
         // BEGIN CopyAirDrop: "Skopiowano" and AirDrop islands, built by the production code.
@@ -1100,7 +1100,7 @@ extension PreviewRenderer {
             qaReset(viewModel)
             viewModel.previewForceIsland = true
             viewModel.closedNotchSize = CGSize(width: settings.islandWidth, height: 32 + settings.islandTopGap)
-            qaIsland(viewModel, symbol: "bubble.left.fill", tint: .green, title: "Anna", detail: " · Cześć!",
+            qaIsland(viewModel, symbol: "bubble.left.fill", tint: .green, title: "Anna", detail: "Cześć!",
                      action: "Odpowiedz")
         }))
 

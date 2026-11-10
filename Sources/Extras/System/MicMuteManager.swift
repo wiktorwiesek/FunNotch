@@ -133,7 +133,7 @@ final class MicMuteManager: ObservableObject {
         guard let control else {
             IslandCenter.shared.post(Island(
                 symbol: "mic.slash", tint: .orange, title: "Mikrofon",
-                detail: " · nie da się wyciszyć tego urządzenia", duration: 3
+                detail: "nie da się wyciszyć tego urządzenia", duration: 3
             ))
             return
         }
@@ -154,7 +154,7 @@ final class MicMuteManager: ObservableObject {
         guard succeeded else {
             DiagnosticLog.write("mic", "could not change mute on \(deviceName ?? "input")")
             IslandCenter.shared.post(Island(
-                symbol: "mic.slash", tint: .orange, title: "Mikrofon", detail: " · nie udało się zmienić", duration: 3
+                symbol: "mic.slash", tint: .orange, title: "Mikrofon", detail: "nie udało się zmienić", duration: 3
             ))
             return
         }
@@ -197,7 +197,7 @@ final class MicMuteManager: ObservableObject {
             symbol: muted ? "mic.slash.fill" : "mic.fill",
             tint: muted ? Color(red: 1, green: 0.35, blue: 0.32) : .green,
             title: "Mikrofon",
-            detail: muted ? " · wyciszony" : " · włączony",
+            detail: muted ? "wyciszony" : "włączony",
             duration: 2.2
         ))
     }
@@ -205,6 +205,6 @@ final class MicMuteManager: ObservableObject {
     var helpText: String {
         guard isSupported else { return "Mikrofon: to urządzenie nie ma regulacji wyciszenia" }
         let device = deviceName.map { " (\($0))" } ?? ""
-        return isMuted ? "Mikrofon wyciszony\(device) — kliknij, aby włączyć" : "Mikrofon włączony\(device) — kliknij, aby wyciszyć"
+        return isMuted ? "Mikrofon wyciszony\(device). Kliknij, aby włączyć." : "Mikrofon włączony\(device). Kliknij, aby wyciszyć."
     }
 }

@@ -246,7 +246,7 @@ final class DownloadWatcher: ObservableObject {
             symbol: airDropSymbol,
             tint: Color(red: 0.35, green: 0.68, blue: 1),
             title: "AirDrop",
-            detail: " · " + name,
+            detail: name,
             action: IslandAction(title: "Pokaż") {
                 NSWorkspace.shared.activateFileViewerSelecting(urls)
             },

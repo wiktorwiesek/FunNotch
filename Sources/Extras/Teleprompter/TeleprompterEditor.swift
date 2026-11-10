@@ -121,7 +121,7 @@ struct TeleprompterEditorView: View {
         guard count > 0 else { return "0 słów" }
         let seconds = Int((Double(count) / store.wordsPerMinute * 60).rounded())
         let reading = seconds < 60 ? "\(seconds) s" : "\(seconds / 60) min \(String(format: "%02d", seconds % 60)) s"
-        return "\(count) \(Self.plural(count)) · czytanie ok. \(reading) przy \(Int(store.wordsPerMinute)) słów/min"
+        return "\(count) \(Self.plural(count)), czytanie ok. \(reading) przy \(Int(store.wordsPerMinute)) słów/min"
     }
 
     private static func plural(_ count: Int) -> String {
@@ -157,7 +157,7 @@ final class TeleprompterEditorController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Teleprompter — tekst"
+        window.title = "Tekst telepromptera"
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 380, height: 260)
         window.delegate = self

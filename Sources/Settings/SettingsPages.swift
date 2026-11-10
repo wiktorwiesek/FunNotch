@@ -444,8 +444,8 @@ private struct SettingsAgentRow: View {
     }
 
     private var detail: String {
-        var place = "\(session.agent.rawValue) · \(session.project)"
-        if let usage = session.usage { place += " · \(usage.summary)" }
+        var place = "\(session.agent.rawValue), \(session.project)"
+        if let usage = session.usage { place += "  \(usage.summary)" }
         switch session.status {
         case .working:
             if session.activity == nil, session.backgroundAgents > 0 {

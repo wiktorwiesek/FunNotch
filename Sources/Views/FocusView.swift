@@ -419,11 +419,11 @@ private struct TimeDial: View {
 
     private func helpText(_ reading: DialReading) -> String {
         switch mode {
-        case .focus: return focus.isActive ? "" : "Przeciągnij po tarczy, aby ustawić czas · kliknij, aby zacząć"
+        case .focus: return focus.isActive ? "" : "Przeciągnij po tarczy, aby ustawić czas. Kliknij, aby zacząć."
         case .timer:
             if timer.finished { return "Kliknij, aby zamknąć" }
             if timer.countdownIsSet { return timer.isCountdownRunning ? "Kliknij, aby wstrzymać" : "Kliknij, aby wznowić" }
-            return "Przeciągnij po tarczy, aby ustawić czas · kliknij, aby zacząć"
+            return "Przeciągnij po tarczy, aby ustawić czas. Kliknij, aby zacząć."
         case .stopwatch: return timer.isStopwatchRunning ? "Kliknij, aby zatrzymać" : "Kliknij, aby uruchomić"
         }
     }
@@ -634,7 +634,7 @@ private struct FocusControls: View {
                     settings.focusBlockWebsites.toggle()
                 }
                 ToggleChip(
-                    title: compact ? "Pomodoro" : "Pomodoro · przerwy \(settings.focusBreakMinutes) min",
+                    title: compact ? "Pomodoro" : "Pomodoro, przerwy \(settings.focusBreakMinutes) min",
                     symbol: "arrow.triangle.2.circlepath",
                     isOn: settings.focusPomodoro,
                     help: "Po sesji przerwa, potem powrót do pracy"
@@ -659,7 +659,7 @@ private struct FocusControls: View {
         let apps = settings.focusBlockedApps.count
         if apps > 0 { parts.append("ukrywa \(Polish.count(apps, "aplikację", "aplikacje", "aplikacji"))") }
         if settings.focusPauseMusic { parts.append("wstrzymuje muzykę") }
-        return parts.isEmpty ? "Tylko Ty i odliczanie." : parts.joined(separator: " · ")
+        return parts.isEmpty ? "Tylko Ty i odliczanie." : parts.joined(separator: ", ")
     }
 
     private var active: some View {
@@ -708,7 +708,7 @@ private struct FocusControls: View {
         if focus.blockedCount > 0 {
             parts.append("zablokowano \(Polish.count(focus.blockedCount, "kartę", "karty", "kart"))")
         }
-        return parts.joined(separator: " · ")
+        return parts.joined(separator: ", ")
     }
 }
 
@@ -809,7 +809,7 @@ private struct TimerControls: View {
 
     private var runningDetail: String {
         if let end = timer.endDate {
-            return "\(TimerManager.shortLength(timer.duration)) · dzwonek o \(FocusView.timeText(end))"
+            return "\(TimerManager.shortLength(timer.duration)), dzwonek o \(FocusView.timeText(end))"
         }
         return "Zostało \(TimerManager.clock(timer.remaining)) z \(TimerManager.shortLength(timer.duration))"
     }
@@ -877,7 +877,7 @@ private struct StopwatchControls: View {
 
     private var detail: String {
         if timer.elapsed == 0 { return "Kliknij tarczę lub Start. „Okrążenie” zapisuje międzyczas." }
-        let current = "Okrążenie \(timer.laps.count + 1) · \(TimerManager.stopwatchClock(timer.currentLap))"
+        let current = "Okrążenie \(timer.laps.count + 1): \(TimerManager.stopwatchClock(timer.currentLap))"
         return current
     }
 }
@@ -910,10 +910,7 @@ private struct PanelTitle: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title.uppercased())
-                .font(.system(size: 8, weight: .semibold))
-                .tracking(0.6)
-                .foregroundStyle(.white.opacity(0.4))
+            PanelLabel(text: title)
             Spacer(minLength: 4)
             if let trailing {
                 Text(trailing)
@@ -1042,7 +1039,6 @@ private struct RecentRow: View {
                     .font(.system(size: 7, weight: .bold))
                     .foregroundStyle(ClockPalette.timer)
                     .frame(width: 14, height: 14)
-                    .notchGlass(in: Circle(), tint: ClockPalette.timer, subtle: true)
                 Text(TimerManager.shortLength(seconds))
                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.85))
@@ -1051,12 +1047,17 @@ private struct RecentRow: View {
                     Text("koniec o \(FocusView.timeText(context.date.addingTimeInterval(seconds)))")
                         .font(.system(size: 9, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(.white.opacity(isHovering ? 0.6 : 0.35))
+                        .foregroundStyle(.white.opacity(isHovering ? 0.7 : 0.4))
                 }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .notchGlass(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lit: isHovering, subtle: true)
+            // A row of the panel, not a card inside it: only the pointer
+            // gives it a surface.
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.white.opacity(isHovering ? 0.08 : 0))
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(NotchPressStyle(scale: 0.97))

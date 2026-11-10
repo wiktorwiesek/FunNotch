@@ -28,7 +28,7 @@ enum WindowSwitcher {
     /// Scans, then opens the menu where the pointer is by then.
     static func showMenu() {
         guard AXIsProcessTrusted() else {
-            announce(" · wymaga uprawnienia Dostępność", tint: .orange)
+            announce("wymaga uprawnienia Dostępność", tint: .orange)
             return
         }
         let ownPID = ProcessInfo.processInfo.processIdentifier
@@ -55,7 +55,7 @@ enum WindowSwitcher {
 
     private static func present(_ windows: [OpenWindow]) {
         guard !windows.isEmpty else {
-            announce(" · brak otwartych okien", tint: .white)
+            announce("brak otwartych okien", tint: .white)
             return
         }
         PointerMenu.show(windows.prefix(limit).map { window in

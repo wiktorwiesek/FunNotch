@@ -55,10 +55,7 @@ struct AgentSessionsTile: View {
 
     private var header: some View {
         HStack(spacing: 4) {
-            Text("AGENCI")
-                .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                .tracking(0.7)
-                .foregroundStyle(.white.opacity(0.4))
+            PanelLabel(text: "Agenci")
             Spacer(minLength: 0)
             summaryBadge
         }
@@ -154,8 +151,8 @@ struct AgentSessionsTile: View {
         guard others > 0 else { return base }
         let busyOthers = agents.activeCount - (session.status.isActive ? 1 : 0)
         return busyOthers > 0
-            ? "\(base) · jeszcze \(busyOthers) \(Polish.plural(busyOthers, "aktywna", "aktywne", "aktywnych"))"
-            : "\(base) · jeszcze \(others)"
+            ? "\(base), jeszcze \(busyOthers) \(Polish.plural(busyOthers, "aktywna", "aktywne", "aktywnych"))"
+            : "\(base), jeszcze \(others)"
     }
 }
 
@@ -190,7 +187,7 @@ private struct AgentRow: View {
         }
         .buttonStyle(NotchPressStyle(scale: 0.97))
         .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.01)
-        .help("\(session.agent.rawValue), projekt \(session.project) — kliknij, aby pokazać")
+        .help("\(session.agent.rawValue), projekt \(session.project). Kliknij, aby pokazać.")
     }
 
     static func detail(for session: AgentSessionsManager.Session) -> String {
@@ -203,7 +200,7 @@ private struct AgentRow: View {
                 // The lead has yielded; only its subagents are still at work.
                 status = "W tle: " + Polish.count(session.backgroundAgents, "agent", "agenty", "agentów")
             } else {
-                status = session.name == session.project ? "Pracuje" : "Pracuje · \(session.project)"
+                status = session.name == session.project ? "Pracuje" : "Pracuje w \(session.project)"
             }
         case let .waiting(reason):
             status = AgentSessionsManager.waitingText(reason)
@@ -211,11 +208,11 @@ private struct AgentRow: View {
             if let duration = session.lastTurnDuration {
                 status = "Zakończono w \(AgentSessionsManager.duration(duration))"
             } else {
-                status = session.name == session.project ? "Bezczynny" : "Bezczynny · \(session.project)"
+                status = session.name == session.project ? "Bezczynny" : "Bezczynny, \(session.project)"
             }
         }
         guard let usage = session.usage else { return status }
-        return "\(status) · \(usage.summary)"
+        return "\(status)  \(usage.summary)"
     }
 
     static func detailColor(for session: AgentSessionsManager.Session) -> Color {

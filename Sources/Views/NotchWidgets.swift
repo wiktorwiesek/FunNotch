@@ -494,7 +494,7 @@ private struct WiFiWidget: View {
     private var helpText: String {
         wifi.isLocationAuthorized || !wifi.isConnected
             ? "Sieć Wi-Fi"
-            : "macOS podaje nazwę sieci tylko aplikacjom z dostępem do lokalizacji — kliknij, aby przyznać dostęp"
+            : "macOS podaje nazwę sieci tylko aplikacjom z dostępem do lokalizacji. Kliknij, aby przyznać dostęp."
     }
 }
 
@@ -571,6 +571,6 @@ private struct UnreadWidget: View {
         }
         .fixedSize()
         .onAppear { unread.start() }
-        .help(unread.badges.isEmpty ? "Brak nieprzeczytanych wiadomości" : "Nieprzeczytane wiadomości — kliknij, aby otworzyć")
+        .help(unread.badges.isEmpty ? "Brak nieprzeczytanych wiadomości" : "Nieprzeczytane wiadomości. Kliknij, aby otworzyć.")
     }
 }

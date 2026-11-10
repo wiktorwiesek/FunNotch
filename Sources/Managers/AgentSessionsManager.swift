@@ -121,14 +121,17 @@ final class AgentSessionsManager: ObservableObject {
         let contextTokens: Int?
         let contextWindow: Int?
 
-        /// "1,2 mln tok. · 3,10 USD · kontekst 42%", leaving out what is unknown or zero.
+        /// "1,2 mln tok.  3,10 USD  kontekst 42%", leaving out what is unknown or
+        /// zero. The figures are set apart by space alone: a row of middle dots
+        /// is the punctuation of a generated interface, and commas would run
+        /// into the decimal ones.
         var summary: String {
             var parts = [AgentSessionsManager.tokenCount(tokens) + " tok."]
             if cost >= 0.005 { parts.append(String(format: "%.2f USD", locale: Polish.locale, cost)) }
             if let contextTokens, let contextWindow, contextWindow > 0 {
                 parts.append("kontekst \(Int((Double(contextTokens) / Double(contextWindow) * 100).rounded()))%")
             }
-            return parts.joined(separator: " · ")
+            return parts.joined(separator: "  ")
         }
     }
 

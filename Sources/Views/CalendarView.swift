@@ -222,7 +222,7 @@ private struct AgendaRow: View {
                     }
                 }
 
-                Text(item.countdownText.map { "\(item.timeText) · \($0)" } ?? item.timeText)
+                Text(item.countdownText.map { "\(item.timeText), \($0)" } ?? item.timeText)
                     .font(.system(size: 9))
                     .foregroundStyle(item.isCurrent ? item.calendarColor : .white.opacity(0.5))
             }

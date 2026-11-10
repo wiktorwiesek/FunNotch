@@ -244,8 +244,10 @@ Issues and pull requests are welcome. A few things worth knowing:
   drag handling or the HUD, add a check to `Sources/App/SelfTest.swift`.
 - **Stay on the design scale.** Text sizes, corner radii, spacing and the
   strengths of white in the notch's views come from a short list, and shadows
-  are black (a coloured one is a glow). `Tools/design-lint.sh` has the list
-  and names every value that is off it.
+  are black (a coloured one is a glow). Labels are sentence case in the body
+  face, never spread capitals, and facts are not strung together with middle
+  dots. `Tools/design-lint.sh` has the list and names every line that is off
+  it.
 - **The notch is a non-activating panel.** It never becomes the key window, so
   keyboard events go to whatever app is actually in front. Anything interactive
   up there has to work from pointer position alone.

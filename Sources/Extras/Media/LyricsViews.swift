@@ -75,7 +75,7 @@ struct LyricsPlayerBlock: View {
             }
             .animation(.easeOut(duration: 0.2), value: lyrics.currentIndex)
         case .plain:
-            note("Tekst bez synchronizacji · kliknij, aby przeczytać")
+            note("Tekst bez synchronizacji. Kliknij, aby przeczytać.")
         case .loading, .instrumental, .notFound, .skipped, .unavailable, .idle:
             EmptyView()
         }
