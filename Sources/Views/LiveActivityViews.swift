@@ -184,9 +184,10 @@ private struct IslandBanner: View {
         if let island = center.current {
             IntroTimeline(duration: 1.2) { time in
                 BannerLayout(geometry: geometry) {
-                    if island.mascot {
-                        // The cat peeks up beside "Skopiowano", AirDrop and the like.
-                        CatPeekOr(tint: island.tint) { glyph(island, time: time) }
+                    if let state = island.cat {
+                        // The cat peeks up beside "Skopiowano" and AirDrop, and
+                        // reads, chats or listens for a notification.
+                        CatOr(state: state, tint: island.tint) { glyph(island, time: time) }
                     } else {
                         glyph(island, time: time)
                     }
@@ -543,7 +544,7 @@ private struct ScreenshotBanner: View {
         IntroTimeline(duration: 1.4) { time in
             BannerLayout(geometry: geometry) {
                 // A shutter flash, then the viewfinder; the cat peeks up instead.
-                CatPeekOr(tint: .white) {
+                CatOr(tint: .white) {
                     let flash = Motion.progress(time, duration: 0.45)
                     ZStack {
                         Circle()
@@ -577,7 +578,7 @@ private struct DownloadBanner: View {
         IntroTimeline(duration: 1.4) { time in
             BannerLayout(geometry: geometry) {
                 // The arrow drops into place and rings as it lands; the cat peeks up instead.
-                CatPeekOr(tint: Color(red: 0.35, green: 0.68, blue: 1)) {
+                CatOr(tint: Color(red: 0.35, green: 0.68, blue: 1)) {
                     let drop = Motion.spring(time, response: 0.45, damping: 0.5)
                     let ring = Motion.progress(time, delay: 0.28, duration: 0.6)
                     ZStack {

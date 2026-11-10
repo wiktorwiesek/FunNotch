@@ -54,11 +54,17 @@ Free and open source. No account, no subscription, no telemetry.
   system overlay rather than sitting beside it.
 - **Cat** — one small mascot in place of the generic glyphs: it types while an
   agent works, waves when one needs you, hops when one finishes, bobs to the
-  music, peeks up when a file lands, and sleeps in empty states. Drawn once
-  and played by Core Animation, so it costs the app nothing per frame, and it
-  stops when the notch is hidden, the screen is off, Low Power Mode or Reduce
-  Motion is on. "Kot zamiast ikon" in Settings → Dodatki → Wygląd turns it off
-  and brings the old glyphs back.
+  music, peeks up when a file lands, and sleeps in empty states. It also lives
+  in the closed notch, left of the camera, all the time ("Kot zawsze w
+  notchu"): awake while you are at the Mac, asleep after a few minutes without
+  input, and standing in for the agent light beside the widgets. A
+  notification brings it out in the clip that suits the app: reading a phone
+  for a text message, a speech bubble for Slack and other chats, an envelope
+  for mail, a bell for everything else. Drawn once and played by Core
+  Animation, so it costs the app nothing per frame, and it stops when the
+  notch is hidden, the screen is off, Low Power Mode or Reduce Motion is on.
+  "Kot zamiast ikon" in Settings → Dodatki → Wygląd turns it off and brings
+  the old glyphs back.
 - **No notch? Still works.** On an external display it draws a floating pill in
   the same place, like the Dynamic Island.
 - **And** — camera mirror, calendar and reminders, meeting-link detection,

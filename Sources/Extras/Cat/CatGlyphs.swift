@@ -84,17 +84,24 @@ struct CatOrSymbol: View {
 
 /// Every state side by side on a strip of notch black, for the settings page.
 struct CatStatesPreview: View {
+    private static let perRow = 6
+
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(CatState.allCases) { state in
-                VStack(spacing: 4) {
-                    CatView(state: state, size: 34, tint: Self.tint(for: state))
-                        .frame(width: 44, height: 40)
-                    Text(state.title)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.55))
+        let states = CatState.allCases
+        VStack(spacing: 8) {
+            ForEach(Array(stride(from: 0, to: states.count, by: Self.perRow)), id: \.self) { start in
+                HStack(spacing: 0) {
+                    ForEach(states[start ..< min(start + Self.perRow, states.count)]) { state in
+                        VStack(spacing: 4) {
+                            CatView(state: state, size: 34, tint: Self.tint(for: state))
+                                .frame(width: 44, height: 40)
+                            Text(state.title)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.55))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
-                .frame(maxWidth: .infinity)
             }
         }
         .padding(.vertical, 10)
@@ -110,15 +117,20 @@ struct CatStatesPreview: View {
         case .waiting: return AgentPalette.waiting
         case .done: return AgentPalette.done
         case .music: return CatPalette.musicDefault
+        case .texting: return .green
+        case .chatting: return .purple
+        case .mail: return .cyan
         default: return .white.opacity(0.8)
         }
     }
 }
 
-/// The cat peeking up in a wing, for the islands that announce a thing landing
-/// (a screenshot, a download, a copy, an AirDrop). With the cat off, `fallback`
-/// is the symbol the banner always had.
-struct CatPeekOr<Fallback: View>: View {
+/// The cat in a wing of an island, in the clip the news calls for: peeking up
+/// when a thing lands (a screenshot, a download, a copy, an AirDrop), busy
+/// with a notification. With the cat off, `fallback` is the symbol the banner
+/// always had.
+struct CatOr<Fallback: View>: View {
+    var state: CatState = .peek
     var tint: Color = .white
     var size: CGFloat = 26
     @ViewBuilder let fallback: Fallback
@@ -127,7 +139,7 @@ struct CatPeekOr<Fallback: View>: View {
 
     var body: some View {
         if decor.catEnabled {
-            CatView(state: .peek, size: size, tint: tint)
+            CatView(state: state, size: size, tint: tint)
                 .frame(width: 24, height: 24)
         } else {
             fallback

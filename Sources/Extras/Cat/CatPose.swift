@@ -36,6 +36,14 @@ enum CatState: String, CaseIterable, Identifiable {
     case peek
     /// Side view, walking: the timer mascot.
     case walking
+    /// A text message: holds up a buzzing phone and reads it.
+    case texting
+    /// A chat app: a speech bubble whose dots fill in beside the head.
+    case chatting
+    /// Mail: pulls up an envelope and holds it, pleased.
+    case mail
+    /// Any other notification: a bell rings by its ear.
+    case ringing
 
     var id: String { rawValue }
 
@@ -50,6 +58,10 @@ enum CatState: String, CaseIterable, Identifiable {
         case .music: return "Muzyka"
         case .peek: return "Wygląda"
         case .walking: return "Idzie"
+        case .texting: return "SMS"
+        case .chatting: return "Czat"
+        case .mail: return "Poczta"
+        case .ringing: return "Dzwonek"
         }
     }
 }
@@ -67,7 +79,7 @@ struct CatArm: Hashable {
 struct CatPose: Hashable {
     enum Body: UInt8 { case sit, curled, walk, peek }
     enum Eyes: UInt8 { case open, blink, closed, happy, wide, glanceLeft, glanceRight, focus }
-    enum Prop: UInt8 { case none, zzz, note, exclaim, sparkle }
+    enum Prop: UInt8 { case none, zzz, note, exclaim, sparkle, phone, bubble, envelope, bell }
 
     var body = Body.sit
     var eyes = Eyes.open
@@ -173,6 +185,10 @@ enum CatClips {
         case .music: return music
         case .peek: return peek
         case .walking: return walking
+        case .texting: return texting
+        case .chatting: return chatting
+        case .mail: return mail
+        case .ringing: return ringing
         }
     }
 
@@ -372,6 +388,104 @@ enum CatClips {
             loop: steps,
             rest: CatPose(body: .walk, eyes: .open, legPhase: 0),
             frameRate: CAFrameRateRange(minimum: 4, maximum: 8, preferred: 6)
+        )
+    }()
+
+    // MARK: Notifications
+
+    /// The paw that holds the phone up beside the head.
+    private static let phoneArm = CatArm(angle: 122, reach: 23)
+
+    private static let texting: CatClip = {
+        // The phone buzzes in the paw, then the cat reads it: `propPhase` is
+        // the phone's lean (0 left … 1 right), `glow` its screen.
+        let intro = timeline(total: 0.6, dt: 0.06) { t in
+            CatPose(
+                eyes: .wide, armR: phoneArm, glow: 1,
+                prop: .phone, propPhase: Int(t / 0.06).isMultiple(of: 2) ? 0 : 1
+            )
+        }
+        let loop = timeline(total: 4, dt: 0.1) { t in
+            var pose = CatPose(
+                eyes: .glanceRight, headTilt: 3,
+                tail: quantised(sin(2 * Double.pi * t / 2), step: 0.5),
+                armR: phoneArm, glow: Int(t / 0.5).isMultiple(of: 2) ? 1 : 0.6,
+                prop: .phone, propPhase: 0.5
+            )
+            if (2.6 ..< 2.72).contains(t) { pose.eyes = .blink }
+            return pose
+        }
+        return CatClip(
+            intro: intro,
+            loop: loop,
+            rest: CatPose(eyes: .glanceRight, headTilt: 3, armR: phoneArm, glow: 1, prop: .phone, propPhase: 0.5),
+            frameRate: CAFrameRateRange(minimum: 4, maximum: 15, preferred: 12)
+        )
+    }()
+
+    private static let chatting: CatClip = {
+        // The bubble's dots fill in one by one, hold, and start again:
+        // `propPhase` is how many of the three are in.
+        let dots: [Double] = [0, 1, 2, 3, 3, 3]
+        let loop = timeline(total: 2.4, dt: 0.1) { t in
+            let count = dots[Int(t / 0.4) % dots.count]
+            var pose = CatPose(
+                eyes: .open, headTilt: count == 3 ? 5 : 0,
+                tail: quantised(sin(2 * Double.pi * t / 2.4), step: 0.5),
+                prop: .bubble, propPhase: count / 3
+            )
+            if (0.4 ..< 0.5).contains(t) { pose.earR = 0.7 }
+            if (2.0 ..< 2.1).contains(t) { pose.eyes = .blink }
+            return pose
+        }
+        return CatClip(
+            loop: loop,
+            rest: CatPose(headTilt: 5, prop: .bubble, propPhase: 1),
+            frameRate: CAFrameRateRange(minimum: 4, maximum: 10, preferred: 10)
+        )
+    }()
+
+    private static let mail: CatClip = {
+        // The envelope comes up from below (`propPhase` 0 … 1), then the cat
+        // holds it by the top edge.
+        let intro = timeline(total: 0.4, dt: 0.1) { t in
+            CatPose(eyes: .wide, prop: .envelope, propPhase: quantised(t / 0.4, step: 0.25))
+        }
+        let loop = timeline(total: 4, dt: 0.1) { t in
+            var pose = CatPose(
+                eyes: .happy,
+                tail: quantised(sin(2 * Double.pi * t / 2), step: 0.5),
+                smile: true, prop: .envelope, propPhase: 1
+            )
+            if (1.0 ..< 1.4).contains(t) || (3.0 ..< 3.4).contains(t) { pose.headDY = 1.5 }
+            return pose
+        }
+        return CatClip(
+            intro: intro,
+            loop: loop,
+            rest: CatPose(eyes: .happy, smile: true, prop: .envelope, propPhase: 1),
+            frameRate: CAFrameRateRange(minimum: 4, maximum: 10, preferred: 10)
+        )
+    }()
+
+    private static let ringing: CatClip = {
+        // The bell swings for a moment, hangs still, and rings again:
+        // `propPhase` is its swing (0 left … 1 right).
+        let loop = timeline(total: 1.6, dt: 0.1) { t in
+            guard t < 0.8 else {
+                return CatPose(eyes: .open, tail: 0.5, prop: .bell, propPhase: 0.5)
+            }
+            let right = Int(t / 0.1).isMultiple(of: 2)
+            return CatPose(
+                eyes: .wide, headTilt: right ? 3 : -3,
+                earR: right ? 0.5 : 0,
+                prop: .bell, propPhase: right ? 1 : 0
+            )
+        }
+        return CatClip(
+            loop: loop,
+            rest: CatPose(eyes: .wide, headTilt: 3, prop: .bell, propPhase: 1),
+            frameRate: CAFrameRateRange(minimum: 4, maximum: 12, preferred: 10)
         )
     }()
 }

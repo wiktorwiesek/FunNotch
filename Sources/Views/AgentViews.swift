@@ -607,22 +607,34 @@ struct AgentPip: View {
                 AgentWorkingGlyph(agent: agents.headline?.agent ?? .claude, size: 12)
             }
             if agents.activeCount > 1 {
-                Text("\(agents.activeCount)")
-                    .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.75))
-                    .contentTransition(.numericText(value: Double(agents.activeCount)))
+                AgentCountLabel(count: agents.activeCount)
             }
         }
         // Clear of the camera housing, the way the widgets beside it are.
         .padding(.leading, 11)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .transition(.scale(scale: 0.3).combined(with: .opacity))
-        .help(summary)
+        .help(agents.activitySummary)
     }
+}
 
-    private var summary: String {
-        let working = agents.workingCount
-        let waiting = agents.waitingCount
+/// How many sessions are busy, beside the glyph that stands for all of them.
+struct AgentCountLabel: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count)")
+            .font(.system(size: 9.5, weight: .bold, design: .rounded))
+            .foregroundStyle(.white.opacity(0.75))
+            .contentTransition(.numericText(value: Double(count)))
+    }
+}
+
+extension AgentSessionsManager {
+    /// "2 pracują, 1 czeka na Ciebie": the tooltip of the light beside the cutout.
+    var activitySummary: String {
+        let working = workingCount
+        let waiting = waitingCount
         var parts: [String] = []
         if working > 0 { parts.append("\(working) \(working == 1 ? "pracuje" : "pracują")") }
         if waiting > 0 { parts.append("\(waiting) \(waiting == 1 ? "czeka" : "czekają") na Ciebie") }

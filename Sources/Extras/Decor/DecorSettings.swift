@@ -81,11 +81,11 @@ struct DecorSettings: View {
             )
 
             SettingsToggle(
-                title: "Kot przy wycięciu, gdy nic się nie dzieje",
-                subtitle: "Śpiący kot obok kamery, kiedy żadna inna aktywność nie zajmuje notcha. Poszerza zamknięty notch o jedno skrzydło.",
-                symbol: "moon.zzz.fill",
+                title: "Kot zawsze w notchu",
+                subtitle: "Mieszka po lewej stronie wycięcia: czuwa, gdy jesteś przy Macu, zasypia po kilku minutach bez ruchu, a obok widżetów zastępuje lampkę agenta. Zajmuje własne miejsce przy kamerze.",
+                symbol: "pawprint.fill",
                 tint: SettingsStyle.pink,
-                isOn: $store.catIdle
+                isOn: $store.catResident
             )
             .disabled(!store.catEnabled)
 

@@ -158,9 +158,16 @@ struct ClosedNotchView: View {
             HStack(spacing: 0) {
                 // Each side keeps the width it asked for, pushed up against the
                 // camera; the wings are equal, so any spare goes on the outside.
-                leadingActivity
-                    .frame(width: insets.leading, height: viewModel.closedNotchSize.height)
-                    .frame(width: viewModel.closedWingWidth, alignment: .trailing)
+                HStack(spacing: 0) {
+                    leadingActivity
+                        .frame(maxWidth: .infinity)
+                    if viewModel.showsResidentCat {
+                        ResidentCat()
+                            .frame(width: viewModel.residentCatWidth)
+                    }
+                }
+                .frame(width: insets.leading, height: viewModel.closedNotchSize.height)
+                .frame(width: viewModel.closedWingWidth, alignment: .trailing)
 
                 // Dead space behind the physical camera housing.
                 Color.clear

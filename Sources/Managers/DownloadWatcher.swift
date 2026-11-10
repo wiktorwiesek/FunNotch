@@ -252,7 +252,7 @@ final class DownloadWatcher: ObservableObject {
             },
             // Long enough to reach the button.
             duration: 5,
-            mascot: true
+            cat: .peek
         )
     }
 }

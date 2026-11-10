@@ -5,7 +5,7 @@
 //  Preferences for the decorations: alternative HUD styles, timer mascots, a
 //  custom idle animation and Liquid Glass. Everything defaults to "off" so the
 //  notch looks as it did before until the user opts in, except the glass
-//  material of buttons and cards (`systemGlass`), which is on.
+//  material of buttons and cards (`systemGlass`) and the cat, which are on.
 //
 //  Values live in UserDefaults under `extras.decor.*`; views observe this
 //  store so a change in settings shows up in the notch at once.
@@ -90,7 +90,7 @@ final class DecorStore: ObservableObject {
         static let glassBanners = "extras.decor.glassBanners"
         static let systemGlass = "extras.decor.systemGlass"
         static let catEnabled = "extras.decor.cat"
-        static let catIdle = "extras.decor.catIdle"
+        static let catResident = "extras.decor.catResident"
     }
 
     private let defaults = UserDefaults.standard
@@ -174,18 +174,13 @@ final class DecorStore: ObservableObject {
         didSet { defaults.set(catEnabled, forKey: Key.catEnabled) }
     }
 
-    /// A sleeping cat beside the cutout while nothing else is shown there.
-    @Published var catIdle: Bool {
-        didSet { defaults.set(catIdle, forKey: Key.catIdle) }
+    /// The cat lives beside the cutout of the closed notch, always (see
+    /// `CatResident`). On by default, like `catEnabled`.
+    @Published var catResident: Bool {
+        didSet { defaults.set(catResident, forKey: Key.catResident) }
     }
 
-    /// The sleeping cat is wanted beside the cutout (the user's own idle
-    /// picture, when there is one, keeps the spot; see `decorIdleWings`).
-    var catIdleIsReady: Bool { catEnabled && catIdle }
-
-    /// Width each wing gets while the sleeping cat is beside the cutout.
-    static let catIdleSize: CGFloat = 16
-    static let catIdleInset: CGFloat = catIdleSize + idlePadding * 2
+    var catResidentIsReady: Bool { catEnabled && catResident }
 
     private var loadGeneration = 0
 
@@ -206,7 +201,7 @@ final class DecorStore: ObservableObject {
         glassBanners = defaults.bool(forKey: Key.glassBanners)
         systemGlass = defaults.object(forKey: Key.systemGlass) as? Bool ?? true
         catEnabled = cat
-        catIdle = defaults.bool(forKey: Key.catIdle)
+        catResident = defaults.object(forKey: Key.catResident) as? Bool ?? true
         idleName = defaults.string(forKey: Key.idleName)
     }
 

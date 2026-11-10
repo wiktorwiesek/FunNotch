@@ -86,6 +86,8 @@ final class NotificationBannerWatcher: ObservableObject {
     /// one without only for as long as it plausibly stays on screen.
     private var delivered: [String: Date] = [:]
     private var workspaceObservers: [NSObjectProtocol] = []
+    /// The first banner of a launch has been described in the log.
+    private var describedBanner = false
 
     private init() {}
 
@@ -279,7 +281,12 @@ final class NotificationBannerWatcher: ObservableObject {
             // same hold; it is shortened below once it has left the screen.
             let alreadyDelivered = delivered[key] != nil
             delivered[key] = now.addingTimeInterval(600)
-            if !alreadyDelivered { onBanner?(banner) }
+            guard !alreadyDelivered else { continue }
+            if !describedBanner {
+                describedBanner = true
+                DiagnosticLog.write("notify", Self.describe(banner))
+            }
+            onBanner?(banner)
         }
         // Without an identifier the key names only the top message, so once
         // it is gone an identical message must be announced again soon, not
@@ -288,6 +295,20 @@ final class NotificationBannerWatcher: ObservableObject {
         for (key, expiry) in delivered where key.hasPrefix("|") && !seen.contains(key) && expiry > soon {
             delivered[key] = soon
         }
+    }
+
+    /// What a banner is made of, without a word of what it says: the banner
+    /// tree is undocumented and changes between systems, so the log records
+    /// what this one offers (which actions, whether it can be moved).
+    private static func describe(_ banner: CapturedBanner) -> String {
+        let subrole = attribute(banner.element, kAXSubroleAttribute) as? String ?? "?"
+        var movable = DarwinBoolean(false)
+        AXUIElementIsAttributeSettable(banner.element, kAXPositionAttribute as CFString, &movable)
+        // A custom action is "Name:Close\nTarget:…\nSelector:…"; the name is enough.
+        let actions = banner.actions.map { action in
+            action.split(separator: "\n").first.map { $0.replacingOccurrences(of: "Name:", with: "") } ?? action
+        }
+        return "first banner: \(subrole), actions \(actions), movable \(movable.boolValue)"
     }
 
     /// One AX element's attributes, fetched in a single round trip to the

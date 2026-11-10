@@ -4,8 +4,9 @@
 //
 //  How the decorations claim room beside the camera cutout. The closed notch
 //  sizes itself from `NotchViewModel.closedActivityInsets`; this is the one
-//  place that adds the timer mascot's track and the idle animation to it, so
-//  the views that draw them and the width they were promised cannot drift.
+//  place that adds the timer mascot's track, the idle animation and the cat
+//  that lives there to it, so the views that draw them and the width they
+//  were promised cannot drift.
 //
 
 import SwiftUI
@@ -27,7 +28,7 @@ extension NotchViewModel {
     /// insets: they are zero exactly when the row beside the camera is empty.
     var decorIdleWings: (leading: Bool, trailing: Bool)? {
         let store = DecorStore.shared
-        guard store.idleIsReady || store.catIdleIsReady, notchState == .closed,
+        guard store.idleIsReady, notchState == .closed,
               !isShowingDropZone, !isShowingStandardHUD, !isShowingStandardMusicPeek
         else { return nil }
         let base = baseClosedActivityInsets
@@ -39,6 +40,28 @@ extension NotchViewModel {
         }
     }
 
+    /// The cat lives left of the cutout whenever the row has no cat of its
+    /// own. Rows that do: the music (the cat is the spectrum), a focus
+    /// countdown whose mascot is the cat, and a working agent with nothing
+    /// else beside the camera (the cat at its laptop has the left wing).
+    var showsResidentCat: Bool {
+        let store = DecorStore.shared
+        guard store.catResidentIsReady, notchState == .closed,
+              !isShowingDropZone, !isShowingStandardHUD, !isShowingStandardMusicPeek
+        else { return false }
+        if showsFocusActivity { return store.mascot != .cat }
+        if showsClosedMediaActivity { return false }
+        return isShowingWidgets || !showsAgentActivity
+    }
+
+    /// Room the cat takes at the inner edge of the left wing, with the count
+    /// of busy sessions beside it when it stands in for the agent light.
+    var residentCatWidth: CGFloat {
+        guard showsResidentCat else { return 0 }
+        let counts = agentPresentation == .cat && agentActivity.active > 1
+        return ResidentCat.width + (counts ? Self.agentPipWidthWithCount - Self.agentPipWidth : 0)
+    }
+
     func decorAdjustedInsets(
         _ base: (leading: CGFloat, trailing: CGFloat)
     ) -> (leading: CGFloat, trailing: CGFloat) {
@@ -46,11 +69,11 @@ extension NotchViewModel {
         var insets = base
         insets.trailing += decorMascotTrackWidth
         if let wings = decorIdleWings {
-            let store = DecorStore.shared
-            let width = store.idleIsReady ? store.idleInset : DecorStore.catIdleInset
+            let width = DecorStore.shared.idleInset
             if wings.leading { insets.leading = width }
             if wings.trailing { insets.trailing = width }
         }
+        insets.leading += residentCatWidth
         return insets
     }
 }

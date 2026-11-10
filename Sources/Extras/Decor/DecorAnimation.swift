@@ -143,8 +143,7 @@ struct DecorAnimationView: View {
 
 // MARK: - In the closed notch
 
-/// The idle picture beside the camera cutout: the user's own animation, or
-/// failing that, the sleeping cat when it is asked for.
+/// The idle picture beside the camera cutout: the user's own animation.
 struct DecorIdleView: View {
     @ObservedObject private var store = DecorStore.shared
 
@@ -152,9 +151,6 @@ struct DecorIdleView: View {
         if store.idleIsReady, let animation = store.idleAnimation {
             DecorAnimationView(animation: animation, speed: store.idleSpeed, size: store.idleSize)
                 .offset(y: CGFloat(store.idleOffsetY))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if store.catIdleIsReady {
-            CatView(state: .sleeping, size: DecorStore.catIdleSize, tint: .white.opacity(0.75))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }

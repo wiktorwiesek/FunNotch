@@ -35,8 +35,9 @@ struct Island: Identifiable {
     /// A passing remark ("Skopiowano"): never replaces another activity that
     /// is already on screen, it is simply dropped.
     var isQuiet = false
-    /// Hook for the cat companion: set by islands that want it to peek in.
-    var mascot = false
+    /// The cat that takes the symbol's place, in the clip that suits the news:
+    /// peeking up when a file lands, reading its phone for a text message.
+    var cat: CatState?
 }
 
 @MainActor

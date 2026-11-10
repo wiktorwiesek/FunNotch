@@ -28,22 +28,103 @@ extension PreviewRenderer {
         return track
     }
 
-    private static func catSet(enabled: Bool = true, idle: Bool = false) {
+    private static func catSet(enabled: Bool = true, resident: Bool = true) {
         DecorStore.shared.catEnabled = enabled
-        DecorStore.shared.catIdle = idle
+        DecorStore.shared.catResident = resident
+    }
+
+    /// Clock on the left, battery and processor on the right, nothing else.
+    private static func catWidgetsOnly(_ viewModel: NotchViewModel) {
+        let settings = Settings.shared
+        settings.idleWidgetsEnabled = true
+        settings.idleLeftWidgets = [.clock]
+        settings.idleRightWidgets = [.battery, .cpu]
+        MusicManager.shared.clearPreviewTrack()
+        viewModel.setPreviewMusicActivity(false)
+        AgentSessionsManager.shared.injectPreviewSessions([])
+        viewModel.setPreviewAgentActivity(AgentActivity())
+        CatPresence.shared.injectPreview(away: false)
     }
 
     static func appendCatScenes(to scenes: inout [QAScene]) {
-        let saved = (DecorStore.shared.catEnabled, DecorStore.shared.catIdle)
+        let saved = (DecorStore.shared.catEnabled, DecorStore.shared.catResident)
+        CatPresence.shared.injectPreview(away: false)
 
+        // The cat that lives beside the cutout: alone, beside the widgets
+        // (awake, asleep, standing in for the agent light), and switched off.
         scenes.append(("cat-closed-idle", { viewModel in
-            catSet(idle: true)
+            catSet()
             Settings.shared.idleWidgetsEnabled = false
             MusicManager.shared.clearPreviewTrack()
             viewModel.setPreviewMusicActivity(false)
             AgentSessionsManager.shared.injectPreviewSessions([])
             viewModel.setPreviewAgentActivity(AgentActivity())
         }))
+
+        scenes.append(("cat-closed-resident-widgets", { viewModel in
+            catSet()
+            catWidgetsOnly(viewModel)
+        }))
+
+        scenes.append(("cat-closed-resident-asleep", { viewModel in
+            catSet()
+            catWidgetsOnly(viewModel)
+            CatPresence.shared.injectPreview(away: true)
+        }))
+
+        scenes.append(("cat-closed-resident-agents-working", { viewModel in
+            catSet()
+            catWidgetsOnly(viewModel)
+            let sessions = Self.sampleSessions()
+            AgentSessionsManager.shared.injectPreviewSessions([sessions[0], sessions[3]])
+            viewModel.setPreviewAgentActivity(AgentActivity(active: 2, waiting: false))
+        }))
+
+        scenes.append(("cat-closed-resident-agent-waiting", { viewModel in
+            catSet()
+            catWidgetsOnly(viewModel)
+            AgentSessionsManager.shared.injectPreviewSessions([Self.sampleSessions()[1]])
+            viewModel.setPreviewAgentActivity(AgentActivity(active: 1, waiting: true))
+        }))
+
+        scenes.append(("cat-closed-resident-focus", { viewModel in
+            catSet()
+            catWidgetsOnly(viewModel)
+            DecorStore.shared.mascot = .rocket
+            FocusManager.shared.injectPreviewSession(minutes: 25, elapsedFraction: 0.35)
+            viewModel.refreshPreviewFocusActivity()
+        }))
+
+        scenes.append(("cat-closed-resident-off", { viewModel in
+            catSet(resident: false)
+            catWidgetsOnly(viewModel)
+            FocusManager.shared.clearPreviewSession()
+            viewModel.setPreviewFocusActivity(false)
+        }))
+
+        // A notification of each kind: the cat reads, chats, holds the letter
+        // or listens to the bell, by the app the news is from.
+        let notifications: [(name: String, app: String, bundle: String, title: String, body: String)] = [
+            ("sms", "Wiadomości", "com.apple.MobileSMS", "Anna", "Będę za dziesięć minut"),
+            ("chat", "Slack", "com.tinyspeck.slackmacgap", "Marta", "Wrzuciłem nowe zdjęcia do kanału"),
+            ("mail", "Mail", "com.apple.mail", "Hurtownia", "Potwierdzenie zamówienia"),
+            ("other", "Kalendarz sprzątania", "com.example.other", "Przypomnienie", "Podlej kwiaty"),
+        ]
+        for sample in notifications {
+            scenes.append(("cat-closed-notify-\(sample.name)", { viewModel in
+                catSet()
+                let item = MirroredNotification(
+                    id: sample.name, bundleIdentifier: sample.bundle, appName: sample.app,
+                    title: sample.title, subtitle: "", body: sample.body, date: Date(), source: .banner, code: nil
+                )
+                let style = NotifyCenter.style(for: item)
+                IslandCenter.shared.post(Island(
+                    symbol: style.symbol, tint: style.tint, title: item.heading, detail: " · " + item.detail,
+                    action: IslandAction(title: "Otwórz") {}, cat: style.cat
+                ))
+                viewModel.expandingView = SneakPeek(show: true, type: .island, value: 0, icon: style.symbol)
+            }))
+        }
 
         scenes.append(("cat-closed-music", { viewModel in
             catSet()
@@ -193,7 +274,7 @@ extension PreviewRenderer {
         catEmptyScenes(&scenes)
 
         scenes.append(("cat-zz-restore", { _ in
-            catSet(enabled: saved.0, idle: saved.1)
+            catSet(enabled: saved.0, resident: saved.1)
         }))
     }
 

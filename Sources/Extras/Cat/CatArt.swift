@@ -835,6 +835,87 @@ enum CatArt {
                 c.setFillColor(color)
                 c.fillPath()
             }
+        case .phone:
+            // Held up in the right paw: it leans left and right with `phase`
+            // while it buzzes, and its screen is the accent.
+            c.saveGState()
+            c.translateBy(x: 85, y: 50)
+            c.rotate(by: (phase - 0.5) * 18 * .pi / 180)
+            let body = CGPath(roundedRect: CGRect(x: -8, y: -27, width: 16, height: 27), cornerWidth: 3.5, cornerHeight: 3.5, transform: nil)
+            c.addPath(body)
+            c.setFillColor(rgb(0x16161C))
+            c.fillPath()
+            c.addPath(body)
+            c.setStrokeColor(rgb(0xB8BCC6, 0.9))
+            c.setLineWidth(1.8)
+            c.strokePath()
+            let screen = CGPath(roundedRect: CGRect(x: -5.5, y: -24, width: 11, height: 19), cornerWidth: 2, cornerHeight: 2, transform: nil)
+            c.addPath(screen)
+            c.setFillColor(accent.copy(alpha: 0.45 + 0.55 * CGFloat(pose.glow)) ?? accent)
+            c.fillPath()
+            line(c, CGPoint(x: -3, y: -19), CGPoint(x: 3, y: -19), width: 1.6, color: rgb(0xFFFFFF, 0.9))
+            line(c, CGPoint(x: -3, y: -14.5), CGPoint(x: 1, y: -14.5), width: 1.6, color: rgb(0xFFFFFF, 0.9))
+            c.restoreGState()
+        case .bubble:
+            // A speech bubble off the right ear; `phase` is how many of its
+            // three dots are in.
+            c.setFillColor(accent)
+            c.addPath(CGPath(roundedRect: CGRect(x: 60, y: 1, width: 39, height: 24), cornerWidth: 9, cornerHeight: 9, transform: nil))
+            c.fillPath()
+            c.move(to: CGPoint(x: 66, y: 22))
+            c.addLine(to: CGPoint(x: 62, y: 33))
+            c.addLine(to: CGPoint(x: 76, y: 24))
+            c.closePath()
+            c.fillPath()
+            let filled = Int((phase * 3).rounded())
+            for index in 0 ..< 3 {
+                fillEllipse(c, 70.5 + 9 * CGFloat(index), 13, 3, 3, rgb(0xFFFFFF, index < filled ? 1 : 0.3))
+            }
+        case .envelope:
+            // Pulled up from below the frame (`phase` 0 … 1), then held by
+            // its top edge; the seal is the accent.
+            c.saveGState()
+            c.translateBy(x: 0, y: (1 - phase) * 34)
+            let paper = CGPath(roundedRect: CGRect(x: 26, y: 69, width: 48, height: 28), cornerWidth: 3, cornerHeight: 3, transform: nil)
+            c.addPath(paper)
+            c.setFillColor(rgb(0xF6F3EC))
+            c.fillPath()
+            c.setStrokeColor(rgb(0x8E929C))
+            c.setLineJoin(.round)
+            c.setLineCap(.round)
+            c.setLineWidth(1.4)
+            c.addPath(paper)
+            c.strokePath()
+            c.setLineWidth(1.6)
+            c.move(to: CGPoint(x: 27.5, y: 70.5))
+            c.addLine(to: CGPoint(x: 50, y: 85))
+            c.addLine(to: CGPoint(x: 72.5, y: 70.5))
+            c.strokePath()
+            fillEllipse(c, 50, 85, 4.2, 4.2, accent)
+            c.restoreGState()
+            if phase >= 1 {
+                for x: CGFloat in [37, 63] { paw(c, at: CGPoint(x: x, y: 70), raised: false, scale: 1.1) }
+            }
+        case .bell:
+            // Hung by the right ear; `phase` swings it (0 left … 1 right).
+            let gold = rgb(0xFFCC4D)
+            let brass = rgb(0xE0A52E)
+            c.saveGState()
+            c.translateBy(x: 86, y: 4)
+            c.rotate(by: (phase - 0.5) * 48 * .pi / 180)
+            fillEllipse(c, 0, 20.5, 3, 3, brass)
+            let dome = CGMutablePath()
+            dome.move(to: CGPoint(x: -10, y: 18))
+            dome.addQuadCurve(to: CGPoint(x: -6.5, y: 7), control: CGPoint(x: -6.5, y: 15))
+            dome.addQuadCurve(to: CGPoint(x: 6.5, y: 7), control: CGPoint(x: 0, y: -4))
+            dome.addQuadCurve(to: CGPoint(x: 10, y: 18), control: CGPoint(x: 6.5, y: 15))
+            dome.closeSubpath()
+            c.addPath(dome)
+            c.setFillColor(gold)
+            c.fillPath()
+            fillEllipse(c, 0, 1.5, 2.2, 2.2, gold)
+            line(c, CGPoint(x: -10, y: 18), CGPoint(x: 10, y: 18), width: 2.4, color: brass)
+            c.restoreGState()
         }
     }
 }

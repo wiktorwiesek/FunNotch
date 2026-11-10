@@ -418,6 +418,11 @@ enum SelfTest {
             idleLeft: settings.idleLeftWidgets,
             idleRight: settings.idleRightWidgets
         )
+        // The cat that lives beside the cutout takes room of its own. It is
+        // measured on its own further down; until then it stays out.
+        let decor = DecorStore.shared
+        let savedCat = (enabled: decor.catEnabled, resident: decor.catResident, mascot: decor.mascot)
+        decor.catResident = false
 
         let widgetModel = controller.viewModel
         widgetModel.expandingView = SneakPeek()
@@ -837,6 +842,78 @@ enum SelfTest {
             "and hands the room back when the agent stops",
             stage.closedActivityInsets.trailing < withLight,
             detail: "\(Int(withLight)) → \(Int(stage.closedActivityInsets.trailing))"
+        )
+
+        // MARK: The cat beside the cutout
+        //
+        // One cat, always: it takes its own room where the row has none, and
+        // stays out of rows that already show it in another role.
+        let savedCatRow = (media: settings.closedMediaDisplay, focus: settings.focusShowInClosedNotch)
+        settings.closedMediaDisplay = .mediaOnly
+        settings.focusShowInClosedNotch = true
+        decor.catEnabled = true
+        decor.mascot = .rocket
+        let withoutCat = stage.closedActivityInsets
+        decor.catResident = true
+        check(
+            "beside the widgets the cat takes its own room on the left",
+            stage.showsResidentCat
+                && stage.closedActivityInsets.leading == withoutCat.leading + ResidentCat.width
+                && stage.closedActivityInsets.trailing == withoutCat.trailing,
+            detail: "\(Int(withoutCat.leading)) → \(Int(stage.closedActivityInsets.leading))"
+        )
+        stage.setPreviewAgentActivity(AgentActivity(active: 1, waiting: false))
+        check(
+            "there it stands in for the agent light, so the right side does not grow",
+            stage.agentPresentation == .cat && stage.closedActivityInsets.trailing == withoutCat.trailing
+        )
+        settings.idleWidgetsEnabled = false
+        check(
+            "a working agent with nothing else keeps the wings, and its one cat",
+            stage.agentPresentation == .wings && !stage.showsResidentCat
+        )
+        stage.setPreviewAgentActivity(AgentActivity())
+        check(
+            "with nothing else there the cat has the row to itself",
+            stage.showsResidentCat && stage.closedActivityInsets.leading == ResidentCat.width
+        )
+        stage.setPreviewMusicActivity(true)
+        check("music brings its own cat, so there is no second one", !stage.showsResidentCat)
+        stage.setPreviewMusicActivity(false)
+        stage.setPreviewFocusActivity(true)
+        check("a countdown with another mascot keeps the cat", stage.showsResidentCat)
+        decor.mascot = .cat
+        check("a countdown the cat walks for does not get two", !stage.showsResidentCat)
+        stage.setPreviewFocusActivity(false)
+        decor.catEnabled = false
+        check(
+            "with the cat off nothing is added",
+            !stage.showsResidentCat && stage.closedActivityInsets.leading == 0
+        )
+        decor.catEnabled = savedCat.enabled
+        decor.catResident = savedCat.resident
+        decor.mascot = savedCat.mascot
+        settings.closedMediaDisplay = savedCatRow.media
+        settings.focusShowInClosedNotch = savedCatRow.focus
+
+        // A notification's island carries the cat that suits where it is from.
+        func notificationCat(_ bundle: String?, app: String) -> CatState {
+            NotifyCenter.style(for: MirroredNotification(
+                id: "self-test", bundleIdentifier: bundle, appName: app,
+                title: "", subtitle: "", body: "", date: Date(), source: .banner, code: nil
+            )).cat
+        }
+        check(
+            "a text message, a chat, mail and everything else each get their own cat",
+            notificationCat("com.apple.MobileSMS", app: "Wiadomości") == .texting
+                && notificationCat("com.tinyspeck.slackmacgap", app: "Slack") == .chatting
+                && notificationCat("dev.vencord.vesktop", app: "Vesktop") == .chatting
+                && notificationCat("com.apple.mail", app: "Mail") == .mail
+                && notificationCat("com.apple.finder", app: "Finder") == .ringing
+        )
+        check(
+            "a banner that names only the app is still told apart as a text message",
+            notificationCat(nil, app: "Wiadomości") == .texting && notificationCat(nil, app: "Nieznana") == .ringing
         )
         settings.agentActivityEnabled = savedAgentSettings.enabled
         settings.idleWidgetsEnabled = savedAgentSettings.idle

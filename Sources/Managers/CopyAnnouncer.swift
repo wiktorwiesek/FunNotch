@@ -85,7 +85,7 @@ final class CopyAnnouncer {
             detail: " · " + preview,
             duration: islandDuration,
             isQuiet: true,
-            mascot: true
+            cat: .peek
         )
     }
 }

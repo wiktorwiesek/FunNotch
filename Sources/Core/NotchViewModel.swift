@@ -37,6 +37,9 @@ enum AgentPresentation {
     case pip
     /// Nothing else is beside the cutout, so the agent gets both wings.
     case wings
+    /// The cat that lives beside the cutout carries it (see `CatResident`),
+    /// so the row gets no light of its own.
+    case cat
 }
 
 @MainActor
@@ -397,7 +400,8 @@ final class NotchViewModel: ObservableObject {
         guard notchState == .closed, showsAgentActivity else { return .none }
         guard !isShowingDropZone, !isShowingStandardHUD, !isShowingStandardMusicPeek else { return .none }
         let sidesTaken = isShowingWidgets || showsClosedMediaActivity || showsFocusActivity
-        return sidesTaken ? .pip : .wings
+        guard sidesTaken else { return .wings }
+        return showsResidentCat ? .cat : .pip
     }
 
     var agentPipWidth: CGFloat {
@@ -444,7 +448,8 @@ final class NotchViewModel: ObservableObject {
         }
 
         switch agentPresentation {
-        case .none:
+        case .none, .cat:
+            // The cat's room is a decoration's, added with the others.
             break
         case .pip:
             trailing += agentPipWidth

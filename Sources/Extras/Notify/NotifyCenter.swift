@@ -4,7 +4,8 @@
 //
 //  The two notification features share one manager:
 //    - Wiadomości w notchu: every banner the watcher catches becomes an island
-//      (sender and text), with a "Kopiuj kod" button when it holds a code.
+//      (sender and text), with a "Kopiuj kod" button when it holds a code. The
+//      cat is in its wing, in the clip that suits the app the news is from.
 //    - Lustro powiadomień: the same banners, plus whatever the usernoted
 //      database holds when Full Disk Access allows reading it, listed in the
 //      Powiadomienia tab.
@@ -119,6 +120,7 @@ final class NotifyCenter: ObservableObject {
         }
         applyCapture()
         applyDatabase()
+        announceMissingAccess()
 
         PaletteCommandRegistry.shared.register(PaletteCommand(
             id: "notify.show",
@@ -128,6 +130,27 @@ final class NotifyCenter: ObservableObject {
             keywords: ["powiadomienia", "notification", "wiadomości", "kod", "lustro"],
             perform: { NotifyCenter.shared.showTab() }
         ))
+    }
+
+    /// Capture is on by default and does nothing without Accessibility, so a
+    /// launch without it says so: macOS asks, when it has no answer on record,
+    /// and an island offers the repair for when it has a stale one.
+    private func announceMissingAccess() {
+        guard captureEnabled, NotificationBannerWatcher.shared.state == .needsAccessibility else { return }
+        NotificationBannerWatcher.shared.requestAccess()
+        // After the notch windows are up and the launch has settled.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            MainActor.assumeIsolated {
+                guard NotificationBannerWatcher.shared.state == .needsAccessibility else { return }
+                IslandCenter.shared.post(Island(
+                    symbol: "bell.slash.fill", tint: .orange,
+                    title: "Powiadomienia nie działają",
+                    detail: " · brak zgody Dostępność",
+                    action: IslandAction(title: "Napraw") { NotifyCenter.shared.openAccessibilitySettings() },
+                    duration: 10
+                ))
+            }
+        }
     }
 
     private func applyCapture() {
@@ -241,7 +264,8 @@ final class NotifyCenter: ObservableObject {
                 detail: showPreview
                     ? (text.isEmpty ? "" : " · " + text)
                     : (item.isMessages ? " · nowa wiadomość" : " · nowe powiadomienie"),
-                duration: 5
+                duration: 5,
+                cat: style.cat
             )
             // Replying through the banner's own field is only offered when the
             // banner says it can; everything else opens the app.
@@ -265,19 +289,22 @@ final class NotifyCenter: ObservableObject {
         }
     }
 
-    private static func style(for item: MirroredNotification) -> (symbol: String, tint: Color) {
+    /// The symbol, colour and cat of an island, by the app the news is from:
+    /// a text message, a chat, mail, and a bell for everything else.
+    static func style(for item: MirroredNotification) -> (symbol: String, tint: Color, cat: CatState) {
         switch item.bundleIdentifier?.lowercased() {
-        case "com.apple.mobilesms": return ("message.fill", .green)
-        case "com.apple.mail": return ("envelope.fill", .cyan)
-        case "com.apple.ical": return ("calendar", .red)
-        case "com.apple.reminders": return ("checklist", .orange)
-        case "com.tinyspeck.slackmacgap", "dev.vencord.vesktop", "com.hnc.discord":
-            return ("bubble.left.fill", .purple)
-        case "net.whatsapp.whatsapp": return ("phone.bubble.fill", .green)
-        case "ru.keepcoder.telegram", "org.whispersystems.signal-desktop":
-            return ("paperplane.fill", .cyan)
+        case "com.apple.mobilesms": return ("message.fill", .green, .texting)
+        case "com.apple.mail", "com.microsoft.outlook", "com.readdle.smartemail-mac", "com.superhuman.electron":
+            return ("envelope.fill", .cyan, .mail)
+        case "com.apple.ical": return ("calendar", .red, .ringing)
+        case "com.apple.reminders": return ("checklist", .orange, .ringing)
+        case "com.tinyspeck.slackmacgap", "dev.vencord.vesktop", "com.hnc.discord", "com.microsoft.teams2":
+            return ("bubble.left.fill", .purple, .chatting)
+        case "net.whatsapp.whatsapp": return ("phone.bubble.fill", .green, .chatting)
+        case "ru.keepcoder.telegram", "org.whispersystems.signal-desktop", "com.facebook.archon":
+            return ("paperplane.fill", .cyan, .chatting)
         default:
-            return item.isMessages ? ("message.fill", .green) : ("bell.fill", .white)
+            return item.isMessages ? ("message.fill", .green, .texting) : ("bell.fill", .white, .ringing)
         }
     }
 
@@ -427,7 +454,20 @@ final class NotifyCenter: ObservableObject {
 
     // MARK: - Permission shortcuts
 
+    /// Asks for Accessibility and opens its pane. A record left by an earlier
+    /// signature of the app keeps the switch there on and the access off, and
+    /// stops macOS from asking again; while the app is not trusted nothing is
+    /// lost by dropping the record first, so the question can be put afresh.
     func openAccessibilitySettings() {
+        if !AXIsProcessTrusted(), let identifier = Bundle.main.bundleIdentifier {
+            let reset = Process()
+            reset.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+            reset.arguments = ["reset", "Accessibility", identifier]
+            if (try? reset.run()) != nil {
+                reset.waitUntilExit()
+                DiagnosticLog.write("notify", "reset the Accessibility record (\(reset.terminationStatus))")
+            }
+        }
         NotificationBannerWatcher.shared.requestAccess()
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
