@@ -50,88 +50,75 @@ enum NotchGlassMotion {
 
 // MARK: - Surface
 
-/// The glass itself, to be used as a `.background`.
+/// Drawn glass as a `.background` (hover and selection markers, which sit
+/// behind content and so must never be system glass; see below).
 ///
 /// - tint: colours the glass (an action that is on, a selected day).
 /// - lit: brighter, as under the pointer or for the selected item.
-/// - interactive: lets system glass react to the pointer.
 /// - subtle: a quiet container (a card), rather than a control: fainter fill
 ///   and no drop shadow.
 struct NotchGlassSurface<S: InsettableShape>: View {
     let shape: S
     var tint: Color?
     var lit = false
-    var interactive = false
     var subtle = false
 
-    @ObservedObject private var store = DecorStore.shared
-
     var body: some View {
-        switch NotchGlassMaterial.resolve(setting: store.systemGlass) {
-        case .system:
-            if #available(macOS 26.0, *) {
-                SystemGlassFill(shape: shape, tint: tint, lit: lit, interactive: interactive, subtle: subtle)
-            } else {
-                DrawnGlassFill(shape: shape, tint: tint, lit: lit, subtle: subtle)
-            }
-        case .drawn:
-            DrawnGlassFill(shape: shape, tint: tint, lit: lit, subtle: subtle)
-        }
+        // A standalone surface is a separate view *behind* the content. System
+        // glass must not be used that way: the window server composites glass
+        // (especially inside a GlassEffectContainer) above sibling views, and
+        // the icon or label on top of it disappears. Measured on a real
+        // capture: blank quick-action chips, blank selected tab and play
+        // button. So this surface is always drawn; real Liquid Glass is
+        // applied to the content itself by `.notchGlass` (NotchGlassModifier).
+        DrawnGlassFill(shape: shape, tint: tint, lit: lit, subtle: subtle)
     }
 }
 
-@available(macOS 26.0, *)
-private struct SystemGlassFill<S: InsettableShape>: View {
+/// Real Liquid Glass with the view as its content, the way Apple's API is
+/// meant to be used: the glass is drawn first and the label on top of it.
+///
+/// The open notch is pure black and glass only refracts what is behind it, so
+/// a white tint and a hairline rim give it an edge on black. Following
+/// Apple's guidance glass is for controls, not content: cards (`subtle`) stay
+/// drawn.
+private struct NotchGlassModifier<S: InsettableShape>: ViewModifier {
     let shape: S
     let tint: Color?
     let lit: Bool
     let interactive: Bool
     let subtle: Bool
 
-    var body: some View {
-        // `Color.clear` keeps the glass out of layout: it fills whatever the
-        // content's frame is and nothing more.
-        //
-        // The open notch is pure black, and Liquid Glass only refracts what is
-        // behind it, so untinted glass there is black on black and vanishes.
-        // A drawn body underneath (which shows even if the panel renders the
-        // glass flat), a white tint, and the rim and sheen on top give it an
-        // edge; the system glass adds the refraction and pointer response.
-        let k = subtle ? 0.5 : 1.0
-        Color.clear
-            .background(DrawnGlassFill(shape: shape, tint: tint, lit: lit, subtle: subtle))
-            .glassEffect(glass, in: shape)
-            .overlay(
-                shape
-                    .inset(by: 1)
-                    .fill(
+    @ObservedObject private var store = DecorStore.shared
+
+    func body(content: Content) -> some View {
+        if !subtle, #available(macOS 26.0, *), NotchGlassMaterial.resolve(setting: store.systemGlass) == .system {
+            content
+                .glassEffect(glass, in: shape)
+                .overlay(
+                    shape.strokeBorder(
                         LinearGradient(
-                            colors: [.white.opacity((lit ? 0.20 : 0.11) * k), .clear],
-                            startPoint: .top, endPoint: .center
-                        )
+                            colors: [.white.opacity(lit ? 0.42 : 0.26), .white.opacity(0.04)],
+                            startPoint: .top, endPoint: .bottom
+                        ),
+                        lineWidth: 0.7
                     )
                     .allowsHitTesting(false)
-            )
-            .overlay(
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: [.white.opacity((lit ? 0.48 : 0.30) * k), .white.opacity(0.06 * k)],
-                        startPoint: .top, endPoint: .bottom
-                    ),
-                    lineWidth: 0.8
                 )
-                .allowsHitTesting(false)
-            )
+        } else {
+            content.background {
+                DrawnGlassFill(shape: shape, tint: tint, lit: lit, subtle: subtle)
+            }
+        }
     }
 
+    @available(macOS 26.0, *)
     private var glass: Glass {
         let colour: Color
         if let tint {
-            colour = tint.opacity(subtle ? 0.22 : 0.42)
-        } else if lit {
-            colour = .white.opacity(subtle ? 0.12 : 0.22)
+            colour = tint.opacity(0.45)
         } else {
-            colour = .white.opacity(subtle ? 0.06 : 0.13)
+            colour = .white.opacity(lit ? 0.24 : 0.14)
         }
         return Glass.regular.tint(colour).interactive(interactive)
     }
@@ -198,9 +185,7 @@ extension View {
         interactive: Bool = false,
         subtle: Bool = false
     ) -> some View {
-        background {
-            NotchGlassSurface(shape: shape, tint: tint, lit: lit, interactive: interactive, subtle: subtle)
-        }
+        modifier(NotchGlassModifier(shape: shape, tint: tint, lit: lit, interactive: interactive, subtle: subtle))
     }
 
     /// The small lift under the pointer. Driven by `hovering`, so the caller

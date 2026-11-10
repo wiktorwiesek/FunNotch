@@ -144,6 +144,12 @@ final class NotchWindowController {
         panel.isMovable = false
         panel.isRestorable = false
         panel.animationBehavior = .none
+        // The notch is always a dark object, whatever the system appearance.
+        // In Light Mode, Liquid Glass renders as light frosted glass and
+        // SwiftUI's primary/secondary colours turn dark, so the white icons
+        // vanish into light chips. Pinning the panel to Dark Aqua keeps every
+        // glass surface and label in the dark variant.
+        panel.appearance = NSAppearance(named: .darkAqua)
         // Above the menu bar (24), status items (25) and anything else that
         // lives up here, but well below screen-saver level. Interactive windows
         // at `.screenSaver` are unusual and are a poor drag destination;

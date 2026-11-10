@@ -583,10 +583,9 @@ struct PlayerControls: View {
     }
 
     private func transportRow(shuffleAndRepeat: Bool, likes: Bool) -> some View {
-        // One glass group, so a hovered button blends with its neighbours.
-        NotchGlassGroup {
-            transportButtons(shuffleAndRepeat: shuffleAndRepeat, likes: likes)
-        }
+        // No glass group here: the buttons sit edge to edge, and a group
+        // melts two lit neighbours (like + shuffle) into one blob.
+        transportButtons(shuffleAndRepeat: shuffleAndRepeat, likes: likes)
     }
 
     private func transportButtons(shuffleAndRepeat: Bool, likes: Bool) -> some View {
