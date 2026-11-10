@@ -94,9 +94,12 @@ private struct SystemGlassFill<S: InsettableShape>: View {
         //
         // The open notch is pure black, and Liquid Glass only refracts what is
         // behind it, so untinted glass there is black on black and vanishes.
-        // A faint white body plus the drawn rim and sheen give it an edge.
+        // A drawn body underneath (which shows even if the panel renders the
+        // glass flat), a white tint, and the rim and sheen on top give it an
+        // edge; the system glass adds the refraction and pointer response.
         let k = subtle ? 0.5 : 1.0
         Color.clear
+            .background(DrawnGlassFill(shape: shape, tint: tint, lit: lit, subtle: subtle))
             .glassEffect(glass, in: shape)
             .overlay(
                 shape
