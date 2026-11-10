@@ -10,7 +10,6 @@ import AppKit
 import Combine
 import Quartz
 import QuickLookThumbnailing
-import Vision
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -467,30 +466,7 @@ final class ShelfManager: NSObject, ObservableObject {
     func copyTextFromImage(_ item: ShelfItem, completion: @escaping (String?) -> Void) {
         let url = item.url
         DispatchQueue.global(qos: .userInitiated).async {
-            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-                  let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
-            else {
-                DispatchQueue.main.async { completion(nil) }
-                return
-            }
-
-            let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
-            // Vision reads English only unless told otherwise, so Polish
-            // diacritics came out as plain letters. Ask only for languages this
-            // Vision revision knows; an unknown one makes the request throw.
-            if let supported = try? request.supportedRecognitionLanguages() {
-                let wanted = ["pl-PL", "en-US"].filter(supported.contains)
-                if !wanted.isEmpty { request.recognitionLanguages = wanted }
-            }
-
-            let handler = VNImageRequestHandler(cgImage: image, options: [:])
-            try? handler.perform([request])
-
-            let text = (request.results ?? [])
-                .compactMap { $0.topCandidates(1).first?.string }
-                .joined(separator: "\n")
+            let text = TextRecognition.text(inImagesAt: [url])
 
             DispatchQueue.main.async {
                 guard !text.isEmpty else { completion(nil); return }

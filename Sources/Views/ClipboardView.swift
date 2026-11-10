@@ -252,7 +252,7 @@ private struct ClipboardTile: View {
     private var content: some View {
         switch entry.payload {
         case let .image(image):
-            Image(nsImage: image)
+            Image(decorative: image.thumbnail, scale: 1)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(height: 58)

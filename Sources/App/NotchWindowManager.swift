@@ -116,7 +116,12 @@ final class NotchWindowManager: ObservableObject {
             // Tuck first: the hover test below must already see the small
             // rect, or a wing under the pointer would open the notch.
             controller.viewModel.setPointerOverMenuBar(controller.isPointerOverMenuBarWings(point))
-            let inside = controller.hoverRect.contains(point)
+            // This runs for every move of the pointer anywhere on any display.
+            // The hover rect lies within the panel (give or take its 12-point
+            // lip), so for nearly all of them one comparison settles it,
+            // without working out what the notch is currently showing.
+            let inside = controller.panel.frame.insetBy(dx: -12, dy: -12).contains(point)
+                && controller.hoverRect.contains(point)
             controller.viewModel.setHovering(inside)
         }
 

@@ -406,6 +406,43 @@ enum SelfTest {
         check("a clipboard entry can be removed", clipboard.entries.isEmpty)
         info("clipboard entries before the test", "\(clipBefore)")
 
+        // A copied image is kept as a PNG and a tile picture, never as the
+        // decoded bitmap, and its text is read by a process of its own.
+        let sheet = NSImage(size: NSSize(width: 900, height: 220), flipped: false) { rect in
+            NSColor.white.setFill()
+            rect.fill()
+            ("Faktura 4821 Fun Notch" as NSString).draw(
+                at: NSPoint(x: 30, y: 80),
+                withAttributes: [.font: NSFont.systemFont(ofSize: 56, weight: .medium), .foregroundColor: NSColor.black]
+            )
+            return true
+        }
+        func pixelSize(_ data: Data) -> [Int] {
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+                  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            else { return [] }
+            return [properties[kCGImagePropertyPixelWidth] as? Int ?? 0, properties[kCGImagePropertyPixelHeight] as? Int ?? 0]
+        }
+        if let tiff = sheet.tiffRepresentation, let kept = ClipboardImage.make(fromPasteboardData: tiff, isPNG: false) {
+            check(
+                "a copied image is kept as a PNG of the same picture",
+                kept.png.count < tiff.count && !pixelSize(tiff).isEmpty && pixelSize(kept.png) == pixelSize(tiff),
+                detail: "\(tiff.count / 1024) KB → \(kept.png.count / 1024) KB"
+            )
+            check(
+                "with a small picture for its tile",
+                max(kept.thumbnail.width, kept.thumbnail.height) <= ClipboardImage.thumbnailPixels
+            )
+            check(
+                "and one that already is a PNG is kept as it came",
+                ClipboardImage.make(fromPasteboardData: kept.png, isPNG: true)?.png == kept.png
+            )
+            let read = TextRecognition.text(inImageData: kept.png)
+            check("its text is read by the worker process", read.contains("4821"), detail: String(read.prefix(40)))
+        } else {
+            check("a copied image can be kept as a PNG", false)
+        }
+
         info("paired Bluetooth devices", "\(BluetoothMonitor.shared.devices.count)")
         for device in BluetoothMonitor.shared.devices.prefix(4) {
             info("  \(device.name)", "\(device.isConnected ? "connected" : "idle") symbol=\(device.symbol)")

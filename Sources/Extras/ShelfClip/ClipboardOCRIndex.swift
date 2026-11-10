@@ -3,15 +3,13 @@
 //  FunNotch
 //
 //  Reads the text out of copied images once, in the background, so the
-//  clipboard search can find a screenshot by the words in it. Vision runs
-//  on-device; the recognised text is kept in memory only and is dropped with
-//  its history entry.
+//  clipboard search can find a screenshot by the words in it. The reading is
+//  done on-device by a worker process (see TextRecognition); the recognised
+//  text is kept in memory only and is dropped with its history entry.
 //
 
 import AppKit
-import ImageIO
 import UniformTypeIdentifiers
-import Vision
 
 @MainActor
 final class ClipboardOCRIndex: ObservableObject {
@@ -25,12 +23,9 @@ final class ClipboardOCRIndex: ObservableObject {
     /// One at a time: recognition is heavy and nothing here is urgent.
     private nonisolated static let queue = DispatchQueue(label: "com.funnotch.clipboard-ocr", qos: .utility)
 
-    /// NSImage is not Sendable, but this one is only read: it is handed to the
-    /// worker queue so the (possibly large) bitmap decode happens off main.
-    private struct ImageBox: @unchecked Sendable { let image: NSImage }
-
     private enum Source: Sendable {
-        case image(ImageBox)
+        /// The image as PNG.
+        case image(Data)
         case files([URL])
     }
 
@@ -47,7 +42,7 @@ final class ClipboardOCRIndex: ObservableObject {
         case .text:
             return
         case let .image(image):
-            source = .image(ImageBox(image: image))
+            source = .image(image.png)
         case let .files(urls):
             let images = urls.filter(Self.isReadableImage).prefix(3)
             guard !images.isEmpty else { return }
@@ -89,50 +84,8 @@ final class ClipboardOCRIndex: ObservableObject {
 
     private nonisolated static func recognise(_ source: Source) -> String {
         switch source {
-        case let .image(box):
-            guard let image = box.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return "" }
-            return recognise(image)
-        case let .files(urls):
-            return urls.compactMap { url -> String? in
-                guard let image = loadImage(url) else { return nil }
-                let text = recognise(image)
-                return text.isEmpty ? nil : text
-            }.joined(separator: "\n")
+        case let .image(png): return TextRecognition.text(inImageData: png)
+        case let .files(urls): return TextRecognition.text(inImagesAt: urls)
         }
-    }
-
-    /// Orientation applied and capped at 4096 px: more than enough for text,
-    /// and it keeps a 50-megapixel photo from taking half a minute.
-    private nonisolated static func loadImage(_ url: URL) -> CGImage? {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: 4096,
-        ]
-        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
-    }
-
-    private nonisolated static func recognise(_ image: CGImage) -> String {
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-        // Only ask for languages this Vision revision knows; an unknown one
-        // makes the whole request throw.
-        if let supported = try? request.supportedRecognitionLanguages() {
-            let wanted = ["pl-PL", "en-US"].filter(supported.contains)
-            if !wanted.isEmpty { request.recognitionLanguages = wanted }
-        }
-
-        let handler = VNImageRequestHandler(cgImage: image, options: [:])
-        do {
-            try handler.perform([request])
-        } catch {
-            DiagnosticLog.write("clipboard", "OCR failed: \(error.localizedDescription)")
-            return ""
-        }
-        return (request.results ?? [])
-            .compactMap { $0.topCandidates(1).first?.string }
-            .joined(separator: "\n")
     }
 }

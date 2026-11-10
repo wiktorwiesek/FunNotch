@@ -14,6 +14,10 @@ enum FunNotchApp {
     static var delegate: AppDelegate?
 
     static func main() {
+        // Started by the app itself to read the text out of an image
+        // (see TextRecognition): no window, no managers, in and out.
+        if TextRecognition.isWorker { TextRecognition.runWorker() }
+
         let app = NSApplication.shared
         let delegate = AppDelegate()
         Self.delegate = delegate

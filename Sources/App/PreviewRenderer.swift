@@ -988,11 +988,16 @@ extension PreviewRenderer {
         }))
 
         // BEGIN CopyAirDrop: "Skopiowano" and AirDrop islands, built by the production code.
+        // The island only says "obraz"; any picture will do for the entry.
+        let pixel = CGContext(
+            data: nil, width: 4, height: 4, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!.makeImage()!
         let copiedSamples: [(String, ClipboardEntry.Payload)] = [
             ("text", .text("Zamówienie ZD/2026/11/0042 do hurtowni")),
             ("link", .text("https://example.com/dashboard/raporty?tab=nowe")),
             ("color", .text("#E8590C")),
-            ("image", .image(NSImage(size: NSSize(width: 4, height: 4)))),
+            ("image", .image(ClipboardImage(png: Data(), thumbnail: pixel))),
             ("file", .files([URL(fileURLWithPath: "/tmp/Faktura_2026_11_0042_korekta_koncowa.pdf")])),
         ]
         for (name, payload) in copiedSamples {
