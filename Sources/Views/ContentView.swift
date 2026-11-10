@@ -259,7 +259,7 @@ struct ClosedNotchView: View {
         } else if showsSideActivity, viewModel.isShowingWidgets {
             HStack(spacing: 0) {
                 ClosedVisualizer()
-                    .frame(width: NotchViewModel.musicActivityInset)
+                    .frame(width: viewModel.closedVisualizerWidth)
                 NotchWidgetStack(widgets: viewModel.activeWidgets.trailing, side: .trailing)
             }
         } else if viewModel.isShowingWidgets {

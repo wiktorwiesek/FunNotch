@@ -437,6 +437,13 @@ final class NotchViewModel: ObservableObject {
         agentActivity.active > 1 ? Self.agentPipWidthWithCount : Self.agentPipWidth
     }
 
+    /// The spectrum's place beside the cutout: wider by a count's worth while
+    /// its cat stands in for more than one busy agent.
+    var closedVisualizerWidth: CGFloat {
+        let counts = musicCatCarriesAgents && agentPresentation == .cat && agentActivity.active > 1
+        return Self.musicActivityInset + (counts ? Self.agentPipWidthWithCount - Self.agentPipWidth : 0)
+    }
+
     /// Space taken beside the cutout by the live activities, left and right,
     /// plus whatever the decorations (timer mascot, idle animation) add.
     var closedActivityInsets: (leading: CGFloat, trailing: CGFloat) {
@@ -452,7 +459,7 @@ final class NotchViewModel: ObservableObject {
 
         if showsClosedMediaActivity, !isShowingStandardMusicPeek {
             leading = Self.musicActivityInset
-            trailing = Self.musicActivityInset
+            trailing = closedVisualizerWidth
         }
 
         if showsFocusActivity {
