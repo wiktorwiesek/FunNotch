@@ -131,6 +131,11 @@ struct NotchHeader: View {
                     BatteryPill()
                 }
 
+                HoverButton(systemName: "wrench.and.screwdriver", size: 13, padding: 5) {
+                    PointerMenu.show(NotchTools.menu { viewModel.close() })
+                }
+                .help("Narzędzia: teleprompter, terminal, asystent ekranu, okna, paleta")
+
                 // Sits beside the gear: the home screen is the thing you are
                 // looking at when you decide you want it rearranged, so the way
                 // to rearrange it belongs here rather than three levels into

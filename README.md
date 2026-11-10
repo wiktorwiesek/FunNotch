@@ -96,6 +96,9 @@ Free and open source. No account, no subscription, no telemetry.
 - **Lock screen widgets** — now playing, a running focus session or timer,
   charging and the weather, above the lock screen. Off unless "Pokazuj na
   ekranie blokady" is on.
+- **Tools button** — the teleprompter, the terminal, the screen assistant, the
+  window switcher and the palette are one click away, behind the wrench in the
+  open notch's header.
 - **No notch? Still works.** On an external display it draws a floating pill in
   the same place, like the Dynamic Island.
 - **And** — camera mirror, calendar and reminders, meeting-link detection,
