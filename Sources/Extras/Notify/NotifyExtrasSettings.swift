@@ -17,7 +17,7 @@ struct NotifyExtrasSettings: View {
         VStack(alignment: .leading, spacing: 22) {
             SettingsCard(
                 title: "Powiadomienia w notchu",
-                footer: "Fun Notch czyta baner powiadomienia przez Dostępność, bo macOS nie udostępnia innego sposobu. Nic nie jest wysyłane poza ten komputer."
+                footer: "Fun Notch czyta baner powiadomienia przez Dostępność, bo macOS nie udostępnia innego sposobu. Zastąpiony baner nie pojawia się na ekranie, ale powiadomienie zostaje w Centrum powiadomień; alerty, które czekają na odpowiedź, pokazują się jak zwykle. Nic nie jest wysyłane poza ten komputer."
             ) {
                 SettingsToggle(
                     title: "Czytaj powiadomienia",
@@ -35,6 +35,15 @@ struct NotifyExtrasSettings: View {
                         isOn: $center.islandsEnabled,
                         preview: previewIsland
                     )
+                    if center.islandsEnabled {
+                        SettingsToggle(
+                            title: "Zastępuj banery systemowe",
+                            subtitle: "Gdy notch pokazuje powiadomienie, baner macOS nie wysuwa się w rogu ekranu.",
+                            symbol: "rectangle.on.rectangle.slash",
+                            tint: SettingsStyle.purple,
+                            isOn: $center.hidesBanners
+                        )
+                    }
                     if center.islandsEnabled {
                         SettingsPicker(
                             title: "Z których aplikacji",

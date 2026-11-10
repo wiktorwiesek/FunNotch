@@ -32,6 +32,9 @@ struct CapturedBanner {
     var element: AXUIElement
     var identifier: String?
     var actions: [String]
+    /// What kind of element it is: a banner that leaves by itself, an alert
+    /// that waits for an answer, a stack of several.
+    var subrole: String
 
     var text: String { [title, subtitle, body].filter { !$0.isEmpty }.joined(separator: " ") }
 }
@@ -50,7 +53,13 @@ final class NotificationBannerWatcher: ObservableObject {
     @Published private(set) var state: State = .stopped
 
     /// Called for every banner that was not on screen at the previous scan.
-    var onBanner: ((CapturedBanner) -> Void)?
+    /// True when the notch shows it itself, so the system's copy may be
+    /// taken off the screen (see "Taking the banner off the screen").
+    var onBanner: ((CapturedBanner) -> Bool)?
+
+    /// Whether a banner may be taken off the screen at all right now. Asked
+    /// the moment one appears, before any of it has been read.
+    var mayHide: (() -> Bool)?
 
     private static let bundleIdentifier = "com.apple.notificationcenterui"
     private static let panelMarker = "widget-editor-button"
@@ -59,6 +68,7 @@ final class NotificationBannerWatcher: ObservableObject {
         "AXNotificationCenterAlert", "AXNotificationCenterBanner", "AXNotificationCenterNotification",
     ]
     private static let stackSubrole = "AXNotificationCenterAlertStack"
+    private static let bannerSubrole = "AXNotificationCenterBanner"
     private static let maxNodes = 600
     private static let maxDepth = 14
 
@@ -78,6 +88,8 @@ final class NotificationBannerWatcher: ObservableObject {
     private var timer: Timer?
     private var observer: AXObserver?
     private var applicationElement: AXUIElement?
+    /// The Notification Center process the observer is attached to.
+    private var observedProcess: pid_t = 0
     private var observedWindows = Set<AXUIElement>()
     private var scanWork: DispatchWorkItem?
     private var firstPendingEvent: Date?
@@ -149,6 +161,18 @@ final class NotificationBannerWatcher: ObservableObject {
                 DiagnosticLog.write("notify", "Accessibility access was revoked")
                 detach()
                 state = .needsAccessibility
+            } else if NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundleIdentifier)
+                .first?.processIdentifier != observedProcess {
+                // Notification Center is an agent, and the workspace does not
+                // announce an agent's launches: when it restarts, the observer
+                // is left listening to a process that is gone.
+                DiagnosticLog.write("notify", "Notification Center restarted; attaching again")
+                detach()
+                attach()
+            } else if !lastTaken.isEmpty {
+                // A banner kept off the screen must not outstay `awayLimit`
+                // for want of an event.
+                scheduleScan()
             }
             return
         }
@@ -195,6 +219,7 @@ final class NotificationBannerWatcher: ObservableObject {
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(created), .commonModes)
         observer = created
         applicationElement = element
+        observedProcess = app.processIdentifier
         observedWindows.removeAll()
         state = .watching
         DiagnosticLog.write("notify", "watching Notification Center (pid \(app.processIdentifier))")
@@ -203,15 +228,20 @@ final class NotificationBannerWatcher: ObservableObject {
     }
 
     private func detach() {
+        releaseBanners()
         scanWork?.cancel()
         scanWork = nil
         firstPendingEvent = nil
+        earlyLooks = 0
         if let observer {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .commonModes)
         }
         observer = nil
         applicationElement = nil
+        observedProcess = 0
         observedWindows.removeAll()
+        lastTaken.removeAll()
+        outstayed.removeAll()
     }
 
     // MARK: - Events
@@ -219,6 +249,7 @@ final class NotificationBannerWatcher: ObservableObject {
     private func handle(_ notification: String) {
         guard observer != nil else { return }
         registerWindows()
+        lookEarly()
         scheduleScan()
     }
 
@@ -247,6 +278,7 @@ final class NotificationBannerWatcher: ObservableObject {
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
                 self?.firstPendingEvent = nil
+                self?.earlyLooks = 0
                 self?.scan()
             }
         }
@@ -261,33 +293,67 @@ final class NotificationBannerWatcher: ObservableObject {
         Self.scanDeadline = Date().addingTimeInterval(1)
         defer { Self.scanDeadline = .distantFuture }
         let windows = Self.attribute(applicationElement, kAXWindowsAttribute) as? [AXUIElement] ?? []
-        var banners: [CapturedBanner] = []
-        for window in windows {
-            banners += Self.banners(in: window)
-        }
 
         let now = Date()
         delivered = delivered.filter { $0.value > now }
+        takenOver.formIntersection(delivered.keys)
+        let mayHide = mayHide?() == true
         var seen = Set<String>()
-        for banner in banners {
-            guard !banner.text.isEmpty else { continue }
-            let content = [banner.appName ?? "", banner.title, banner.subtitle, banner.body].joined(separator: "\u{1F}")
-            let key = (banner.identifier ?? "") + "|" + content
-            seen.insert(key)
-            // A banner still on screen stays "delivered": its lifetime restarts on
-            // every scan that sees it. Otherwise an alert left up for longer than
-            // the lifetime would be announced a second time as soon as any other
-            // banner triggered a scan. A collapsed stack (no identifier) gets the
-            // same hold; it is shortened below once it has left the screen.
-            let alreadyDelivered = delivered[key] != nil
-            delivered[key] = now.addingTimeInterval(600)
-            guard !alreadyDelivered else { continue }
-            if !describedBanner {
-                describedBanner = true
-                DiagnosticLog.write("notify", Self.describe(banner))
+        for window in windows {
+            let content = Self.content(of: window, guessing: true)
+            guard !content.items.isEmpty else {
+                outstayed.remove(window)
+                lastTaken[window] = nil
+                // The panel belongs on screen. An empty window is one whose
+                // banner has just left: it is about to close where it is.
+                if content.isPanel { bringBack(window) }
+                continue
             }
-            onBanner?(banner)
+            // The window may be away only while everything in it is a
+            // banner the notch is showing itself.
+            var allTaken = true
+            var unread = false
+            for banner in Self.banners(from: content.items) {
+                // Its text has not arrived: the next scan decides.
+                guard !banner.text.isEmpty else { unread = true; continue }
+                let text = [banner.appName ?? "", banner.title, banner.subtitle, banner.body].joined(separator: "\u{1F}")
+                let key = (banner.identifier ?? "") + "|" + text
+                seen.insert(key)
+                // A banner still on screen stays "delivered": its lifetime restarts on
+                // every scan that sees it. Otherwise an alert left up for longer than
+                // the lifetime would be announced a second time as soon as any other
+                // banner triggered a scan. A collapsed stack (no identifier) gets the
+                // same hold; it is shortened below once it has left the screen.
+                let alreadyDelivered = delivered[key] != nil
+                delivered[key] = now.addingTimeInterval(600)
+                if !alreadyDelivered {
+                    if !describedBanner {
+                        describedBanner = true
+                        DiagnosticLog.write("notify", Self.describe(banner))
+                    }
+                    if onBanner?(banner) == true {
+                        takenOver.insert(key)
+                        lastTaken[window] = now
+                    }
+                }
+                if !Self.leavesByItself(banner.subrole) || !takenOver.contains(key) { allTaken = false }
+            }
+            if let position = Self.position(of: window), Self.isAway(position) {
+                let since = lastTaken[window] ?? now
+                lastTaken[window] = since
+                if now.timeIntervalSince(since) > Self.awayLimit, outstayed.insert(window).inserted {
+                    DiagnosticLog.write("notify", "a hidden banner outstayed its time; its window is back")
+                }
+            }
+            if !allTaken || !mayHide || outstayed.contains(window) {
+                bringBack(window)
+            } else if !unread {
+                sendAway(window, early: false)
+            }
         }
+        lastTaken = lastTaken.filter { windows.contains($0.key) }
+        outstayed.formIntersection(windows)
+
         // Without an identifier the key names only the top message, so once
         // it is gone an identical message must be announced again soon, not
         // ten minutes on.
@@ -299,16 +365,122 @@ final class NotificationBannerWatcher: ObservableObject {
 
     /// What a banner is made of, without a word of what it says: the banner
     /// tree is undocumented and changes between systems, so the log records
-    /// what this one offers (which actions, whether it can be moved).
+    /// what this one offers.
     private static func describe(_ banner: CapturedBanner) -> String {
-        let subrole = attribute(banner.element, kAXSubroleAttribute) as? String ?? "?"
-        var movable = DarwinBoolean(false)
-        AXUIElementIsAttributeSettable(banner.element, kAXPositionAttribute as CFString, &movable)
         // A custom action is "Name:Close\nTarget:…\nSelector:…"; the name is enough.
         let actions = banner.actions.map { action in
             action.split(separator: "\n").first.map { $0.replacingOccurrences(of: "Name:", with: "") } ?? action
         }
-        return "first banner: \(subrole), actions \(actions), movable \(movable.boolValue)"
+        return "first banner: \(banner.subrole), actions \(actions)"
+    }
+
+    // MARK: - Taking the banner off the screen
+    //
+    // When the notch shows a notification itself, the system's banner beside
+    // it says the same thing twice. Accessibility cannot hide a banner, but it
+    // can move the window banners are drawn in (as large as the display, and
+    // the one the Notification Center panel opens in), so that window is
+    // moved far above every display while it holds nothing but banners the
+    // notch has taken over. The banner itself is untouched: it can still be
+    // pressed, it leaves when it would have, and it stays in Notification
+    // Center.
+    //
+    // The window is closed when its last banner leaves, and Notification
+    // Center puts it back on its display every time it opens it, so nothing
+    // has to be undone afterwards and nothing is remembered here about where
+    // a window is: its position is read, and it is put where what it holds
+    // belongs, the moment something comes up in it (`lookEarly`) and again
+    // when the text has been read (`scan`). An alert that waits for an
+    // answer, a banner the notch is not showing and the panel all bring it
+    // home. (It is not brought home as its banner leaves: it can only be
+    // moved while it is open, and that would show the banner sliding out.)
+
+    /// Further than any display can be.
+    private static let awayDistance: CGFloat = 30000
+    /// A window is never away longer than this after its newest banner: a
+    /// banner is gone in five seconds, so anything still there is not one.
+    private static let awayLimit: TimeInterval = 12
+    /// A window with a banner in it is a handful of elements. An early look
+    /// that has not seen all of a window by this many is looking at the
+    /// panel, and leaves it to the scan.
+    private static let earlyNodes = 120
+
+    /// When each window that is open got its newest banner the notch took over.
+    private var lastTaken: [AXUIElement: Date] = [:]
+    /// Windows brought home for passing `awayLimit`, until they are empty again.
+    private var outstayed = Set<AXUIElement>()
+    /// Keys (as in `delivered`) of the banners the notch is showing itself.
+    private var takenOver = Set<String>()
+    /// Early looks spent on the burst of events in flight.
+    private var earlyLooks = 0
+
+    private static func leavesByItself(_ subrole: String) -> Bool {
+        subrole == bannerSubrole || subrole == stackSubrole
+    }
+
+    private static func position(of window: AXUIElement) -> CGPoint? {
+        guard let value = attribute(window, kAXPositionAttribute), CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
+        var point = CGPoint.zero
+        return AXValueGetValue(value as! AXValue, .cgPoint, &point) ? point : nil
+    }
+
+    private static func isAway(_ position: CGPoint) -> Bool {
+        position.y < -awayDistance / 2
+    }
+
+    private static func move(_ window: AXUIElement, to point: CGPoint) -> Bool {
+        var point = point
+        guard let value = AXValueCreate(.cgPoint, &point) else { return false }
+        return AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, value) == .success
+    }
+
+    private func sendAway(_ window: AXUIElement, early: Bool) {
+        guard let position = Self.position(of: window), !Self.isAway(position) else { return }
+        if Self.move(window, to: CGPoint(x: position.x, y: position.y - Self.awayDistance)) {
+            DiagnosticLog.write("notify", "banner hidden (\(early ? "as it appeared" : "once read"))")
+        }
+    }
+
+    private func bringBack(_ window: AXUIElement) {
+        guard let position = Self.position(of: window), Self.isAway(position) else { return }
+        _ = Self.move(window, to: CGPoint(x: position.x, y: position.y + Self.awayDistance))
+    }
+
+    /// Stops hiding: every window that is open comes home with what is in it.
+    func releaseBanners() {
+        guard let applicationElement else { return }
+        let windows = Self.attribute(applicationElement, kAXWindowsAttribute) as? [AXUIElement] ?? []
+        for window in windows { bringBack(window) }
+    }
+
+    /// A banner slides in over a third of a second and its text arrives later
+    /// still, so a window that waited for the scan would show it first. One
+    /// look at what a window holds is enough to put it where that belongs at
+    /// once; the scan then reads it and decides again. A burst of events gets
+    /// three such looks at most.
+    private func lookEarly() {
+        guard earlyLooks < 3, let applicationElement else { return }
+        earlyLooks += 1
+        Self.scanDeadline = Date().addingTimeInterval(0.25)
+        defer { Self.scanDeadline = .distantFuture }
+        let mayHide = mayHide?() == true
+        let windows = Self.attribute(applicationElement, kAXWindowsAttribute) as? [AXUIElement] ?? []
+        for window in windows where !outstayed.contains(window) {
+            guard let position = Self.position(of: window) else { continue }
+            let away = Self.isAway(position)
+            // At home with nothing to hide: not worth the walk.
+            guard away || mayHide else { continue }
+            let content = Self.content(of: window, guessing: false, budget: Self.earlyNodes)
+            guard content.isComplete else { continue }
+            let bannersOnly = !content.items.isEmpty && content.items.allSatisfy { Self.leavesByItself($0.subrole) }
+            if bannersOnly, mayHide {
+                if lastTaken[window] == nil { lastTaken[window] = Date() }
+                if !away { sendAway(window, early: true) }
+            } else if away, !content.items.isEmpty {
+                // An alert, or a banner the notch cannot show right now.
+                bringBack(window)
+            }
+        }
     }
 
     /// One AX element's attributes, fetched in a single round trip to the
@@ -369,10 +541,22 @@ final class NotificationBannerWatcher: ObservableObject {
         let value: String
     }
 
-    /// Banners in one Notification Center window, or none when the window is
-    /// the Notification Center panel or a desktop widget.
-    private static func banners(in window: AXUIElement) -> [CapturedBanner] {
-        var budget = maxNodes
+    /// What one Notification Center window holds.
+    private struct WindowContent {
+        /// The notification elements in it; none for the panel.
+        var items: [Node] = []
+        /// It is the Notification Center panel or a desktop widget, whose
+        /// notifications are not banners.
+        var isPanel = false
+        /// The whole window was seen: neither the node budget nor the
+        /// scan's deadline cut the walk short.
+        var isComplete = true
+    }
+
+    /// `guessing` also accepts a window that only looks like a banner;
+    /// `nodes` stops the walk sooner than `maxNodes`.
+    private static func content(of window: AXUIElement, guessing: Bool, budget nodes: Int? = nil) -> WindowContent {
+        var budget = nodes ?? maxNodes
         var isPanel = false
         var hasWidget = false
 
@@ -394,15 +578,22 @@ final class NotificationBannerWatcher: ObservableObject {
         }
 
         let root = node(window)
-        var items = visit(root, depth: 0)
-        guard !isPanel, !hasWidget else { return [] }
+        let items = visit(root, depth: 0)
+        let isComplete = budget > 0 && Date() < scanDeadline
+        guard !isPanel, !hasWidget else { return WindowContent(isPanel: true, isComplete: isComplete) }
         // A newer macOS may name the banner differently. A window that holds
         // nothing but identified title/body texts is still a banner.
-        if items.isEmpty, !texts(in: root).filter({ ["title", "body"].contains($0.identifier ?? "") }).isEmpty {
-            items = [root]
+        if guessing, items.isEmpty, !texts(in: root).filter({ ["title", "body"].contains($0.identifier ?? "") }).isEmpty {
+            return WindowContent(items: [root], isComplete: isComplete)
         }
+        return WindowContent(items: items, isComplete: isComplete)
+    }
 
-        return items.flatMap { item -> [CapturedBanner] in
+    /// The banners among a window's notification elements. One whose text
+    /// cannot be read yet comes back empty rather than not at all, so the
+    /// window is known to hold it.
+    private static func banners(from items: [Node]) -> [CapturedBanner] {
+        items.flatMap { item -> [CapturedBanner] in
             let actions = actionNames(of: item.element)
             // The collapsed stack is always called "AXNotificationListItems": it
             // says nothing about which notification is on top, so it must not
@@ -412,19 +603,19 @@ final class NotificationBannerWatcher: ObservableObject {
             if groups.isEmpty {
                 // No readable texts: the banner's own description holds
                 // "title, subtitle, body" as one string.
-                guard let combined = item.description ?? item.title ?? firstDescription(in: item) else { return [] }
+                let combined = item.description ?? item.title ?? firstDescription(in: item) ?? ""
                 let parts = combined.components(separatedBy: ", ")
                 let title = parts.first ?? combined
                 let body = parts.dropFirst().joined(separator: ", ")
                 return [CapturedBanner(
                     appName: nil, title: title, subtitle: "", body: body,
-                    element: item.element, identifier: identifier, actions: actions
+                    element: item.element, identifier: identifier, actions: actions, subrole: item.subrole
                 )]
             }
             return groups.map { group in
                 CapturedBanner(
                     appName: group.app, title: group.title, subtitle: group.subtitle, body: group.body,
-                    element: item.element, identifier: identifier, actions: actions
+                    element: item.element, identifier: identifier, actions: actions, subrole: item.subrole
                 )
             }
         }

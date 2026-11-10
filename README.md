@@ -52,6 +52,12 @@ Free and open source. No account, no subscription, no telemetry.
 - **Widgets** — thirteen of them, any number either side of the camera.
 - **HUD** — volume, brightness and keyboard backlight that *replaces* the
   system overlay rather than sitting beside it.
+- **Notifications** — every banner is shown in the notch instead (sender and
+  text, a "Kopiuj kod" button for one-time codes, reply or open), and the
+  system's own banner stays off the screen while the notch has it. The
+  notification still lands in Notification Center, and alerts that wait for an
+  answer appear as usual. Needs Accessibility; "Zastępuj banery systemowe" in
+  Settings → Dodatki turns the replacing off.
 - **Cat** — one small mascot in place of the generic glyphs: it types while an
   agent works, waves when one needs you, hops when one finishes, bobs to the
   music, peeks up when a file lands, and sleeps in empty states. It also lives

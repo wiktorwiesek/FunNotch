@@ -108,6 +108,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // A banner's window moved away must not stay there without the app.
+        NotificationBannerWatcher.shared.releaseBanners()
         MouseTracker.shared.stop()
         WebcamManager.shared.stop()
         // A note typed in the last second is still waiting on its debounce.

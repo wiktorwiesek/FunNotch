@@ -58,6 +58,14 @@ final class NotifyCenter: ObservableObject {
     /// Watches banners at all. Off means no islands and an empty mirror source.
     @Published var captureEnabled: Bool { didSet { store(captureEnabled, "capture"); applyCapture() } }
     @Published var islandsEnabled: Bool { didSet { store(islandsEnabled, "islands") } }
+    /// Keep the system's own banner off the screen while the notch shows the
+    /// notification, so it is not announced twice.
+    @Published var hidesBanners: Bool {
+        didSet {
+            store(hidesBanners, "hideBanners")
+            if !hidesBanners { NotificationBannerWatcher.shared.releaseBanners() }
+        }
+    }
     @Published var islandScope: IslandScope { didSet { store(islandScope.rawValue, "scope") } }
     /// Offer "Kopiuj kod" when a notification holds a verification code.
     @Published var codeDetection: Bool { didSet { store(codeDetection, "codes") } }
@@ -93,6 +101,7 @@ final class NotifyCenter: ObservableObject {
         }
         captureEnabled = bool("capture", true)
         islandsEnabled = bool("islands", true)
+        hidesBanners = bool("hideBanners", true)
         islandScope = UserDefaults.standard.string(forKey: Self.prefix + "scope").flatMap(IslandScope.init) ?? .all
         codeDetection = bool("codes", true)
         showPreview = bool("preview", true)
@@ -116,7 +125,10 @@ final class NotifyCenter: ObservableObject {
 
         NotifyAppDirectory.shared.prefetch()
         NotificationBannerWatcher.shared.onBanner = { [weak self] banner in
-            self?.ingest(banner)
+            self?.ingest(banner) ?? false
+        }
+        NotificationBannerWatcher.shared.mayHide = { [weak self] in
+            self?.canTakeBannersOver ?? false
         }
         applyCapture()
         applyDatabase()
@@ -202,7 +214,16 @@ final class NotifyCenter: ObservableObject {
 
     // MARK: - Banners
 
-    private func ingest(_ banner: CapturedBanner) {
+    /// The notch can stand in for a banner: islands are on, and some notch is
+    /// closed and on screen to show one.
+    private var canTakeBannersOver: Bool {
+        hidesBanners && islandsEnabled
+            && NotchWindowManager.shared.viewModels.contains { $0.notchState == .closed && !$0.hiddenForFullscreen }
+    }
+
+    /// Records the banner and announces it. True when the notch is showing it,
+    /// so the system's copy need not be on screen as well.
+    private func ingest(_ banner: CapturedBanner) -> Bool {
         var appName = banner.appName ?? ""
         var bundleIdentifier: String?
         if !appName.isEmpty, let app = NotifyAppDirectory.shared.resolve(name: appName) {
@@ -237,9 +258,11 @@ final class NotifyCenter: ObservableObject {
         }
         rebuild()
 
-        guard islandsEnabled, !isOwn else { return }
-        if islandScope == .messages, !item.isMessages { return }
+        guard islandsEnabled, !isOwn else { return false }
+        if islandScope == .messages, !item.isMessages { return false }
+        let takesOver = canTakeBannersOver
         postIsland(for: item)
+        return takesOver
     }
 
     private func postIsland(for item: MirroredNotification) {
