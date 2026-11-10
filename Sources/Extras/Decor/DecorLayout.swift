@@ -27,7 +27,7 @@ extension NotchViewModel {
     /// insets: they are zero exactly when the row beside the camera is empty.
     var decorIdleWings: (leading: Bool, trailing: Bool)? {
         let store = DecorStore.shared
-        guard store.idleIsReady, notchState == .closed,
+        guard store.idleIsReady || store.catIdleIsReady, notchState == .closed,
               !isShowingDropZone, !isShowingStandardHUD, !isShowingStandardMusicPeek
         else { return nil }
         let base = baseClosedActivityInsets
@@ -46,7 +46,8 @@ extension NotchViewModel {
         var insets = base
         insets.trailing += decorMascotTrackWidth
         if let wings = decorIdleWings {
-            let width = DecorStore.shared.idleInset
+            let store = DecorStore.shared
+            let width = store.idleIsReady ? store.idleInset : DecorStore.catIdleInset
             if wings.leading { insets.leading = width }
             if wings.trailing { insets.trailing = width }
         }

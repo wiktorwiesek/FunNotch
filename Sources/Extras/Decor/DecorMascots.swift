@@ -50,8 +50,21 @@ struct DecorMascotCanvas: View {
     static let grid = CGSize(width: 20, height: 14)
 
     @Environment(\.decorAnimationsPaused) private var paused
+    @ObservedObject private var decor = DecorStore.shared
 
     var body: some View {
+        if mascot == .cat && decor.catEnabled {
+            // The designed cat, in side view, walking in the render server.
+            // A little taller than the 20 × 14 grid: ears and tail need room.
+            CatView(state: .walking, size: Self.grid.height * scale * 1.45, tint: .white, still: !isMoving)
+                .frame(width: Self.grid.width * scale, height: Self.grid.height * scale, alignment: .bottom)
+                .accessibilityHidden(true)
+        } else {
+            pixelBody
+        }
+    }
+
+    private var pixelBody: some View {
         Group {
             if isMoving && !paused {
                 TimelineView(DecorClock.schedule) { context in

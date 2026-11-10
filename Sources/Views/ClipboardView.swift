@@ -48,9 +48,7 @@ struct ClipboardView: View {
 
     private var emptyState: some View {
         VStack(spacing: 6) {
-            Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 24, weight: .light))
-                .foregroundStyle(.white.opacity(0.4))
+            CatOrSymbol(systemName: "doc.on.clipboard", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.4), catSize: 42)
             Text("Nic jeszcze nie skopiowano")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.65))

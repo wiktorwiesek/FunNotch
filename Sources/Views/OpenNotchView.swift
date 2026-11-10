@@ -239,6 +239,7 @@ struct AlbumArtwork: View {
     @ObservedObject private var music = MusicManager.shared
     @EnvironmentObject private var settings: Settings
     @State private var isHovering = false
+    @ObservedObject private var decor = DecorStore.shared
 
     private let side = MusicPlayerImageSizes.size.opened.width
 
@@ -290,6 +291,21 @@ struct AlbumArtwork: View {
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .offset(x: 5, y: 5)
                     .shadow(radius: 2)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            // The cat that bobs to the music sits in the corner of the art (the
+            // tile clips anything that hangs outside it).
+            if decor.catEnabled, music.isPlaying {
+                MusicCat(
+                    isPlaying: true,
+                    color: settings.coloredSpectrogram
+                        ? settings.spectrumColor.resolved(albumArt: music.artworkColor, accent: settings.accentColor)
+                        : .white,
+                    size: 30
+                )
+                .offset(x: -3, y: 4)
+                .allowsHitTesting(false)
             }
         }
     }

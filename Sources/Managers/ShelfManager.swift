@@ -497,6 +497,7 @@ final class ShelfManager: NSObject, ObservableObject {
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()
                 pasteboard.setString(text, forType: .string)
+                MainActor.assumeIsolated { ClipboardManager.shared.markOwnWrite() }
                 completion(text)
             }
         }
@@ -507,6 +508,7 @@ final class ShelfManager: NSObject, ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(item.url.path, forType: .string)
+        ClipboardManager.shared.markOwnWrite()
     }
 
     /// Just the filename.
@@ -514,6 +516,7 @@ final class ShelfManager: NSObject, ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(item.url.lastPathComponent, forType: .string)
+        ClipboardManager.shared.markOwnWrite()
     }
 
     /// `deleteFileAfter` postpones deleting a cached file, for an item that is
@@ -588,6 +591,7 @@ final class ShelfManager: NSObject, ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects(urls as [NSURL])
+        ClipboardManager.shared.markOwnWrite()
     }
 
     /// What a share or AirDrop acts on: the selection if there is one, else

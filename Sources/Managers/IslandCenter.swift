@@ -32,6 +32,11 @@ struct Island: Identifiable {
     var action: IslandAction?
     /// Seconds on screen.
     var duration: Double = 3
+    /// A passing remark ("Skopiowano"): never replaces another activity that
+    /// is already on screen, it is simply dropped.
+    var isQuiet = false
+    /// Hook for the cat companion: set by islands that want it to peek in.
+    var mascot = false
 }
 
 @MainActor
@@ -43,13 +48,19 @@ final class IslandCenter: ObservableObject {
     private init() {}
 
     /// Shows `island` on every notch that is currently closed. A newer island
-    /// replaces one still on screen.
+    /// replaces one still on screen, unless it is quiet.
     func post(_ island: Island) {
-        current = island
         // Only the symbol: island text can carry notification content and one-time codes.
         DiagnosticLog.write("island", island.symbol)
+        // A quiet island must not rewrite `current` unless some notch really
+        // shows it: the banner on screen reads it.
+        if !island.isQuiet { current = island }
         NotchWindowManager.shared.broadcast { viewModel in
             guard viewModel.notchState == .closed else { return }
+            if island.isQuiet {
+                guard !viewModel.expandingView.show, !viewModel.sneakPeek.show else { return }
+                current = island
+            }
             viewModel.showExpandingView(type: .island, value: 0, icon: island.symbol, duration: island.duration)
         }
     }

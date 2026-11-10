@@ -15,6 +15,7 @@ struct DecorSettings: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             hudCard
+            catCard
             mascotCard
             idleCard
             glassCard
@@ -61,6 +62,35 @@ struct DecorSettings: View {
             HUDManager.shared.injectPreview(.volume, value: 0.6)
         } else {
             DecorHUDOverlay.shared.present(kind: .volume, value: 0.6, muted: false, duration: 2)
+        }
+    }
+
+    // MARK: - Cat
+
+    private var catCard: some View {
+        SettingsCard(
+            title: "Kot",
+            footer: "Kot to mały maskot rysowany raz i odtwarzany przez system, więc prawie nie obciąża procesora. Zatrzymuje się, gdy notch jest ukryty, ekran zgaszony, włączone jest oszczędzanie energii albo ograniczenie ruchu."
+        ) {
+            SettingsToggle(
+                title: "Kot zamiast ikon",
+                subtitle: "Pracujący, czekający i skończony agent, muzyka, zrzuty i pliki oraz puste listy. Po wyłączeniu wracają dawne ikony.",
+                symbol: "cat.fill",
+                tint: SettingsStyle.orange,
+                isOn: $store.catEnabled
+            )
+
+            SettingsToggle(
+                title: "Kot przy wycięciu, gdy nic się nie dzieje",
+                subtitle: "Śpiący kot obok kamery, kiedy żadna inna aktywność nie zajmuje notcha. Poszerza zamknięty notch o jedno skrzydło.",
+                symbol: "moon.zzz.fill",
+                tint: SettingsStyle.pink,
+                isOn: $store.catIdle
+            )
+            .disabled(!store.catEnabled)
+
+            CatStatesPreview()
+                .opacity(store.catEnabled ? 1 : 0.45)
         }
     }
 

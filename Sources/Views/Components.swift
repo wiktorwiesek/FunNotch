@@ -15,6 +15,7 @@ struct MusicVisualizer: View {
     let color: Color
 
     @AppStorage(MediaExtrasDefaults.realSpectrumKey) private var realSpectrum = false
+    @ObservedObject private var decor = DecorStore.shared
 
     private let barCount = 4
     /// Per-bar phase and rate so the bars never move in lockstep.
@@ -22,6 +23,19 @@ struct MusicVisualizer: View {
     private let rates: [Double] = [3.1, 4.3, 2.6, 3.7]
 
     var body: some View {
+        if decor.catEnabled {
+            // The cat bobs to a tempo in the render server; with the real
+            // spectrum on it reads the levels itself, eight times a second,
+            // and only to size the bob. Square, and a little taller than the
+            // bars' slot: the row beside the cutout has room.
+            MusicCat(isPlaying: isPlaying, color: color, size: 20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            bars
+        }
+    }
+
+    private var bars: some View {
         Group {
             if realSpectrum || Motion.filmSpectrum != nil || Motion.snapshotMode {
                 // Real levels change every frame, and the offline renderers

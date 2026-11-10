@@ -52,6 +52,13 @@ Free and open source. No account, no subscription, no telemetry.
 - **Widgets** — thirteen of them, any number either side of the camera.
 - **HUD** — volume, brightness and keyboard backlight that *replaces* the
   system overlay rather than sitting beside it.
+- **Cat** — one small mascot in place of the generic glyphs: it types while an
+  agent works, waves when one needs you, hops when one finishes, bobs to the
+  music, peeks up when a file lands, and sleeps in empty states. Drawn once
+  and played by Core Animation, so it costs the app nothing per frame, and it
+  stops when the notch is hidden, the screen is off, Low Power Mode or Reduce
+  Motion is on. "Kot zamiast ikon" in Settings → Dodatki → Wygląd turns it off
+  and brings the old glyphs back.
 - **No notch? Still works.** On an external display it draws a floating pill in
   the same place, like the Dynamic Island.
 - **And** — camera mirror, calendar and reminders, meeting-link detection,
@@ -152,6 +159,7 @@ Sources/
                 battery, weather, HUD, updates
   Settings/     The settings window and the home-screen editor
   Views/        The notch panel and everything drawn in it
+  Extras/Cat/   The cat mascot: poses and clips, vector art, Core Animation player
 Tools/
   MakeIcon.swift    Generates the app icon at build time
   fetch-sparkle.sh  Pins and verifies the Sparkle framework

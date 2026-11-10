@@ -89,6 +89,8 @@ final class DecorStore: ObservableObject {
         static let glassPanel = "extras.decor.glassPanel"
         static let glassBanners = "extras.decor.glassBanners"
         static let systemGlass = "extras.decor.systemGlass"
+        static let catEnabled = "extras.decor.cat"
+        static let catIdle = "extras.decor.catIdle"
     }
 
     private let defaults = UserDefaults.standard
@@ -163,13 +165,38 @@ final class DecorStore: ObservableObject {
         didSet { defaults.set(systemGlass, forKey: Key.systemGlass) }
     }
 
+    // Cat
+
+    /// The cat in place of the generic animated glyphs (agent spinner, waving
+    /// hand, check, music bars). Off brings every one of them back as it was.
+    /// On by default, so read with `object` to tell "never set" from "off".
+    @Published var catEnabled: Bool {
+        didSet { defaults.set(catEnabled, forKey: Key.catEnabled) }
+    }
+
+    /// A sleeping cat beside the cutout while nothing else is shown there.
+    @Published var catIdle: Bool {
+        didSet { defaults.set(catIdle, forKey: Key.catIdle) }
+    }
+
+    /// The sleeping cat is wanted beside the cutout (the user's own idle
+    /// picture, when there is one, keeps the spot; see `decorIdleWings`).
+    var catIdleIsReady: Bool { catEnabled && catIdle }
+
+    /// Width each wing gets while the sleeping cat is beside the cutout.
+    static let catIdleSize: CGFloat = 16
+    static let catIdleInset: CGFloat = catIdleSize + idlePadding * 2
+
     private var loadGeneration = 0
 
     private init() {
         let defaults = UserDefaults.standard
         hudStyle = defaults.string(forKey: Key.hudStyle).flatMap(DecorHUDStyle.init(rawValue:)) ?? .notch
         hudScale = Self.number(Key.hudScale, default: 1, in: 0.6 ... 2)
-        mascot = defaults.string(forKey: Key.mascot).flatMap(DecorMascot.init(rawValue:)) ?? .none
+        // The cat is the mascot nobody had to pick: with the cat on and no
+        // choice ever made, it rides the timer's track.
+        let cat = defaults.object(forKey: Key.catEnabled) as? Bool ?? true
+        mascot = defaults.string(forKey: Key.mascot).flatMap(DecorMascot.init(rawValue:)) ?? (cat ? .cat : .none)
         idleEnabled = defaults.bool(forKey: Key.idleEnabled)
         idleSpeed = Self.number(Key.idleSpeed, default: 1, in: 0.25 ... 3)
         idleScale = Self.number(Key.idleScale, default: 1, in: 0.5 ... 1.6)
@@ -178,6 +205,8 @@ final class DecorStore: ObservableObject {
         glassPanel = defaults.bool(forKey: Key.glassPanel)
         glassBanners = defaults.bool(forKey: Key.glassBanners)
         systemGlass = defaults.object(forKey: Key.systemGlass) as? Bool ?? true
+        catEnabled = cat
+        catIdle = defaults.bool(forKey: Key.catIdle)
         idleName = defaults.string(forKey: Key.idleName)
     }
 

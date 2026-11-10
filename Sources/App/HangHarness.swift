@@ -590,6 +590,7 @@ enum HangHarness {
             await measure("reopen (animated)", seconds: 3) { viewModel.open() }
         }
 
+        print("cat: animating views \(CatLayerView.playing), stills drawn \(CatFrameCache.drawn), cache \(CatFrameCache.bytes) bytes")
         print("harness done")
         fflush(stdout)
     }

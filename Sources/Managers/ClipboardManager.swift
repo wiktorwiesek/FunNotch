@@ -93,6 +93,9 @@ final class ClipboardManager: ObservableObject {
     /// Change count of writes we made ourselves, so pasting back does not
     /// re-record the same thing.
     private var ownChangeCount = -1
+    /// Change count of a write Fun Notch made that the history still records
+    /// (a copied path, recognised text) but that is not announced as "Skopiowano".
+    private var quietChangeCount = -1
     private var cancellables = Set<AnyCancellable>()
 
     private let storageKey = "clipboardTextHistory"
@@ -171,29 +174,34 @@ final class ClipboardManager: ObservableObject {
             return
         }
 
-        let source = NSWorkspace.shared.frontmostApplication?.localizedName
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        let source = frontmost?.localizedName
+        // Copies made inside Fun Notch's own windows (settings, notes) are
+        // not news, and neither are the ones it flagged through markOwnWrite().
+        let announce = pasteboard.changeCount != quietChangeCount
+            && frontmost?.processIdentifier != ProcessInfo.processInfo.processIdentifier
 
         if let urls = pasteboard.readObjects(
             forClasses: [NSURL.self],
             options: [.urlReadingFileURLsOnly: true]
         ) as? [URL], !urls.isEmpty {
-            record(.files(urls), source: source)
+            record(.files(urls), source: source, announce: announce)
             return
         }
 
         if let text = pasteboard.string(forType: .string),
            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            record(.text(text), source: source)
+            record(.text(text), source: source, announce: announce)
             return
         }
 
         if let images = pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage],
            let image = images.first {
-            record(.image(image), source: source)
+            record(.image(image), source: source, announce: announce)
         }
     }
 
-    private func record(_ payload: ClipboardEntry.Payload, source: String?) {
+    private func record(_ payload: ClipboardEntry.Payload, source: String?, announce: Bool) {
         // Copying the same thing twice should move it up, not duplicate it.
         if let index = entries.firstIndex(where: { $0.payload == payload }) {
             let existing = entries.remove(at: index)
@@ -228,6 +236,8 @@ final class ClipboardManager: ObservableObject {
         }
 
         persist()
+
+        if announce { CopyAnnouncer.shared.note(payload) }
     }
 
     /// Puts an entry back on the pasteboard.
@@ -256,6 +266,12 @@ final class ClipboardManager: ObservableObject {
         pasteboard.setString(value, forType: .string)
         ownChangeCount = pasteboard.changeCount
         lastChangeCount = pasteboard.changeCount
+    }
+
+    /// Call right after Fun Notch writes to the general pasteboard itself with
+    /// something the history may keep: the write is not announced as a copy.
+    func markOwnWrite() {
+        quietChangeCount = NSPasteboard.general.changeCount
     }
 
     /// Moves a copied file or image onto the shelf.

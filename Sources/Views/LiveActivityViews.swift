@@ -184,11 +184,12 @@ private struct IslandBanner: View {
         if let island = center.current {
             IntroTimeline(duration: 1.2) { time in
                 BannerLayout(geometry: geometry) {
-                    Image(systemName: island.symbol)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(island.tint)
-                        .frame(width: 24, height: 24)
-                        .modifier(WingPop(time: time))
+                    if island.mascot {
+                        // The cat peeks up beside "Skopiowano", AirDrop and the like.
+                        CatPeekOr(tint: island.tint) { glyph(island, time: time) }
+                    } else {
+                        glyph(island, time: time)
+                    }
                 } trailing: {
                     trailing(island)
                         .modifier(WingSlide(time: time, delay: 0.2))
@@ -198,6 +199,14 @@ private struct IslandBanner: View {
             }
             .id(island.id)
         }
+    }
+
+    private func glyph(_ island: Island, time: Double) -> some View {
+        Image(systemName: island.symbol)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(island.tint)
+            .frame(width: 24, height: 24)
+            .modifier(WingPop(time: time))
     }
 
     @ViewBuilder
@@ -533,20 +542,22 @@ private struct ScreenshotBanner: View {
     var body: some View {
         IntroTimeline(duration: 1.4) { time in
             BannerLayout(geometry: geometry) {
-                // A shutter flash, then the viewfinder.
-                let flash = Motion.progress(time, duration: 0.45)
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.85 * (1 - flash)))
-                        .frame(width: 10 + 24 * flash, height: 10 + 24 * flash)
-                        .blur(radius: 3)
-                        .opacity(flash < 1 ? 1 : 0)
-                    Image(systemName: "camera.viewfinder")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.white)
+                // A shutter flash, then the viewfinder; the cat peeks up instead.
+                CatPeekOr(tint: .white) {
+                    let flash = Motion.progress(time, duration: 0.45)
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.85 * (1 - flash)))
+                            .frame(width: 10 + 24 * flash, height: 10 + 24 * flash)
+                            .blur(radius: 3)
+                            .opacity(flash < 1 ? 1 : 0)
+                        Image(systemName: "camera.viewfinder")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 24, height: 24)
+                    .modifier(WingPop(time: time, delay: 0.08))
                 }
-                .frame(width: 24, height: 24)
-                .modifier(WingPop(time: time, delay: 0.08))
             } trailing: {
                 ShelfThumbnail(url: screenshots.lastCatch, shelf: shelf, time: time)
             } chin: {
@@ -565,21 +576,23 @@ private struct DownloadBanner: View {
     var body: some View {
         IntroTimeline(duration: 1.4) { time in
             BannerLayout(geometry: geometry) {
-                // The arrow drops into place and rings as it lands.
-                let drop = Motion.spring(time, response: 0.45, damping: 0.5)
-                let ring = Motion.progress(time, delay: 0.28, duration: 0.6)
-                ZStack {
-                    Circle()
-                        .stroke(Color(red: 0.35, green: 0.68, blue: 1).opacity(0.7 * (1 - ring)), lineWidth: 1.2)
-                        .frame(width: 18 + 14 * ring, height: 18 + 14 * ring)
-                        .opacity(ring > 0 && ring < 1 ? 1 : 0)
-                    Image(systemName: "arrow.down.circle.fill")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.white, Color(red: 0.2, green: 0.55, blue: 1))
-                        .offset(y: (1 - drop) * -12)
+                // The arrow drops into place and rings as it lands; the cat peeks up instead.
+                CatPeekOr(tint: Color(red: 0.35, green: 0.68, blue: 1)) {
+                    let drop = Motion.spring(time, response: 0.45, damping: 0.5)
+                    let ring = Motion.progress(time, delay: 0.28, duration: 0.6)
+                    ZStack {
+                        Circle()
+                            .stroke(Color(red: 0.35, green: 0.68, blue: 1).opacity(0.7 * (1 - ring)), lineWidth: 1.2)
+                            .frame(width: 18 + 14 * ring, height: 18 + 14 * ring)
+                            .opacity(ring > 0 && ring < 1 ? 1 : 0)
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.white, Color(red: 0.2, green: 0.55, blue: 1))
+                            .offset(y: (1 - drop) * -12)
+                    }
+                    .frame(width: 24, height: 24)
+                    .opacity(Motion.clamp(drop * 2))
                 }
-                .frame(width: 24, height: 24)
-                .opacity(Motion.clamp(drop * 2))
             } trailing: {
                 ShelfThumbnail(url: downloads.lastDownload, shelf: shelf, time: time)
             } chin: {
@@ -645,7 +658,7 @@ private struct FocusBanner: View {
             BannerLayout(geometry: geometry) {
                 Group {
                     if finished {
-                        CheckmarkBurst(time: time, size: 17, tint: Color(red: 0.55, green: 0.5, blue: 1))
+                        AgentDoneGlyph(time: time, size: 17, tint: Color(red: 0.55, green: 0.5, blue: 1))
                     } else {
                         Image(systemName: activity.icon.isEmpty ? "cup.and.saucer.fill" : activity.icon)
                             .font(.system(size: 15, weight: .medium))
@@ -712,7 +725,7 @@ private struct AgentBanner: View {
                     .modifier(WingPop(time: time))
             }
         case .finished:
-            CheckmarkBurst(time: time, size: 18)
+            AgentDoneGlyph(time: time, size: 18)
         case .needsInput:
             AgentWaitingGlyph(size: 15, time: time)
                 .modifier(WingPop(time: time))

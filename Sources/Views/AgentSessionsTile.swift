@@ -74,7 +74,7 @@ struct AgentSessionsTile: View {
                 Text("\(agents.waitingCount) \(agents.waitingCount == 1 ? "czeka" : "czekają") na Ciebie")
                     .foregroundStyle(AgentPalette.waiting)
             } else if agents.workingCount > 0 {
-                ClaudeSpinner(size: 8)
+                AgentWorkingGlyph(agent: agents.headline?.agent ?? .claude, size: 8)
                 Text("\(agents.workingCount) \(agents.workingCount == 1 ? "pracuje" : "pracują")")
                     .foregroundStyle(AgentPalette.claude)
             } else if !agents.sessions.isEmpty {
@@ -91,9 +91,10 @@ struct AgentSessionsTile: View {
 
     private var emptyState: some View {
         VStack(spacing: 4) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 15))
-                .foregroundStyle(AgentPalette.claude.opacity(0.75))
+            CatOrSymbol(
+                systemName: "sparkles", symbolSize: 15, symbolColor: AgentPalette.claude.opacity(0.75),
+                catSize: 34, tint: AgentPalette.claude
+            )
             Text("Brak uruchomionych agentów")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
@@ -135,9 +136,10 @@ struct AgentSessionsTile: View {
             .help("Pokaż: \(session.name)")
         } else {
             HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 11))
-                    .foregroundStyle(AgentPalette.claude.opacity(0.7))
+                CatOrSymbol(
+                    systemName: "sparkles", symbolSize: 11, symbolColor: AgentPalette.claude.opacity(0.7),
+                    catSize: 18, tint: AgentPalette.claude
+                )
                 Text("Brak uruchomionych agentów")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.45))
@@ -262,6 +264,8 @@ struct AgentStatusIcon: View {
     let session: AgentSessionsManager.Session
     var size: CGFloat = 12
 
+    @ObservedObject private var decor = DecorStore.shared
+
     var body: some View {
         Group {
             switch session.status {
@@ -273,15 +277,22 @@ struct AgentStatusIcon: View {
                     .transition(.scale(scale: 0.3).combined(with: .opacity))
             case .idle:
                 if session.lastTurnDuration != nil {
-                    // Only a check that has just happened draws itself; one
-                    // from earlier is simply there when the notch opens.
+                    // Only a finish that has just happened plays; one from
+                    // earlier is simply there when the notch opens.
                     if Date().timeIntervalSince(session.statusSince) < 6 {
-                        IntroTimeline(duration: 1.2) { time in
-                            CheckmarkBurst(time: time, size: size + 1)
+                        if decor.catEnabled {
+                            AgentDoneGlyph(time: 60, size: size + 1)
+                        } else {
+                            IntroTimeline(duration: 1.2) { time in
+                                CheckmarkBurst(time: time, size: size + 1)
+                            }
                         }
                     } else {
-                        CheckmarkBurst(time: 60, size: size + 1)
+                        AgentDoneGlyph(time: 60, size: size + 1, fresh: false)
                     }
+                } else if decor.catEnabled {
+                    // Nothing has run yet: the cat dozes.
+                    CatView(state: .sleeping, size: size * 1.4, tint: .white.opacity(0.7))
                 } else {
                     Circle()
                         .fill(Color.white.opacity(0.28))

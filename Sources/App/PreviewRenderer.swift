@@ -406,6 +406,7 @@ enum PreviewRenderer {
 
         appendLayoutScenes(to: &scenes) // QALayout audit scenes
         appendMediaScenes(to: &scenes) // QAMedia audit scenes
+        appendCatScenes(to: &scenes) // CatCompanion: cat integration scenes
 
         // FUNNOTCH_PREVIEW_ONLY=prefix,prefix renders just the matching scenes
         // (and skips the settings pages), for quick iteration.
@@ -621,6 +622,7 @@ enum PreviewRenderer {
         appendLayoutJobs(to: &jobs) // QALayout audit jobs
         appendNotifySnapJobs(to: &jobs) // QANotifyWindowSnap audit jobs
         appendSystemPaletteJobs(to: &jobs) // QASystemPalette audit jobs
+        appendCatJobs(to: &jobs) // CatCompanion: contact sheets of every animation
         if let only = ProcessInfo.processInfo.environment["FUNNOTCH_PREVIEW_JOBS"], !only.isEmpty {
             let prefixes = only.split(separator: ",").map(String.init)
             jobs = jobs.filter { job in prefixes.contains { job.name.hasPrefix($0) } }
@@ -866,6 +868,17 @@ extension PreviewRenderer {
         viewModel.expandingView = SneakPeek(show: true, type: .island, value: 0, icon: symbol)
     }
 
+    // BEGIN CopyAirDrop
+    private static func qaPost(_ viewModel: NotchViewModel, _ island: Island) {
+        // Preview notches are not registered with the window manager, and a
+        // quiet island only becomes `current` once some registered notch shows it.
+        var island = island
+        island.isQuiet = false
+        IslandCenter.shared.post(island)
+        viewModel.expandingView = SneakPeek(show: true, type: .island, value: 0, icon: island.symbol)
+    }
+    // END CopyAirDrop
+
     static func appendLayoutScenes(to scenes: inout [QAScene]) {
         let settings = Settings.shared
 
@@ -973,6 +986,41 @@ extension PreviewRenderer {
             qaIsland(viewModel, symbol: "number.square.fill", tint: .cyan, title: "Kod: 482 193",
                      detail: " · Google", action: "Kopiuj")
         }))
+
+        // BEGIN CopyAirDrop: "Skopiowano" and AirDrop islands, built by the production code.
+        let copiedSamples: [(String, ClipboardEntry.Payload)] = [
+            ("text", .text("Zamówienie ZD/2026/11/0042 do hurtowni")),
+            ("link", .text("https://example.com/dashboard/raporty?tab=nowe")),
+            ("color", .text("#E8590C")),
+            ("image", .image(NSImage(size: NSSize(width: 4, height: 4)))),
+            ("file", .files([URL(fileURLWithPath: "/tmp/Faktura_2026_11_0042_korekta_koncowa.pdf")])),
+        ]
+        for (name, payload) in copiedSamples {
+            scenes.append(("qa-island-copied-\(name)", { viewModel in
+                qaReset(viewModel)
+                qaPost(viewModel, CopyAnnouncer.island(for: payload))
+            }))
+        }
+        scenes.append(("qa-island-airdrop", { viewModel in
+            qaReset(viewModel)
+            if let island = DownloadWatcher.airDropIsland(for: [URL(fileURLWithPath: "/tmp/IMG_1563.jpg")]) {
+                qaPost(viewModel, island)
+            }
+        }))
+        scenes.append(("qa-island-airdrop-long", { viewModel in
+            qaReset(viewModel)
+            if let island = DownloadWatcher.airDropIsland(for: [URL(fileURLWithPath: "/tmp/Zestawienie_sprzedazy_Allegro_pazdziernik_2026_wersja_koncowa.xlsx")]) {
+                qaPost(viewModel, island)
+            }
+        }))
+        scenes.append(("qa-island-airdrop-many", { viewModel in
+            qaReset(viewModel)
+            let urls = (1 ... 7).map { URL(fileURLWithPath: "/tmp/IMG_\($0).jpg") }
+            if let island = DownloadWatcher.airDropIsland(for: urls) {
+                qaPost(viewModel, island)
+            }
+        }))
+        // END CopyAirDrop
 
         // Long names in the existing banners.
         scenes.append(("qa-bt-long", { viewModel in

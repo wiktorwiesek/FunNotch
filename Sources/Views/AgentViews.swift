@@ -163,11 +163,19 @@ struct AgentWorkingGlyph: View {
     let agent: AgentSessionsManager.Agent
     var size: CGFloat = 13
 
+    @ObservedObject private var decor = DecorStore.shared
+
     var body: some View {
-        switch agent {
-        case .claude: ClaudeSpinner(size: size)
-        case .codex: OrbitSpinner(size: size * 0.95)
-        case .omp: OrbitSpinner(size: size * 0.95, tint: AgentPalette.omp)
+        if decor.catEnabled {
+            // Typing at a laptop that glows in the agent's colour.
+            CatView(state: .working, size: size * 1.5, tint: agent.tint)
+                .frame(width: size * 1.3, height: size * 1.3)
+        } else {
+            switch agent {
+            case .claude: ClaudeSpinner(size: size)
+            case .codex: OrbitSpinner(size: size * 0.95)
+            case .omp: OrbitSpinner(size: size * 0.95, tint: AgentPalette.omp)
+            }
         }
     }
 }
@@ -181,9 +189,14 @@ struct AgentWaitingGlyph: View {
     /// Seconds since the wait began, when the caller already has a clock.
     var time: Double?
     @Environment(\.decorAnimationsPaused) private var paused
+    @ObservedObject private var decor = DecorStore.shared
 
     var body: some View {
-        if let time = time ?? Motion.filmTime {
+        if decor.catEnabled {
+            // Looks up and waves a paw; the "!" beside it stays in the render server.
+            CatView(state: .waiting, size: size * 1.5, tint: AgentPalette.waiting)
+                .frame(width: size * 1.3, height: size * 1.3)
+        } else if let time = time ?? Motion.filmTime {
             drawn(time)
         } else if Motion.snapshotMode {
             drawn(1.1)

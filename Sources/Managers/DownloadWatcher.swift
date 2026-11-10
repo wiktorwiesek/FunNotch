@@ -224,16 +224,26 @@ final class DownloadWatcher: ObservableObject {
         let urls = airDropBatch
         airDropBatch = []
         airDropWork = nil
-        guard let first = urls.first else { return }
+        guard let island = Self.airDropIsland(for: urls) else { return }
+        IslandCenter.shared.post(island)
+    }
+
+    /// SF Symbol for AirDrop. "airdrop" is not in the symbol set of every macOS
+    /// release (it is missing on this one), so fall back to the glyph the shelf's
+    /// own AirDrop button uses rather than show an empty wing.
+    static let airDropSymbol: String = {
+        ["airdrop", "dot.radiowaves.right"].first {
+            NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil
+        } ?? "dot.radiowaves.right"
+    }()
+
+    static func airDropIsland(for urls: [URL]) -> Island? {
+        guard let first = urls.first else { return nil }
 
         let name = urls.count == 1 ? first.lastPathComponent : Polish.count(urls.count, "plik", "pliki", "plików")
-        // "airdrop" exists on current macOS; the fallback keeps the island
-        // from showing an empty wing if a future release renames it.
-        let symbol = NSImage(systemSymbolName: "airdrop", accessibilityDescription: nil) != nil
-            ? "airdrop" : "antenna.radiowaves.left.and.right"
 
-        IslandCenter.shared.post(Island(
-            symbol: symbol,
+        return Island(
+            symbol: airDropSymbol,
             tint: Color(red: 0.35, green: 0.68, blue: 1),
             title: "AirDrop",
             detail: " · " + name,
@@ -241,7 +251,8 @@ final class DownloadWatcher: ObservableObject {
                 NSWorkspace.shared.activateFileViewerSelecting(urls)
             },
             // Long enough to reach the button.
-            duration: 5
-        ))
+            duration: 5,
+            mascot: true
+        )
     }
 }

@@ -104,18 +104,18 @@ struct ShelfClipExtrasSettings: View {
                 )
                 .disabled(!smartActions)
                 SettingsToggle(
-                    title: "Szukaj też w tekście z obrazów",
-                    subtitle: "Wyszukiwarka schowka znajdzie słowa ze skopiowanych zrzutów i zdjęć.",
-                    symbol: "text.viewfinder",
-                    tint: SettingsStyle.blue,
-                    isOn: $ocr
-                )
-                SettingsToggle(
                     title: "Pokazuj „Skopiowano” w notchu",
                     subtitle: "Krótka informacja z podglądem tego, co trafiło do schowka. Pomija hasła i kopie zrobione przez Fun Notch.",
                     symbol: "doc.on.doc",
                     tint: SettingsStyle.blue,
                     isOn: $copiedIsland
+                )
+                SettingsToggle(
+                    title: "Szukaj też w tekście z obrazów",
+                    subtitle: "Wyszukiwarka schowka znajdzie słowa ze skopiowanych zrzutów i zdjęć.",
+                    symbol: "text.viewfinder",
+                    tint: SettingsStyle.blue,
+                    isOn: $ocr
                 )
                 if ocr {
                     SettingsStatus(
@@ -142,7 +142,7 @@ struct ShelfClipExtrasSettings: View {
                 SettingsToggle(
                     title: "Dodawaj pliki z AirDrop na Półkę",
                     subtitle: "Plik odebrany przez AirDrop pokazuje się w notchu z przyciskiem „Pokaż”. Działa, gdy włączone jest wykrywanie pobranych plików.",
-                    symbol: "airdrop",
+                    symbol: DownloadWatcher.airDropSymbol,
                     tint: SettingsStyle.blue,
                     isOn: $airDropToShelf
                 )

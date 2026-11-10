@@ -31,10 +31,12 @@ struct ShelfView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Image(systemName: "tray.and.arrow.down")
-                .font(.system(size: 26, weight: .light))
-                .foregroundStyle(.white.opacity(viewModel.isDropTargeted ? 0.9 : 0.4))
-                .scaleEffect(viewModel.isDropTargeted ? 1.12 : 1)
+            CatOrSymbol(
+                systemName: "tray.and.arrow.down", symbolSize: 26, symbolWeight: .light,
+                symbolColor: .white.opacity(viewModel.isDropTargeted ? 0.9 : 0.4),
+                catSize: 46, catState: viewModel.isDropTargeted ? .awake : .sleeping
+            )
+            .scaleEffect(viewModel.isDropTargeted ? 1.12 : 1)
 
             Text(viewModel.isDropTargeted ? "Upuść, aby dodać" : "Upuść pliki tutaj")
                 .font(.system(size: 12, weight: .medium))

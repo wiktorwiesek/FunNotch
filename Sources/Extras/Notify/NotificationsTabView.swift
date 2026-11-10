@@ -28,9 +28,7 @@ struct NotificationsTabView: View {
 
     private var emptyState: some View {
         VStack(spacing: 6) {
-            Image(systemName: "bell.slash")
-                .font(.system(size: 24, weight: .light))
-                .foregroundStyle(.white.opacity(0.4))
+            CatOrSymbol(systemName: "bell.slash", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.4), catSize: 42)
             Text("Brak powiadomień")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.65))
