@@ -62,14 +62,17 @@ private struct DecorGlassFill<S: Shape>: View {
     let shape: S
 
     var body: some View {
-        // Glass alone is only as dark as its tint, and over a light wallpaper
-        // a 55 % tint is a mid grey that washes out white text and the
-        // dimmer labels. A black base under it keeps the panel dark whatever
-        // is behind; the glass still adds the blur and the sheen.
+        // Liquid Glass adapts to what is behind it: over a white web page it
+        // turns into light frosted glass, and the notch's white text and icons
+        // disappear on it. A black base underneath does not help, because the
+        // glass is drawn over it. So the dark layer goes on top of the glass:
+        // the glass still blurs and lights the edge, but the panel always
+        // reads as dark, whatever window is behind the notch.
         ZStack {
-            shape.fill(Color.black.opacity(0.5))
             Color.clear
                 .glassEffect(.regular.tint(.black.opacity(0.6)), in: shape)
+            shape.fill(Color.black.opacity(0.78))
+                .allowsHitTesting(false)
         }
     }
 }
