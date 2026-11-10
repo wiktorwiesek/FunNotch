@@ -360,19 +360,37 @@ private struct ClosedAlbumArt: View {
     }
 }
 
-/// The spectrum bars shown to the right of the cutout.
+/// The spectrum bars shown to the right of the cutout, or the cat in their
+/// place: bobbing to the music, and at the laptop while an agent is busy.
 private struct ClosedVisualizer: View {
     @EnvironmentObject private var settings: Settings
+    @EnvironmentObject private var viewModel: NotchViewModel
     @ObservedObject private var music = MusicManager.shared
+    @ObservedObject private var agents = AgentSessionsManager.shared
 
     var body: some View {
-        MusicVisualizer(
-            isPlaying: music.isPlaying,
-            color: settings.coloredSpectrogram
-                ? settings.spectrumColor.resolved(albumArt: music.artworkColor, accent: settings.accentColor)
-                : .white
-        )
-        .frame(width: 18, height: 14)
-        .frame(maxWidth: .infinity, alignment: .center)
+        if viewModel.agentPresentation == .cat {
+            HStack(spacing: 2) {
+                if agents.waitingCount > 0 {
+                    AgentWaitingGlyph(size: 13)
+                } else {
+                    AgentWorkingGlyph(agent: agents.headline?.agent ?? .claude, size: 13)
+                }
+                if agents.activeCount > 1 {
+                    AgentCountLabel(count: agents.activeCount)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .help(agents.activitySummary)
+        } else {
+            MusicVisualizer(
+                isPlaying: music.isPlaying,
+                color: settings.coloredSpectrogram
+                    ? settings.spectrumColor.resolved(albumArt: music.artworkColor, accent: settings.accentColor)
+                    : .white
+            )
+            .frame(width: 18, height: 14)
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
     }
 }

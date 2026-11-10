@@ -54,6 +54,14 @@ extension NotchViewModel {
         return isShowingWidgets || !showsAgentActivity
     }
 
+    /// In the music's row the cat is the spectrum. An agent at work borrows
+    /// that cat instead of bringing a second one: two side by side, one at a
+    /// laptop and one asleep over paused music, read as two agents. A focus
+    /// countdown has the spectrum's place, so there the light stays a light.
+    var musicCatCarriesAgents: Bool {
+        DecorStore.shared.catEnabled && showsClosedMediaActivity && !showsFocusActivity
+    }
+
     /// Room the cat takes at the inner edge of the left wing, with the count
     /// of busy sessions beside it when it stands in for the agent light.
     var residentCatWidth: CGFloat {
