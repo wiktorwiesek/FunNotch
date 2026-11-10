@@ -607,6 +607,45 @@ enum SelfTest {
         widgetModel.setPreviewPointerOverMenuBar(false)
         settings.hideWingsAtMenuBar = savedHideWings
 
+        // MARK: Chin tucking
+        //
+        // A track peek hangs a strip below the notch for as long as a line is
+        // sung, over whatever is there (a browser's tabs). The pointer coming
+        // for that puts the strip away and clicks through.
+        let savedPeekStyle = settings.sneakPeekStyle
+        settings.sneakPeekStyle = .standard
+        widgetModel.sneakPeek = SneakPeek(show: true, type: .music)
+        let chinProbe = NSPoint(
+            x: windowSize.width / 2,
+            y: windowSize.height - widgetModel.closedNotchSize.height - 10
+        )
+        check(
+            "a track peek's chin takes the pointer where it is drawn",
+            widgetModel.isShowingStandardMusicPeek && tuckView?.hitTest(chinProbe) != nil
+        )
+        widgetModel.setPointerOverChin(true)
+        check(
+            "the pointer on the chin puts the peek away, and a click there falls through",
+            !widgetModel.isShowingStandardMusicPeek && tuckView?.hitTest(chinProbe) == nil
+        )
+        check(
+            "the notch itself still takes the pointer",
+            tuckView?.hitTest(NSPoint(x: windowSize.width / 2, y: windowSize.height - 10)) != nil
+        )
+        widgetModel.setPointerOverChin(false)
+        check("leaving does not bring the peek back at once", widgetModel.chinTucked)
+        widgetModel.setPreviewPointerOverChin(false)
+        check("and then it is back", widgetModel.isShowingStandardMusicPeek)
+        widgetModel.sneakPeek = SneakPeek()
+        settings.sneakPeekStyle = savedPeekStyle
+        check(
+            "the chin's zone is the strip under the notch, not the notch",
+            NotchWindowController.isOverChin(CGPoint(x: 700, y: 910), midX: 735, notchBottom: 923, width: 364, chin: 24)
+                && !NotchWindowController.isOverChin(CGPoint(x: 700, y: 930), midX: 735, notchBottom: 923, width: 364, chin: 24)
+                && !NotchWindowController.isOverChin(CGPoint(x: 700, y: 880), midX: 735, notchBottom: 923, width: 364, chin: 24)
+                && !NotchWindowController.isOverChin(CGPoint(x: 400, y: 910), midX: 735, notchBottom: 923, width: 364, chin: 24)
+        )
+
         // Two-finger swipes: the direction follows the fingers whichever way
         // the system scrolls, and a diagonal is nobody's.
         check("a short scroll is not a swipe", NotchGestures.swipe(travelled: CGSize(width: 0, height: 20), natural: true) == nil)

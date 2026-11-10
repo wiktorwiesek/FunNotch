@@ -214,7 +214,9 @@ final class NotchWindowController {
             height: size.height
         )
 
-        if viewModel.notchState == .closed, Settings.shared.extendHoverArea {
+        // No lip while a track peek's chin is put away for the pointer: the
+        // pointer is there for what is under the notch, not for the notch.
+        if viewModel.notchState == .closed, Settings.shared.extendHoverArea, !viewModel.chinTucked {
             // A forgiving lip below the notch so the pointer does not have to be
             // pixel-accurate to keep it open. Not sideways while the wings are
             // tucked: that strip is menu bar the user is trying to click.
@@ -290,6 +292,31 @@ final class NotchWindowController {
               point.y <= screenFrame.maxY, point.y >= screenFrame.maxY - barHeight
         else { return false }
         return abs(point.x - screenFrame.midX) > cutoutWidth / 2
+    }
+
+    /// True when the pointer is where a track peek hangs its chin below the
+    /// notch, with a little margin so the strip is gone before the pointer is
+    /// on it. Only while a peek is asked for, so it costs one comparison the
+    /// rest of the time.
+    func isPointerOverMusicChin(_ point: CGPoint) -> Bool {
+        guard viewModel.wantsStandardMusicPeek else { return false }
+        let style = LiveActivityMetrics.banner
+        return Self.isOverChin(
+            point,
+            midX: panel.frame.midX,
+            notchBottom: panel.frame.maxY - viewModel.closedNotchSize.height,
+            width: max(viewModel.closedNotchSize.width + style.wing * 2, style.minimumWidth),
+            chin: style.chin
+        )
+    }
+
+    /// The geometry behind `isPointerOverMusicChin`.
+    nonisolated static func isOverChin(
+        _ point: CGPoint, midX: CGFloat, notchBottom: CGFloat, width: CGFloat, chin: CGFloat
+    ) -> Bool {
+        let margin: CGFloat = 8
+        return abs(point.x - midX) <= width / 2 + margin
+            && point.y < notchBottom && point.y >= notchBottom - chin - margin
     }
 
     func close() {

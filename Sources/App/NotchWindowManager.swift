@@ -123,6 +123,7 @@ final class NotchWindowManager: ObservableObject {
             // Tuck first: the hover test below must already see the small
             // rect, or a wing under the pointer would open the notch.
             controller.viewModel.setPointerOverMenuBar(controller.isPointerOverMenuBarWings(point))
+            controller.viewModel.setPointerOverChin(controller.isPointerOverMusicChin(point))
             // This runs for every move of the pointer anywhere on any display.
             // The hover rect lies within the panel (give or take its 12-point
             // lip), so for nearly all of them one comparison settles it,

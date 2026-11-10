@@ -104,6 +104,10 @@ final class NotchViewModel: ObservableObject {
     /// How long the pointer must stay off the menu bar before the wings return.
     static let wingsRestoreDelay: TimeInterval = 0.4
 
+    /// The pointer is where a track peek's chin hangs below the notch.
+    @Published private(set) var pointerOverChin = false
+    private var chinRestoreWorkItem: DispatchWorkItem?
+
     init(screen: NSScreen?) {
         screenIdentifier = screen?.displayIdentifier ?? ""
         closedNotchSize = measureClosedNotch(for: screen)
@@ -259,6 +263,40 @@ final class NotchViewModel: ObservableObject {
             && notchState == .closed && !dragDetectorTargeting
     }
 
+    // MARK: - Chin tucking
+
+    /// Reports whether the pointer is where a track peek's chin hangs (see
+    /// `NotchWindowController.isPointerOverMusicChin`). Like the wings: away
+    /// at once, back after `wingsRestoreDelay`.
+    func setPointerOverChin(_ over: Bool) {
+        if over {
+            chinRestoreWorkItem?.cancel()
+            chinRestoreWorkItem = nil
+            guard !pointerOverChin else { return }
+            withAnimation(.notchContent) { pointerOverChin = true }
+        } else {
+            // Called on every pointer move; bail out cheaply when idle.
+            guard pointerOverChin, chinRestoreWorkItem == nil else { return }
+            let work = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                self.chinRestoreWorkItem = nil
+                withAnimation(.notchContent) { self.pointerOverChin = false }
+            }
+            chinRestoreWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.wingsRestoreDelay, execute: work)
+        }
+    }
+
+    /// True while a track peek is kept off the screen because the pointer is
+    /// where its chin would be. The line being sung stays there for as long
+    /// as the music plays, over whatever is under the notch (a browser's
+    /// tabs), and hovering it opened the notch on top of that; so the pointer
+    /// coming for what is underneath gets the strip out of its way, and the
+    /// notch opens from the notch itself.
+    var chinTucked: Bool {
+        pointerOverChin && notchState == .closed && !dragDetectorTargeting
+    }
+
     /// True while an announcement with a button in its wing is on screen
     /// ("Odpowiedz", "Kopiuj kod", "Wysuń"). The button has to take the
     /// pointer where it is drawn, so for as long as it is there the wings
@@ -313,6 +351,11 @@ final class NotchViewModel: ObservableObject {
     /// Forces the menu-bar tuck, for snapshots.
     func setPreviewPointerOverMenuBar(_ over: Bool) {
         pointerOverMenuBar = over
+    }
+
+    /// Forces the chin tuck, for snapshots.
+    func setPreviewPointerOverChin(_ over: Bool) {
+        pointerOverChin = over
     }
 
     /// Forces the agent live activity, for snapshots.
@@ -391,9 +434,15 @@ final class NotchViewModel: ObservableObject {
         focusIsActive && settings.focusShowInClosedNotch
     }
 
+    /// A track peek is asked for (a track change, a sung line), whether or
+    /// not the pointer has it put away.
+    var wantsStandardMusicPeek: Bool {
+        sneakPeek.show && sneakPeek.type == .music && settings.sneakPeekStyle == .standard
+    }
+
     /// True when the peek strip below the cutout is showing a track change.
     var isShowingStandardMusicPeek: Bool {
-        sneakPeek.show && sneakPeek.type == .music && settings.sneakPeekStyle == .standard
+        wantsStandardMusicPeek && !chinTucked
     }
 
     /// The widgets to show beside the cutout right now, if any.
