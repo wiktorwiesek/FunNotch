@@ -1148,6 +1148,13 @@ extension PreviewRenderer {
         func tile(_ kind: HomeTileKind, _ row: Int, _ span: Int? = nil, path: String? = nil) -> HomeTile {
             HomeTile(kind: kind, row: row, span: span, appPath: path)
         }
+        // Nothing playing beside a weather tile: the player stays a player.
+        home("qa-home-idle-with-weather", music: false,
+             row0: [tile(.nowPlaying, 0), tile(.weather, 0), tile(.agents, 0)],
+             row1: [tile(.quickActions, 1), tile(.systemStats, 1), tile(.battery, 1)])
+        home("qa-home-idle-no-weather", music: false,
+             row0: [tile(.nowPlaying, 0), tile(.agents, 0)],
+             row1: [tile(.quickActions, 1), tile(.systemStats, 1), tile(.battery, 1)])
         home("qa-home-dev-top",
              row0: [tile(.github, 0), tile(.aiUsage, 0), tile(.launcher, 0)],
              row1: [tile(.quickActions, 1), tile(.systemStats, 1), tile(.battery, 1), tile(.devices, 1)])

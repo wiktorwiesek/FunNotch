@@ -31,13 +31,16 @@ struct HomeGridView: View {
         // content, so the two waited on each other and SwiftUI recursed until
         // it locked up; a custom Layout broke the recursion but then ground
         // through hundreds of re-measurements of the album art and canvases.
+        // The idle player borrows the weather only when the layout has no
+        // weather tile of its own to say the same thing beside it.
+        let hasWeather = tiles.contains { $0.kind == .weather }
         VStack(spacing: (top.isEmpty || bottom.isEmpty) ? 0 : 8) {
             if !top.isEmpty {
-                row(top, spacing: 14)
+                row(top, spacing: 14, layoutHasWeather: hasWeather)
                     .frame(maxHeight: .infinity)
             }
             if !bottom.isEmpty {
-                row(bottom, spacing: 6)
+                row(bottom, spacing: 6, layoutHasWeather: hasWeather)
                     .frame(height: 46)
             }
         }
@@ -47,14 +50,14 @@ struct HomeGridView: View {
     /// Width available to a row inside the open notch.
     private static let rowWidth = openNotchSize.width - 44
 
-    private func row(_ tiles: [HomeTile], spacing: CGFloat) -> some View {
+    private func row(_ tiles: [HomeTile], spacing: CGFloat, layoutHasWeather: Bool) -> some View {
         let available = Self.rowWidth - spacing * CGFloat(max(tiles.count - 1, 0))
         let widths = HomeRowLayout.widths(for: tiles, available: available, floor: 24)
         return HStack(alignment: .top, spacing: spacing) {
             ForEach(Array(tiles.enumerated()), id: \.element.id) { index, tile in
                 // Clipped so a tile squeezed below its content never draws
                 // over the one next to it.
-                HomeTileView(tile: tile)
+                HomeTileView(tile: tile, layoutHasWeather: layoutHasWeather)
                     .frame(width: widths[index])
                     .clipped()
             }
@@ -67,11 +70,13 @@ struct HomeGridView: View {
 /// bare, because a box around the album art would be a box inside a box.
 struct HomeTileView: View {
     let tile: HomeTile
+    /// The layout this tile is in has a weather tile.
+    var layoutHasWeather = false
 
     var body: some View {
         switch tile.kind {
         case .nowPlaying:
-            NowPlayingTile()
+            NowPlayingTile(weatherWhenIdle: !layoutHasWeather)
         case .weather:
             WeatherPane()
         case .calendar:
@@ -105,13 +110,16 @@ struct HomeTileView: View {
 }
 
 /// Album art and transport, or the weather when nothing is playing — the
-/// behaviour the home tab had before it was configurable.
+/// behaviour the home tab had before it was configurable. A layout that has
+/// the weather as a tile keeps the empty player instead of showing it twice.
 private struct NowPlayingTile: View {
+    let weatherWhenIdle: Bool
+
     @ObservedObject private var music = MusicManager.shared
     @ObservedObject private var settings = Settings.shared
 
     var body: some View {
-        if music.track.isEmpty, settings.showWeatherWhenIdle {
+        if music.track.isEmpty, weatherWhenIdle, settings.showWeatherWhenIdle {
             WeatherPane()
         } else {
             HStack(alignment: .top, spacing: 14) {
