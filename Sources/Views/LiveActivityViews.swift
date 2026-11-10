@@ -113,7 +113,8 @@ private struct WingSlide: ViewModifier {
     }
 }
 
-/// One line of text rising into the chin.
+/// One line of text rising into the chin. A line too long for the chin (a
+/// sung line, a file's name) gets smaller before it loses its middle.
 private struct ChinLine: View {
     let time: Double
     let text: Text
@@ -124,6 +125,7 @@ private struct ChinLine: View {
             .font(.system(size: 11))
             .foregroundColor(.white)
             .lineLimit(1)
+            .minimumScaleFactor(0.7)
             .truncationMode(.middle)
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity)
