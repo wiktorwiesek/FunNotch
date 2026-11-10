@@ -294,7 +294,7 @@ final class NotifyCenter: ObservableObject {
             // banner says it can; everything else opens the app.
             if let banner, let reply = Self.replyAction(of: banner) {
                 island.action = IslandAction(title: "Odpowiedz") {
-                    NotifyCenter.shared.perform(reply, on: banner, item: item)
+                    NotifyCenter.shared.reply(to: banner, with: reply, item: item)
                 }
             } else {
                 island.action = IslandAction(title: "Otwórz") {
@@ -365,9 +365,11 @@ final class NotifyCenter: ObservableObject {
         openApplication(of: item)
     }
 
-    private func perform(_ action: String, on banner: CapturedBanner, item: MirroredNotification) {
-        if AXUIElementPerformAction(banner.element, action as CFString) != .success {
-            open(item, banner: banner)
+    /// Opens the banner's reply field; when it will not open (the banner has
+    /// left, the app's reply works differently), opens the app instead.
+    private func reply(to banner: CapturedBanner, with action: String, item: MirroredNotification) {
+        NotificationBannerWatcher.shared.reply(to: banner, action: action) { opened in
+            if !opened { NotifyCenter.shared.open(item, banner: banner) }
         }
     }
 

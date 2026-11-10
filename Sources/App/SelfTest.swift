@@ -537,6 +537,18 @@ enum SelfTest {
         check("leaving the bar does not bring the wings back at once", widgetModel.wingsTucked)
         widgetModel.setPreviewPointerOverMenuBar(false)
         check("with the pointer gone the wings return", abs(widgetModel.contentSize.width - wingedWidth) < 0.5)
+        // An announcement with a button keeps its wing: otherwise the pointer
+        // reaching for "Odpowiedz" tucks the wing and the click lands on the
+        // menu bar under it.
+        IslandCenter.shared.post(Island(symbol: "bell.fill", title: "Self test"))
+        widgetModel.expandingView = SneakPeek(show: true, type: .island)
+        widgetModel.setPreviewPointerOverMenuBar(true)
+        check("a plain announcement lets clicks through to the menu bar", tuckView?.hitTest(wingProbe) == nil)
+        IslandCenter.shared.post(Island(symbol: "bell.fill", title: "Self test", action: IslandAction(title: "Otwórz") {}))
+        widgetModel.expandingView = SneakPeek(show: true, type: .island)
+        check("one with a button stays clickable at the menu bar", tuckView?.hitTest(wingProbe) != nil)
+        widgetModel.expandingView = SneakPeek()
+        widgetModel.setPreviewPointerOverMenuBar(false)
         settings.hideWingsAtMenuBar = false
         widgetModel.setPreviewPointerOverMenuBar(true)
         check("the setting off keeps the wings out", !widgetModel.wingsTucked)
@@ -914,6 +926,20 @@ enum SelfTest {
         check(
             "a banner that names only the app is still told apart as a text message",
             notificationCat(nil, app: "Wiadomości") == .texting && notificationCat(nil, app: "Nieznana") == .ringing
+        )
+        func bannerApp(_ description: String?, _ title: String, _ subtitle: String, _ body: String) -> String? {
+            NotificationBannerWatcher.appName(inDescription: description, title: title, subtitle: subtitle, body: body)
+        }
+        check(
+            "a banner without a header line names its app in its description",
+            bannerApp("Slack, Anna, Będę za chwilę", "Anna", "", "Będę za chwilę") == "Slack"
+                && bannerApp("Edytor skryptów, Tytuł, Podtytuł, Treść", "Tytuł", "Podtytuł", "Treść") == "Edytor skryptów"
+                && bannerApp("Mail, Hurtownia, inaczej zapisana treść", "Hurtownia", "", "Treść") == "Mail"
+                && bannerApp("Notatki, szkice, Tytuł, Treść", "Tytuł", "", "Treść") == "Notatki, szkice"
+        )
+        check(
+            "and a description that is only the texts names none",
+            bannerApp("Tytuł, Treść", "Tytuł", "", "Treść") == nil && bannerApp(nil, "Tytuł", "", "Treść") == nil
         )
         settings.agentActivityEnabled = savedAgentSettings.enabled
         settings.idleWidgetsEnabled = savedAgentSettings.idle

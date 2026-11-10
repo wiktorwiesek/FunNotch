@@ -199,7 +199,10 @@ final class NotchViewModel: ObservableObject {
             cancelPendingClose()
             guard settings.openNotchOnHover, notchState == .closed else { return }
             let work = DispatchWorkItem { [weak self] in
-                guard let self, self.isHovering else { return }
+                // A pointer that came for a banner's button does not open the
+                // notch: that would take the button from under it, and after
+                // the press, the keyboard from the reply being typed.
+                guard let self, self.isHovering, !self.isShowingActionBanner else { return }
                 self.open()
             }
             hoverWorkItem = work
@@ -251,13 +254,22 @@ final class NotchViewModel: ObservableObject {
             && notchState == .closed && !dragDetectorTargeting
     }
 
+    /// True while an announcement with a button in its wing is on screen
+    /// ("Odpowiedz", "Kopiuj kod", "Wysuń"). The button has to take the
+    /// pointer where it is drawn, so for as long as it is there the wings
+    /// are not given back to the menu bar and hovering does not open the notch.
+    var isShowingActionBanner: Bool {
+        isShowingStandardHUD && expandingView.type == .island && IslandCenter.shared.current?.action != nil
+    }
+
     /// Size of the area that takes the pointer (hover and clicks), as opposed
     /// to the drawn size. Announcements (HUD, track peek) still play in full
     /// while tucked — they are transient and the user asked for them — but
     /// only the plain cutout is interactive, so they never swallow clicks
-    /// meant for the menus beneath their wings.
+    /// meant for the menus beneath their wings. One with a button is the
+    /// exception: a button nobody can press is no button.
     var interactiveSize: CGSize {
-        wingsTucked ? closedNotchSize : contentSize
+        wingsTucked && !isShowingActionBanner ? closedNotchSize : contentSize
     }
 
     /// Sets state directly, bypassing animation. Used by the snapshot renderer.

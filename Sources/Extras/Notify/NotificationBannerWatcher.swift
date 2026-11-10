@@ -241,7 +241,7 @@ final class NotificationBannerWatcher: ObservableObject {
         observedProcess = 0
         observedWindows.removeAll()
         lastTaken.removeAll()
-        outstayed.removeAll()
+        keptHome.removeAll()
     }
 
     // MARK: - Events
@@ -302,7 +302,7 @@ final class NotificationBannerWatcher: ObservableObject {
         for window in windows {
             let content = Self.content(of: window, guessing: true)
             guard !content.items.isEmpty else {
-                outstayed.remove(window)
+                keptHome.remove(window)
                 lastTaken[window] = nil
                 // The panel belongs on screen. An empty window is one whose
                 // banner has just left: it is about to close where it is.
@@ -341,18 +341,18 @@ final class NotificationBannerWatcher: ObservableObject {
             if let position = Self.position(of: window), Self.isAway(position) {
                 let since = lastTaken[window] ?? now
                 lastTaken[window] = since
-                if now.timeIntervalSince(since) > Self.awayLimit, outstayed.insert(window).inserted {
+                if now.timeIntervalSince(since) > Self.awayLimit, keptHome.insert(window).inserted {
                     DiagnosticLog.write("notify", "a hidden banner outstayed its time; its window is back")
                 }
             }
-            if !allTaken || !mayHide || outstayed.contains(window) {
+            if !allTaken || !mayHide || keptHome.contains(window) {
                 bringBack(window)
             } else if !unread {
                 sendAway(window, early: false)
             }
         }
         lastTaken = lastTaken.filter { windows.contains($0.key) }
-        outstayed.formIntersection(windows)
+        keptHome.formIntersection(windows)
 
         // Without an identifier the key names only the top message, so once
         // it is gone an identical message must be announced again soon, not
@@ -407,8 +407,9 @@ final class NotificationBannerWatcher: ObservableObject {
 
     /// When each window that is open got its newest banner the notch took over.
     private var lastTaken: [AXUIElement: Date] = [:]
-    /// Windows brought home for passing `awayLimit`, until they are empty again.
-    private var outstayed = Set<AXUIElement>()
+    /// Windows that stay home until they are empty again: one whose banner
+    /// passed `awayLimit`, one whose banner is being answered.
+    private var keptHome = Set<AXUIElement>()
     /// Keys (as in `delivered`) of the banners the notch is showing itself.
     private var takenOver = Set<String>()
     /// Early looks spent on the burst of events in flight.
@@ -453,6 +454,86 @@ final class NotificationBannerWatcher: ObservableObject {
         for window in windows { bringBack(window) }
     }
 
+    // MARK: - Replying
+
+    /// Banners whose reply field is on its way; a second press has to wait.
+    private var replying = Set<AXUIElement>()
+
+    /// Opens a banner's reply field where it can be seen, and puts the
+    /// keyboard in it. `action` is the banner's own reply action.
+    ///
+    /// Two things about that action shape this. Notification Center answers
+    /// it with an error even when it has opened the field, so the answer is
+    /// not believed and the field is looked for instead. And once the field
+    /// is open, the same action sends what is in it, so it is never
+    /// performed again without a good look first: pressing twice would send
+    /// an empty reply.
+    func reply(to banner: CapturedBanner, action: String, completion: @escaping @MainActor (Bool) -> Void) {
+        var owner: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(banner.element, kAXWindowAttribute as CFString, &owner) == .success,
+              let owner, CFGetTypeID(owner) == AXUIElementGetTypeID()
+        else {
+            // The banner has left.
+            completion(false)
+            return
+        }
+        let window = owner as! AXUIElement
+        // A text field far above the display is no use to anyone.
+        keptHome.insert(window)
+        bringBack(window)
+        guard replying.insert(banner.element).inserted else { return }
+        openReplyField(of: banner.element, in: window, action: action, performs: 2, looks: 0, completion: completion)
+    }
+
+    /// Looks for the field; while there is none, waits out `looks` more looks
+    /// a quarter of a second apart, and only then performs the action (again).
+    private func openReplyField(
+        of element: AXUIElement, in window: AXUIElement, action: String,
+        performs: Int, looks: Int, completion: @escaping @MainActor (Bool) -> Void
+    ) {
+        if let field = Self.textField(in: window) {
+            replying.remove(element)
+            AXUIElementSetAttributeValue(field, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+            DiagnosticLog.write("notify", "reply field open")
+            completion(true)
+            return
+        }
+        var performs = performs
+        var looks = looks
+        if looks > 0 {
+            looks -= 1
+        } else if performs > 0 {
+            performs -= 1
+            looks = 6
+            _ = AXUIElementPerformAction(element, action as CFString)
+        } else {
+            replying.remove(element)
+            DiagnosticLog.write("notify", "reply field did not open")
+            completion(false)
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            MainActor.assumeIsolated {
+                self?.openReplyField(of: element, in: window, action: action, performs: performs, looks: looks, completion: completion)
+            }
+        }
+    }
+
+    /// The field a reply is typed into, once the banner in `window` has one.
+    private static func textField(in window: AXUIElement) -> AXUIElement? {
+        var budget = 200
+        func search(_ node: Node, depth: Int) -> AXUIElement? {
+            budget -= 1
+            if node.role == kAXTextAreaRole || node.role == kAXTextFieldRole { return node.element }
+            guard depth < 12 else { return nil }
+            for child in node.children where budget > 0 {
+                if let found = search(Self.node(child), depth: depth + 1) { return found }
+            }
+            return nil
+        }
+        return search(node(window), depth: 0)
+    }
+
     /// A banner slides in over a third of a second and its text arrives later
     /// still, so a window that waited for the scan would show it first. One
     /// look at what a window holds is enough to put it where that belongs at
@@ -465,7 +546,7 @@ final class NotificationBannerWatcher: ObservableObject {
         defer { Self.scanDeadline = .distantFuture }
         let mayHide = mayHide?() == true
         let windows = Self.attribute(applicationElement, kAXWindowsAttribute) as? [AXUIElement] ?? []
-        for window in windows where !outstayed.contains(window) {
+        for window in windows where !keptHome.contains(window) {
             guard let position = Self.position(of: window) else { continue }
             let away = Self.isAway(position)
             // At home with nothing to hide: not worth the walk.
@@ -614,11 +695,37 @@ final class NotificationBannerWatcher: ObservableObject {
             }
             return groups.map { group in
                 CapturedBanner(
-                    appName: group.app, title: group.title, subtitle: group.subtitle, body: group.body,
+                    appName: group.app ?? appName(
+                        inDescription: item.description, title: group.title, subtitle: group.subtitle, body: group.body
+                    ),
+                    title: group.title, subtitle: group.subtitle, body: group.body,
                     element: item.element, identifier: identifier, actions: actions, subrole: item.subrole
                 )
             }
         }
+    }
+
+    /// The app a banner is from, when it has no header line saying so. Since
+    /// macOS 15 a banner shows the app's icon instead, and the name is only in
+    /// the banner's own description: "Slack, Anna, Będę za chwilę", the app and
+    /// then the same texts the banner shows.
+    nonisolated static func appName(inDescription description: String?, title: String, subtitle: String, body: String) -> String? {
+        guard let description else { return nil }
+        let texts = [title, subtitle, body].filter { !$0.isEmpty }
+        guard let first = texts.first else { return nil }
+        // The whole tail, so a name with a comma in it survives; failing
+        // that (a body the description words differently), whatever stands
+        // before the first of the texts.
+        let tail = ", " + texts.joined(separator: ", ")
+        let name: Substring
+        if description.hasSuffix(tail) {
+            name = description.dropLast(tail.count)
+        } else if let range = description.range(of: ", " + first) {
+            name = description[..<range.lowerBound]
+        } else {
+            return nil
+        }
+        return name.isEmpty ? nil : String(name)
     }
 
     private static func actionNames(of element: AXUIElement) -> [String] {
