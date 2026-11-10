@@ -678,16 +678,16 @@ struct ClipboardSmartContent: View {
         case let .url(url):
             ClipboardURLCard(url: url)
         case let .color(color):
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(color.swiftUIColor)
                     .frame(height: 30)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.24), lineWidth: 0.5))
                 Text(color.hex)
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.85))
                 Text(color.rgb)
-                    .font(.system(size: 8.5, design: .monospaced))
+                    .font(.system(size: 8, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
             }
@@ -700,39 +700,39 @@ struct ClipboardSmartContent: View {
         case let .nip(nip):
             badged("NIP", value: ClipboardSmart.formatted(nip: nip), mono: true)
         case let .longText(characters, words):
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(text)
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Spacer(minLength: 0)
                 Text("\(characters.formatted(.number.locale(Polish.locale))) \(Polish.plural(characters, "znak", "znaki", "znaków")) · \(words.formatted(.number.locale(Polish.locale))) \(Polish.plural(words, "słowo", "słowa", "słów"))")
-                    .font(.system(size: 8.5))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
             }
         case .plain:
             Text(text)
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(.white.opacity(0.85))
                 .lineLimit(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
     private func badged(_ label: String, value: String, mono: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.7))
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1.5)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
                 .background(Capsule().fill(Color.white.opacity(0.12)))
             Text(value)
                 .font(.system(size: 11, weight: .medium, design: mono ? .monospaced : .default))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(.white.opacity(0.95))
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
                 .multilineTextAlignment(.leading)
@@ -752,15 +752,15 @@ private struct ClipboardURLCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(store.title(for: url) ?? host)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(.white.opacity(0.95))
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
             Text(store.title(for: url) == nil ? url.absoluteString : host)
-                .font(.system(size: 8.5))
-                .foregroundStyle(.white.opacity(0.45))
+                .font(.system(size: 8))
+                .foregroundStyle(.white.opacity(0.5))
                 .lineLimit(2)
                 .truncationMode(.middle)
         }

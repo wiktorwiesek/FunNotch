@@ -14,7 +14,7 @@ struct ShelfConversionStrip: View {
 
     var body: some View {
         if !converter.jobs.isEmpty {
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 ForEach(converter.jobs.suffix(3)) { job in
                     ShelfConversionRow(job: job)
                 }
@@ -36,8 +36,8 @@ private struct ShelfConversionRow: View {
                 .frame(width: 12, height: 12)
 
             Text(job.title)
-                .font(.system(size: 9.5, weight: .medium))
-                .foregroundStyle(.white.opacity(0.8))
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.white.opacity(0.85))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -54,13 +54,13 @@ private struct ShelfConversionRow: View {
                 }
             case let .done(name):
                 Text(name)
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
                     .truncationMode(.middle)
             case let .failed(message):
                 Text(message)
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 9))
                     .foregroundStyle(.orange.opacity(0.9))
                     .lineLimit(1)
             }
@@ -76,13 +76,13 @@ private struct ShelfConversionRow: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.5))
             }
             .buttonStyle(NotchPressStyle())
             .help(job.state == .running ? "Anuluj" : "Zamknij")
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .padding(.vertical, 2)
         .notchGlass(in: Capsule(), subtle: true)
     }
 

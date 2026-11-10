@@ -46,8 +46,8 @@ struct WeatherPane: View {
             HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(weather.temperatureText ?? "—")
-                        .font(.system(size: 34, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.97))
+                        .font(.system(size: 32, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.95))
                         .monospacedDigit()
                         .contentTransition(.numericText())
                         .animation(.snappy, value: weather.temperatureText)
@@ -59,7 +59,7 @@ struct WeatherPane: View {
                     if let place = weather.conditions?.placeName {
                         Text(place)
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.72))
+                            .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(1)
                     }
                 }
@@ -74,7 +74,7 @@ struct WeatherPane: View {
             // has not landed. Say which, rather than showing a blank box.
             VStack(spacing: 6) {
                 Image(systemName: "location.slash")
-                    .font(.system(size: 18, weight: .light))
+                    .font(.system(size: 18, weight: .regular))
                     .foregroundStyle(.white.opacity(0.35))
                 Text(weather.isLocationAuthorized ? (weather.lastError ?? "Pobieranie pogody…") : "Pogoda wymaga dostępu do lokalizacji")
                     .font(.system(size: 11))
@@ -84,7 +84,7 @@ struct WeatherPane: View {
                         .buttonStyle(NotchPressStyle())
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 11)
+                        .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .notchControl(in: Capsule(), resting: true)
                 }

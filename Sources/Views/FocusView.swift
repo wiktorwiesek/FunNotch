@@ -171,10 +171,10 @@ private struct ModeSwitcher: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: mode.symbol)
-                    .font(.system(size: 9.5, weight: .semibold))
+                    .font(.system(size: 9, weight: .semibold))
                 if !iconsOnly {
                     Text(mode.title)
-                        .font(.system(size: 10.5, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                 }
                 if isLive(mode) {
                     // Something is counting here, whether or not you are
@@ -245,7 +245,7 @@ private struct TimeDial: View {
             DialTicks(inset: ring + 4)
 
             Circle()
-                .stroke(Color.white.opacity(0.07), lineWidth: ring)
+                .stroke(Color.white.opacity(0.08), lineWidth: ring)
 
             if reading.laps > 0 {
                 Circle()
@@ -328,7 +328,7 @@ private struct TimeDial: View {
             .minimumScaleFactor(0.6)
             Text(reading.caption)
                 .font(.system(size: max(size * 0.07, 7.5), weight: .medium))
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(.white.opacity(0.5))
                 .lineLimit(1)
         }
         .frame(width: size - ring * 4)
@@ -572,11 +572,11 @@ private struct Headline: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(tint)
                 .contentTransition(.opacity)
             Text(detail)
-                .font(.system(size: 10.5))
+                .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.5))
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -622,7 +622,7 @@ private struct FocusControls: View {
                 }
             }
 
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 ToggleChip(
                     title: "Blokuj strony",
                     symbol: settings.focusBlockWebsites ? "hand.raised.fill" : "hand.raised.slash",
@@ -692,7 +692,7 @@ private struct FocusControls: View {
                 } else if let host = focus.lastBlockedHost {
                     Label("Zablokowano: \(host)", systemImage: "hand.raised.fill")
                         .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .foregroundStyle(.white.opacity(0.5))
                         .lineLimit(1)
                 }
             }
@@ -720,19 +720,19 @@ private struct CycleDots: View {
     @EnvironmentObject private var settings: Settings
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             let inSet = completed % 4
             ForEach(0 ..< 4, id: \.self) { index in
                 Capsule()
                     .fill(index < inSet || (inSet == 0 && completed > 0 && onBreak)
                           ? settings.accentColor
-                          : Color.white.opacity(0.14))
+                          : Color.white.opacity(0.16))
                     .frame(width: index == inSet && !onBreak ? 16 : 8, height: 5)
             }
             Text(completed == 0 ? "Pierwsza runda" : "Ukończono: \(Polish.count(completed, "runda", "rundy", "rund"))")
-                .font(.system(size: 9.5, weight: .medium))
-                .foregroundStyle(.white.opacity(0.45))
-                .padding(.leading, 3)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.white.opacity(0.5))
+                .padding(.leading, 2)
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: completed)
     }
@@ -864,7 +864,7 @@ private struct StopwatchControls: View {
                 Text("Ostatnie okrążenie: \(TimerManager.stopwatchClock(last))")
                     .font(.system(size: 10))
                     .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.5))
                     .modifier(HiddenWhenTight())
             }
         }
@@ -911,13 +911,13 @@ private struct PanelTitle: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title.uppercased())
-                .font(.system(size: 8.5, weight: .semibold))
+                .font(.system(size: 8, weight: .semibold))
                 .tracking(0.6)
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.white.opacity(0.35))
             Spacer(minLength: 4)
             if let trailing {
                 Text(trailing)
-                    .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.7))
             }
@@ -943,17 +943,17 @@ private struct FocusWeekPanel: View {
             HStack(alignment: .bottom, spacing: 0) {
                 ForEach(Array(week.enumerated()), id: \.offset) { index, day in
                     let isToday = index == week.count - 1
-                    VStack(spacing: 3) {
+                    VStack(spacing: 2) {
                         GeometryReader { bar in
                             ZStack(alignment: .bottom) {
                                 Capsule()
-                                    .fill(Color.white.opacity(0.06))
+                                    .fill(Color.white.opacity(0.04))
                                 Capsule()
                                     .fill(isToday
                                           ? AnyShapeStyle(LinearGradient(
                                               colors: [settings.accentColor, settings.accentColor.opacity(0.55)],
                                               startPoint: .top, endPoint: .bottom))
-                                          : AnyShapeStyle(Color.white.opacity(0.28)))
+                                          : AnyShapeStyle(Color.white.opacity(0.24)))
                                     .frame(height: day.seconds == 0
                                            ? 0
                                            : max(CGFloat(day.seconds) / CGFloat(top) * bar.size.height, 5))
@@ -972,17 +972,17 @@ private struct FocusWeekPanel: View {
             .animation(.spring(response: 0.5, dampingFraction: 0.8), value: week.map(\.seconds))
 
             HStack(spacing: 8) {
-                HStack(spacing: 3) {
+                HStack(spacing: 2) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 9))
-                        .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.3))
+                        .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.35))
                     Text(focus.streak == 0 ? "Brak serii" : "Seria: \(Polish.count(focus.streak, "dzień", "dni", "dni"))")
                 }
                 Spacer(minLength: 0)
                 Text("Dziś \(FocusManager.duration(focus.todaySeconds))")
             }
-            .font(.system(size: 9.5, weight: .medium))
-            .foregroundStyle(.white.opacity(0.6))
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(.white.opacity(0.7))
             .lineLimit(1)
         }
     }
@@ -1009,16 +1009,16 @@ private struct RecentTimersPanel: View {
 
     var body: some View {
         let recent = Array(timer.recentDurations.prefix(4))
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
             PanelTitle(title: "Ostatnie")
 
             if recent.isEmpty {
                 Text("Tutaj pojawią się użyte minutniki, gotowe do ponownego uruchomienia.")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.35))
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                VStack(spacing: 3) {
+                VStack(spacing: 2) {
                     ForEach(recent, id: \.self) { seconds in
                         RecentRow(seconds: seconds) { timer.start(seconds: seconds) }
                     }
@@ -1039,24 +1039,24 @@ private struct RecentRow: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: "play.fill")
-                    .font(.system(size: 7.5, weight: .bold))
+                    .font(.system(size: 7, weight: .bold))
                     .foregroundStyle(ClockPalette.timer)
                     .frame(width: 14, height: 14)
                     .notchGlass(in: Circle(), tint: ClockPalette.timer, subtle: true)
                 Text(TimerManager.shortLength(seconds))
-                    .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.85))
                 Spacer(minLength: 0)
                 TimelineView(.everyMinute) { context in
                     Text("koniec o \(FocusView.timeText(context.date.addingTimeInterval(seconds)))")
-                        .font(.system(size: 9.5, design: .rounded))
+                        .font(.system(size: 9, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.white.opacity(isHovering ? 0.6 : 0.35))
                 }
             }
             .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .notchGlass(in: RoundedRectangle(cornerRadius: 7, style: .continuous), lit: isHovering, subtle: true)
+            .padding(.vertical, 2)
+            .notchGlass(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lit: isHovering, subtle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(NotchPressStyle(scale: 0.97))
@@ -1083,14 +1083,14 @@ private struct LapsPanel: View {
             if laps.isEmpty, !timer.isStopwatchRunning {
                 Text("Naciśnij „Okrążenie” podczas pomiaru, aby zapisać międzyczas.")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.35))
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 2) {
                         if timer.isStopwatchRunning || timer.elapsed > 0 {
-                            lapRow(number: laps.count + 1, time: timer.currentLap, colour: .white.opacity(0.55))
+                            lapRow(number: laps.count + 1, time: timer.currentLap, colour: .white.opacity(0.5))
                         }
                         ForEach(Array(laps.enumerated()), id: \.offset) { index, lap in
                             lapRow(
@@ -1109,7 +1109,7 @@ private struct LapsPanel: View {
     private func lapRow(number: Int, time: TimeInterval, colour: Color) -> some View {
         HStack {
             Text("Okrążenie \(number)")
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.white.opacity(0.35))
             Spacer()
             Text(TimerManager.stopwatchClock(time))
                 .monospacedDigit()
@@ -1164,22 +1164,21 @@ struct ClockButton: View {
         .fixedSize()
     }
 
+    /// The label is never the colour of the glass it sits on: white on the
+    /// one tinted (primary) button, the warning colour on clear glass for a
+    /// destructive one.
     private var foreground: Color {
         switch style {
-        case .primary: return tint
+        case .primary: return .white
         case .secondary: return .white.opacity(isHovering ? 1 : 0.85)
         case .destructive: return ClockPalette.slowest
         }
     }
 
-    /// Primary and destructive actions tint the glass; secondary ones leave
-    /// it clear.
+    /// Only the primary action tints the glass, so one button in a row
+    /// carries the emphasis.
     private var glassTint: Color? {
-        switch style {
-        case .primary: return tint
-        case .secondary: return nil
-        case .destructive: return ClockPalette.slowest
-        }
+        style == .primary ? tint : nil
     }
 }
 
@@ -1250,7 +1249,7 @@ private struct LengthPicker: View {
                     choose(minutes)
                 } label: {
                     Text("\(minutes)")
-                        .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
                         .foregroundStyle(selection == minutes ? .white : .white.opacity(0.5))
                         .frame(width: 26, height: 21)
                         .contentShape(Capsule())
@@ -1284,9 +1283,9 @@ private struct ToggleChip: View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: symbol)
-                    .font(.system(size: 8.5, weight: .semibold))
+                    .font(.system(size: 8, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 9.5, weight: .medium))
+                    .font(.system(size: 9, weight: .medium))
             }
             .foregroundStyle(isOn ? settings.accentColor : .white.opacity(isHovering ? 0.75 : 0.45))
             .padding(.horizontal, 8)

@@ -224,7 +224,7 @@ private struct DecorHUDBar: View {
         .padding(.vertical, 11 * s)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Capsule().fill(.black.opacity(0.82)))
-        .overlay(Capsule().strokeBorder(.white.opacity(0.1), lineWidth: 0.5))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
         .animation(.spring(response: 0.28, dampingFraction: 0.75), value: model.level)
     }
 }
@@ -237,7 +237,7 @@ private struct DecorHUDRing: View {
         let s = CGFloat(model.scale)
         ZStack {
             Circle().fill(.black.opacity(0.82))
-            Circle().strokeBorder(.white.opacity(0.1), lineWidth: 0.5)
+            Circle().strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
 
             Circle()
                 .stroke(.white.opacity(0.16), lineWidth: 6 * s)

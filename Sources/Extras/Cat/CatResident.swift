@@ -88,6 +88,6 @@ struct ResidentCat: View {
             return (.working, (agents.headline?.agent ?? .claude).tint)
         }
         if music.isPlaying { return (.music, CatPalette.musicDefault) }
-        return (presence.isAway ? .sleeping : .awake, .white.opacity(0.75))
+        return (presence.isAway ? .sleeping : .awake, .white.opacity(0.7))
     }
 }

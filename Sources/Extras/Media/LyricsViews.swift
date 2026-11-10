@@ -68,8 +68,8 @@ struct LyricsPlayerBlock: View {
                     .transition(.opacity)
                 if rows == .two {
                     Text(lyrics.nextText ?? " ")
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.35))
                         .lineLimit(1)
                 }
             }
@@ -83,8 +83,8 @@ struct LyricsPlayerBlock: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10.5))
-            .foregroundStyle(.white.opacity(0.4))
+            .font(.system(size: 10))
+            .foregroundStyle(.white.opacity(0.35))
             .lineLimit(1)
     }
 }
@@ -191,7 +191,7 @@ struct LyricsFullView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Ten tekst nie ma znaczników czasu, więc nie przewija się sam.")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.35))
                 Text(lyrics.plain ?? "")
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.85))
@@ -204,7 +204,7 @@ struct LyricsFullView: View {
     }
 
     private func message(symbol: String, text: String, detail: String?) -> some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 4) {
             Image(systemName: symbol)
                 .font(.system(size: 20))
                 .foregroundStyle(.white.opacity(0.5))

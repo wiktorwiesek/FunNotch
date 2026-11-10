@@ -28,10 +28,10 @@ struct NotificationsTabView: View {
 
     private var emptyState: some View {
         VStack(spacing: 6) {
-            CatOrSymbol(systemName: "bell.slash", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.4), catSize: 42)
+            CatOrSymbol(systemName: "bell.slash", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.35), catSize: 42)
             Text("Brak powiadomień")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.white.opacity(0.7))
             Text(emptyHint)
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
@@ -91,23 +91,23 @@ private struct NotificationRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 4) {
                         Text(item.appName)
-                            .font(.system(size: 8.5, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.4))
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.35))
                             .lineLimit(1)
                         Spacer(minLength: 0)
                         Text(Self.relativeTime(item.date, now: now))
-                            .font(.system(size: 8.5))
+                            .font(.system(size: 8))
                             .foregroundStyle(.white.opacity(0.35))
                             .lineLimit(1)
                     }
                     Text(item.heading)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.92))
+                        .foregroundStyle(.white.opacity(0.95))
                         .lineLimit(1)
                     if !item.detail.isEmpty {
                         Text(item.detail)
                             .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                     }
@@ -121,7 +121,7 @@ private struct NotificationRow: View {
                         Text("Kopiuj")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(.yellow)
-                            .padding(.horizontal, 7)
+                            .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .notchGlass(in: Capsule(), tint: .yellow, lit: true)
                             .contentShape(Capsule())
@@ -130,14 +130,14 @@ private struct NotificationRow: View {
                     .help("Skopiuj kod " + code)
                 }
             }
-            .padding(7)
+            .padding(6)
             .frame(maxWidth: .infinity, minHeight: 50, alignment: .topLeading)
             .notchGlass(
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous),
                 lit: isHovering,
                 subtle: !isHovering
             )
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(NotchPressStyle(scale: 0.98))
         .notchHoverLift(isHovering, scale: 1.015)
@@ -158,7 +158,7 @@ private struct NotificationRow: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 26, height: 26)
-                .notchGlass(in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .notchGlass(in: RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
     }
 
@@ -195,10 +195,10 @@ private struct NotificationSourceBar: View {
             if !center.items.isEmpty {
                 Button("Wyczyść") { center.clear() }
                     .buttonStyle(NotchPressStyle())
-                    .font(.system(size: 9.5, weight: .medium))
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.white.opacity(0.85))
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 1.5)
+                    .padding(.vertical, 2)
                     .notchControl(in: Capsule(), resting: true)
             }
         }
@@ -211,16 +211,16 @@ private struct NotificationSourceBar: View {
                 .font(.system(size: 9))
                 .foregroundStyle(tint)
             Text(text)
-                .font(.system(size: 9.5))
-                .foregroundStyle(.white.opacity(0.45))
+                .font(.system(size: 9))
+                .foregroundStyle(.white.opacity(0.5))
                 .lineLimit(1)
             if let fix {
                 Button(fix.0, action: fix.1)
                     .buttonStyle(NotchPressStyle())
-                    .font(.system(size: 9.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 1.5)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.95))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
                     .notchControl(in: Capsule(), resting: true)
             }
         }

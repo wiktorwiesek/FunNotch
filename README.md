@@ -242,6 +242,10 @@ Issues and pull requests are welcome. A few things worth knowing:
   if a line needs a comment saying what it does, the line is usually the problem.
 - **Run `--self-test` before opening a PR.** If you change window geometry,
   drag handling or the HUD, add a check to `Sources/App/SelfTest.swift`.
+- **Stay on the design scale.** Text sizes, corner radii, spacing and the
+  strengths of white in the notch's views come from a short list, and shadows
+  are black (a coloured one is a glow). `Tools/design-lint.sh` has the list
+  and names every value that is off it.
 - **The notch is a non-activating panel.** It never becomes the key window, so
   keyboard events go to whatever app is actually in front. Anything interactive
   up there has to work from pointer position alone.

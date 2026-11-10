@@ -53,7 +53,7 @@ struct KeepAwakeWidget: View {
         HStack(spacing: 4) {
             Image(systemName: keepAwake.isActive ? KeepAwakeManager.activeSymbol : KeepAwakeManager.symbol)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(keepAwake.isActive ? Color.orange : .white.opacity(0.4))
+                .foregroundStyle(keepAwake.isActive ? Color.orange : .white.opacity(0.35))
             if let text {
                 Text(text)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -71,7 +71,7 @@ struct MicMuteWidget: View {
 
     var body: some View {
         Image(systemName: mic.isMuted ? "mic.slash.fill" : "mic.fill")
-            .font(.system(size: 10.5, weight: .medium))
+            .font(.system(size: 10, weight: .medium))
             .foregroundStyle(mic.isMuted ? widgetRed : .white.opacity(mic.isSupported ? 0.6 : 0.3))
             .fixedSize()
             .onAppear { MicMuteManager.shared.start() }
@@ -88,11 +88,11 @@ struct PrivacyWidget: View {
     @ObservedObject private var privacy = PrivacyIndicatorManager.shared
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             if !privacy.cameraActive && !privacy.microphoneActive && !privacy.screenActive {
                 Image(systemName: "lock.shield")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.35))
             }
             if privacy.cameraActive { dot(.green) }
             if privacy.microphoneActive { dot(.orange) }
@@ -117,7 +117,7 @@ struct AudioOutputWidget: View {
 
     var body: some View {
         Image(systemName: output.current?.symbol ?? "speaker.slash")
-            .font(.system(size: 10.5, weight: .medium))
+            .font(.system(size: 10, weight: .medium))
             .foregroundStyle(.white.opacity(output.current == nil ? 0.4 : 0.85))
             .fixedSize()
             .onAppear { AudioOutputManager.shared.start() }

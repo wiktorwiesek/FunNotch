@@ -35,7 +35,7 @@ struct ScreenAssistantView: View {
             thumbnail
             if session.showsPermissionHint {
                 Text("Jeśli zrzut pokazuje tylko tapetę, zezwól Fun Notch na nagrywanie ekranu w Ustawieniach systemowych → Prywatność i ochrona.")
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -70,7 +70,7 @@ struct ScreenAssistantView: View {
         HStack {
             Label("Asystent ekranu", systemImage: "sparkles")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.white.opacity(0.7))
             Spacer()
             Button(action: onClose) {
                 Image(systemName: "xmark")
@@ -94,8 +94,8 @@ struct ScreenAssistantView: View {
                 .scaledToFit()
                 .frame(maxWidth: .infinity)
                 .frame(height: 150)
-                .background(Color.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.white.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 
@@ -109,8 +109,8 @@ struct ScreenAssistantView: View {
                         .font(.system(size: 11, weight: .medium))
                         .lineLimit(1)
                         .foregroundStyle(.white.opacity(0.85))
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                 }
                 .buttonStyle(NotchPressStyle())
                 .notchControl(in: Capsule(), resting: true)
@@ -132,7 +132,7 @@ struct ScreenAssistantView: View {
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(canSend ? Color.white : Color.white.opacity(0.25))
+                    .foregroundStyle(canSend ? Color.white : Color.white.opacity(0.24))
             }
             .buttonStyle(NotchPressStyle())
             .disabled(!canSend)
@@ -167,15 +167,15 @@ struct ScreenAssistantView: View {
     }
 
     private func turnView(_ turn: ScreenAssistantSession.Turn, isLatest: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(turn.question)
-                .font(.system(size: 11.5, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.5))
                 .textSelection(.enabled)
             if !turn.answer.isEmpty {
                 Text(turn.answer)
                     .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.92))
+                    .foregroundStyle(.white.opacity(0.95))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else if isLatest, session.isRunning {
@@ -188,7 +188,7 @@ struct ScreenAssistantView: View {
             }
             if let failure = turn.failure {
                 Label(failure, systemImage: "exclamationmark.triangle.fill")
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 11))
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -225,6 +225,6 @@ struct ScreenAssistantView: View {
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(.white.opacity(0.85))
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.vertical, 4)
     }
 }

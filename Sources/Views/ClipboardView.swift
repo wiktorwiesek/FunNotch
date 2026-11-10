@@ -34,11 +34,11 @@ struct ClipboardView: View {
     private var disabledState: some View {
         VStack(spacing: 6) {
             Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 24, weight: .light))
-                .foregroundStyle(.white.opacity(0.4))
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(.white.opacity(0.35))
             Text("Historia schowka jest wyłączona")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.white.opacity(0.7))
             Text("Włącz ją w Ustawieniach → Półka i schowek")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
@@ -48,10 +48,10 @@ struct ClipboardView: View {
 
     private var emptyState: some View {
         VStack(spacing: 6) {
-            CatOrSymbol(systemName: "doc.on.clipboard", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.4), catSize: 42)
+            CatOrSymbol(systemName: "doc.on.clipboard", symbolSize: 24, symbolWeight: .light, symbolColor: .white.opacity(0.35), catSize: 42)
             Text("Nic jeszcze nie skopiowano")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.white.opacity(0.7))
             Text("Tutaj pojawi się to, co skopiujesz")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
@@ -68,7 +68,7 @@ struct ClipboardView: View {
             HStack(spacing: 4) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.35))
                 TextField("Szukaj", text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 10))
@@ -79,13 +79,13 @@ struct ClipboardView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 9))
-                            .foregroundStyle(.white.opacity(0.4))
+                            .foregroundStyle(.white.opacity(0.35))
                     }
                     .buttonStyle(NotchPressStyle())
                 }
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
             .notchGlass(in: Capsule(), subtle: true)
             .frame(width: 150)
 
@@ -96,9 +96,9 @@ struct ClipboardView: View {
             Button("Wyczyść") { clipboard.clear() }
                 .buttonStyle(NotchPressStyle())
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(.white.opacity(0.95))
                 .padding(.horizontal, 8)
-                .padding(.vertical, 3.5)
+                .padding(.vertical, 4)
                 .contentShape(Capsule())
                 .notchControl(in: Capsule(), resting: true)
         }
@@ -185,16 +185,16 @@ private struct ClipboardTile: View {
 
                 content
             }
-            .padding(7)
+            .padding(6)
             .frame(width: 132, height: 96, alignment: .topLeading)
             .notchGlass(
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous),
                 tint: justCopied || flashed ? settings.accentColor : nil,
                 lit: isHovering || justCopied || flashed,
                 subtle: !isHovering && !justCopied && !flashed
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(
                         entry.isPinned ? settings.accentColor.opacity(0.55) : .clear,
                         lineWidth: 1
@@ -220,7 +220,7 @@ private struct ClipboardTile: View {
                         .help(action.title)
                     }
                 }
-                .padding(.bottom, 5)
+                .padding(.bottom, 4)
                 .transition(.opacity)
             }
         }
@@ -263,9 +263,9 @@ private struct ClipboardTile: View {
                         Image(systemName: "text.viewfinder")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(.white)
-                            .padding(3)
+                            .padding(2)
                             .background(Circle().fill(Color.black.opacity(0.55)))
-                            .padding(3)
+                            .padding(2)
                             .help("W obrazie rozpoznano tekst")
                     }
                 }
@@ -274,7 +274,7 @@ private struct ClipboardTile: View {
         default:
             Text(entry.preview)
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(.white.opacity(0.85))
                 .lineLimit(4)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -69,16 +69,16 @@ private struct GameBlockedDuringFocus: View {
                 .foregroundStyle(.white)
             Text("Gry wrócą za \(focus.compactRemainingText).")
                 .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.white.opacity(0.5))
             Button("Przejdź do minutnika") {
                 FocusTabState.shared.mode = .focus
                 withAnimation(.notchContent) { viewModel.currentTab = .focus }
             }
             .buttonStyle(NotchPressStyle())
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(.white.opacity(0.9))
-            .padding(.horizontal, 11)
-            .padding(.vertical, 5)
+            .foregroundStyle(.white.opacity(0.95))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
             .notchControl(in: Capsule(), resting: true)
             .padding(.top, 4)
         }
@@ -200,7 +200,7 @@ private struct TabChip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 Image(systemName: tab.symbol)
                     .font(.system(size: 11, weight: .medium))
                 if showsLabel {
@@ -259,13 +259,13 @@ struct AlbumArtwork: View {
                         .aspectRatio(contentMode: .fill)
                 } else {
                     LinearGradient(
-                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        colors: [Color.white.opacity(0.16), Color.white.opacity(0.04)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     Image(systemName: "music.note")
                         .font(.system(size: 26))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.7))
                 }
 
                 if isHovering {
@@ -436,7 +436,7 @@ struct PlayerControls: View {
 
             HStack(spacing: 4) {
                 MarqueeText(text: music.track.artist, font: .system(size: 12), lineHeight: Metrics.artist)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.7))
                 MediaPlayerButtons()
             }
             .frame(height: Metrics.artist)
@@ -506,14 +506,14 @@ struct PlayerControls: View {
                         .font(.system(size: 7, weight: .bold))
                 }
                 .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.white.opacity(0.35))
                 .frame(height: Metrics.hint)
             }
             .buttonStyle(NotchPressStyle(scale: 0.97))
         } else {
             Text("Brak informacji o pozycji")
                 .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.white.opacity(0.35))
                 .frame(height: Metrics.hint)
         }
     }
@@ -541,14 +541,14 @@ struct PlayerControls: View {
             }
             .font(.system(size: 9))
             .monospacedDigit()
-            .foregroundStyle(.white.opacity(0.45))
+            .foregroundStyle(.white.opacity(0.5))
             .frame(height: Metrics.times)
         }
     }
 
     /// Times either side of the bar: one row instead of two, for short tiles.
     private var inlineScrubber: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             elapsedLabel
                 .frame(minWidth: 24, alignment: .leading)
             slider
@@ -557,7 +557,7 @@ struct PlayerControls: View {
         }
         .font(.system(size: 9))
         .monospacedDigit()
-        .foregroundStyle(.white.opacity(0.45))
+        .foregroundStyle(.white.opacity(0.5))
         .frame(height: Metrics.inlineScrubber)
     }
 
@@ -721,14 +721,14 @@ struct MirrorPane: View {
                 } label: {
                     ZStack {
                         Color.white.opacity(0.08)
-                        VStack(spacing: 5) {
+                        VStack(spacing: 4) {
                             Image(systemName: "video.slash")
                                 .font(.system(size: 18))
-                                .foregroundStyle(.white.opacity(0.6))
+                                .foregroundStyle(.white.opacity(0.7))
                             Text("Włącz dostęp do kamery")
                                 .font(.system(size: 9))
                                 .multilineTextAlignment(.center)
-                                .foregroundStyle(.white.opacity(0.6))
+                                .foregroundStyle(.white.opacity(0.7))
                         }
                         .padding(.horizontal, 6)
                     }
@@ -739,20 +739,20 @@ struct MirrorPane: View {
             } else {
                 ZStack {
                     Color.white.opacity(0.08)
-                    VStack(spacing: 5) {
+                    VStack(spacing: 4) {
                         Image(systemName: webcam.hasCamera ? "web.camera" : "video.slash")
                             .font(.system(size: 18))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.white.opacity(0.7))
                         Text(webcam.hasCamera ? "Lusterko" : "Brak kamery")
                             .font(.system(size: 9))
-                            .foregroundStyle(.white.opacity(0.45))
+                            .foregroundStyle(.white.opacity(0.5))
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(mirrorShape)
-        .overlay(mirrorShape.stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .overlay(mirrorShape.stroke(Color.white.opacity(0.12), lineWidth: 1))
         .onAppear { webcam.start() }
         .onDisappear { webcam.stop() }
     }

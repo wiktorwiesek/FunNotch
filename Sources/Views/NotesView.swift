@@ -23,21 +23,21 @@ struct NotesView: View {
                 if notes.isEmpty {
                     Text(notes.isToday ? prompt : "Brak notatki z tego dnia.")
                         .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.28))
+                        .foregroundStyle(.white.opacity(0.24))
                         .padding(.top, 2)
-                        .padding(.leading, 5)
+                        .padding(.leading, 4)
                         .allowsHitTesting(false)
                 }
 
                 TextEditor(text: $notes.text)
                     .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.92))
+                    .foregroundStyle(.white.opacity(0.95))
                     .scrollContentBackground(.hidden)
                     .background(.clear)
                     .tint(.accentColor)
             }
             .padding(.horizontal, 2)
-            .notchCard(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .notchCard(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .padding(.horizontal, 4)
         .padding(.bottom, 2)
@@ -66,7 +66,7 @@ struct NotesView: View {
         HStack(spacing: 8) {
             Image(systemName: "note.text")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.white.opacity(0.5))
 
             // Days are a menu rather than arrows: most of the time you want
             // today or yesterday, and a list gets you to either in one click.
@@ -83,14 +83,14 @@ struct NotesView: View {
                     }
                 }
             } label: {
-                HStack(spacing: 3) {
+                HStack(spacing: 2) {
                     Text(notes.displayName(for: notes.day))
-                        .font(.system(size: 11.5, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8, weight: .semibold))
                 }
                 .foregroundStyle(.white.opacity(0.85))
-                .padding(.horizontal, 7)
+                .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .notchControl(in: Capsule(), resting: true)
             }
@@ -104,7 +104,7 @@ struct NotesView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 2.5)
+                    .padding(.vertical, 2)
                     .notchControl(in: Capsule(), tint: .blue, active: true)
             }
 
@@ -134,7 +134,7 @@ struct NotesView: View {
             Group {
                 if showsText {
                     Label("Nie udało się zapisać kopii na pulpicie", systemImage: "exclamationmark.triangle.fill")
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 9))
                         .lineLimit(1)
                 } else {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -145,7 +145,7 @@ struct NotesView: View {
             .help("\(error)\n\nKopia zapasowa została mimo to zapisana w aplikacji.")
         } else if showsText, let at = notes.savedAt {
             Text("Zapisano \(at.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Polish.locale)))")
-                .font(.system(size: 9.5))
+                .font(.system(size: 9))
                 .lineLimit(1)
                 .foregroundStyle(.white.opacity(0.35))
         }

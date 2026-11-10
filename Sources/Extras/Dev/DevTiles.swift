@@ -51,7 +51,7 @@ struct GitHubTile: View {
             PanelLabel(text: "GitHub")
             Text(text)
                 .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.white.opacity(0.5))
                 .lineLimit(compact ? 2 : 4)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -80,11 +80,11 @@ struct GitHubTile: View {
     @ViewBuilder
     private var compactBody: some View {
         if let repo = featured {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 PanelLabel(text: manager.repos.count > 1 ? "GitHub · \(manager.repos.count) repo" : "GitHub · \(repo.name)")
                 if let error = repo.error, repo.run == nil {
                     Text(error)
-                        .font(.system(size: 8.5))
+                        .font(.system(size: 8))
                         .foregroundStyle(.orange.opacity(0.85))
                         .lineLimit(2)
                 } else {
@@ -118,17 +118,17 @@ struct GitHubTile: View {
 
     private func chip(_ text: String, symbol: String? = nil, tint: Color, url: URL, help: String) -> some View {
         Button { openInBrowser(url) } label: {
-            HStack(spacing: 3) {
+            HStack(spacing: 2) {
                 if let symbol {
                     Image(systemName: symbol)
-                        .font(.system(size: 8.5, weight: .semibold))
+                        .font(.system(size: 8, weight: .semibold))
                         .foregroundStyle(tint)
                 } else {
                     Circle().fill(tint).frame(width: 5, height: 5)
                 }
                 Text(text)
-                    .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.88))
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(1)
                     .fixedSize()
             }
@@ -142,7 +142,7 @@ struct GitHubTile: View {
     // MARK: Expanded
 
     private var expandedBody: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
             ForEach(manager.repos.prefix(2)) { repo in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
@@ -167,7 +167,7 @@ struct GitHubTile: View {
                     if repo.hasPullRequests, repo.reviewRequests.isEmpty, repo.authored.isEmpty {
                         Text("Brak otwartych PR-ów")
                             .font(.system(size: 9))
-                            .foregroundStyle(.white.opacity(0.4))
+                            .foregroundStyle(.white.opacity(0.35))
                     }
                 }
             }
@@ -178,7 +178,7 @@ struct GitHubTile: View {
 
     private func row(symbol: String, tint: Color, text: String, url: URL) -> some View {
         Button { openInBrowser(url) } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 Image(systemName: symbol)
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(tint)
@@ -287,15 +287,15 @@ struct AIUsageTile: View {
     }
 
     private func compactFigures(withTokens: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 5) {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(costText)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white.opacity(0.92))
+                .foregroundStyle(.white.opacity(0.95))
             if withTokens {
                 Text(AIUsageManager.tokens(snapshot.todayTokens))
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.5))
             }
         }
         .lineLimit(1)
@@ -310,13 +310,13 @@ struct AIUsageTile: View {
                 PanelLabel(text: "Zużycie AI dziś")
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(costText)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(.white.opacity(0.92))
+                        .foregroundStyle(.white.opacity(0.95))
                         .fixedSize()
                     Text(AIUsageManager.tokens(snapshot.todayTokens) + " tokenów")
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.5))
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
@@ -325,23 +325,23 @@ struct AIUsageTile: View {
                 HStack(spacing: 6) {
                     Text(AIUsageManager.providerName(provider.name))
                         .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.85))
                         .lineLimit(1)
                     Spacer(minLength: 0)
                     Text(AIUsageManager.tokens(provider.tokens))
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.35))
                     Text((provider.costIsEstimate ? "~" : "") + AIUsageManager.money(provider.cost))
                         .font(.system(size: 10, weight: .medium))
                         .monospacedDigit()
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.85))
                         .frame(width: 58, alignment: .trailing)
                 }
             }
             if snapshot.providers.isEmpty, manager.hasScanned {
                 Text("Dziś nic jeszcze nie zużyto")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.35))
             }
             Spacer(minLength: 0)
             AIUsageBars(days: snapshot.days, showLabels: true)
@@ -381,7 +381,7 @@ private struct AIUsageBars: View {
                     }
                     if showLabels {
                         Text(Self.weekday.string(from: day.date).uppercased())
-                            .font(.system(size: 7.5, weight: .semibold, design: .monospaced))
+                            .font(.system(size: 7, weight: .semibold, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.35))
                     }
                 }
@@ -505,13 +505,13 @@ struct LauncherTile: View {
         Button {
             store.chooseApps(keeping: viewModel)
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 Image(systemName: "plus.app")
                     .font(.system(size: compact ? 15 : 22))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(.white.opacity(0.5))
                 Text("Dodaj aplikacje")
-                    .font(.system(size: 8.5))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.5))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
@@ -574,7 +574,7 @@ struct LauncherTile: View {
                     // Moved or uninstalled since it was pinned.
                     Image(systemName: "questionmark.app.dashed")
                         .font(.system(size: size * 0.7))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.white.opacity(0.35))
                 }
             }
             .frame(width: size, height: size)

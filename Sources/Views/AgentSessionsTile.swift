@@ -33,7 +33,7 @@ struct AgentSessionsTile: View {
     // MARK: Main row
 
     private var fullBody: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
             header
             if agents.sessions.isEmpty {
                 emptyState
@@ -54,11 +54,11 @@ struct AgentSessionsTile: View {
     }
 
     private var header: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             Text("AGENCI")
                 .font(.system(size: 8, weight: .semibold, design: .monospaced))
                 .tracking(0.7)
-                .foregroundStyle(.white.opacity(0.38))
+                .foregroundStyle(.white.opacity(0.35))
             Spacer(minLength: 0)
             summaryBadge
         }
@@ -99,8 +99,8 @@ struct AgentSessionsTile: View {
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
             Text("Sesje Claude Code i omp pojawią się tutaj")
-                .font(.system(size: 9.5))
-                .foregroundStyle(.white.opacity(0.38))
+                .font(.system(size: 9))
+                .foregroundStyle(.white.opacity(0.35))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -113,13 +113,13 @@ struct AgentSessionsTile: View {
             Button {
                 agents.bringForward(session)
             } label: {
-                HStack(spacing: 7) {
+                HStack(spacing: 6) {
                     AgentStatusIcon(session: session, size: 13)
                         .frame(width: 16, height: 16)
                     VStack(alignment: .leading, spacing: 0) {
                         Text(session.name)
-                            .font(.system(size: 10.5, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.92))
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.95))
                             .lineLimit(1)
                         Text(compactDetail(for: session))
                             .font(.system(size: 9))
@@ -132,7 +132,7 @@ struct AgentSessionsTile: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(NotchPressStyle(scale: 0.97))
-            .notchControl(in: RoundedRectangle(cornerRadius: 7, style: .continuous), lift: 1.02)
+            .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.02)
             .help("Pokaż: \(session.name)")
         } else {
             HStack(spacing: 6) {
@@ -142,7 +142,7 @@ struct AgentSessionsTile: View {
                 )
                 Text("Brak uruchomionych agentów")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.5))
                 Spacer(minLength: 0)
             }
         }
@@ -168,7 +168,7 @@ private struct AgentRow: View {
         Button {
             AgentSessionsManager.shared.bringForward(session)
         } label: {
-            HStack(spacing: 7) {
+            HStack(spacing: 6) {
                 AgentStatusIcon(session: session, size: 12)
                     .frame(width: 16, height: 16)
                 VStack(alignment: .leading, spacing: 0) {
@@ -177,7 +177,7 @@ private struct AgentRow: View {
                         .foregroundStyle(.white.opacity(session.status.isActive ? 0.95 : 0.7))
                         .lineLimit(1)
                     Text(Self.detail(for: session))
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 9))
                         .foregroundStyle(Self.detailColor(for: session))
                         .lineLimit(1)
                 }
@@ -185,11 +185,11 @@ private struct AgentRow: View {
                 AgentRowTime(session: session)
             }
             .padding(.horizontal, 6)
-            .padding(.vertical, 2.5)
+            .padding(.vertical, 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(NotchPressStyle(scale: 0.97))
-        .notchControl(in: RoundedRectangle(cornerRadius: 7, style: .continuous), lift: 1.01)
+        .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.01)
         .help("\(session.agent.rawValue), projekt \(session.project) — kliknij, aby pokazać")
     }
 
@@ -225,7 +225,7 @@ private struct AgentRow: View {
         case .idle:
             return session.lastTurnDuration != nil
                 ? AgentPalette.done.opacity(0.85)
-                : .white.opacity(0.4)
+                : .white.opacity(0.35)
         }
     }
 }
@@ -237,7 +237,7 @@ private struct AgentRowTime: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             Text(label(now: context.date))
-                .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
                 .foregroundStyle(color)
         }
     }
@@ -295,7 +295,7 @@ struct AgentStatusIcon: View {
                     CatView(state: .sleeping, size: size * 1.4, tint: .white.opacity(0.7))
                 } else {
                     Circle()
-                        .fill(Color.white.opacity(0.28))
+                        .fill(Color.white.opacity(0.24))
                         .frame(width: 5, height: 5)
                 }
             }

@@ -44,7 +44,7 @@ struct QuickActionStrip: View {
     private var hoveredItem: QuickActionItem? { items.first { $0.id == hovered } }
 
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 2) {
             // One glass group: neighbouring chips blend as the pointer moves.
             NotchGlassGroup {
                 HStack(spacing: Self.spacing) {
@@ -79,7 +79,7 @@ struct QuickActionStrip: View {
         HStack(spacing: 6) {
             if let item = hoveredItem {
                 Text(item.label)
-                    .font(.system(size: 9.5, weight: .semibold))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(item.activeTint ?? .white.opacity(0.85))
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -98,7 +98,7 @@ struct QuickActionStrip: View {
                                 .font(.system(size: 7, weight: .bold))
                         }
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(.white.opacity(0.7))
                         .padding(.horizontal, 6)
                         .frame(maxHeight: .infinity)
                         .notchGlass(in: Capsule(), lit: true, subtle: true)
@@ -125,7 +125,7 @@ private struct QuickActionChip: View {
     var body: some View {
         Button(action: item.perform) {
             Image(systemName: item.symbol)
-                .font(.system(size: 12.5, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(item.activeTint ?? .white.opacity(lit ? 1 : 0.85))
                 .symbolEffect(.bounce, value: item.isActive)
                 .contentTransition(.symbolEffect(.replace))
@@ -133,7 +133,7 @@ private struct QuickActionChip: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(NotchPressStyle())
-        .notchGlass(in: RoundedRectangle(cornerRadius: 10, style: .continuous), tint: item.activeTint, lit: lit)
+        .notchGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous), tint: item.activeTint, lit: lit)
         // A chip with options carries a small mark, so they are not a secret.
         .overlay(alignment: .bottomTrailing) {
             if !item.menu.isEmpty {

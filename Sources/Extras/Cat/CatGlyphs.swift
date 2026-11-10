@@ -97,7 +97,7 @@ struct CatStatesPreview: View {
                                 .frame(width: 44, height: 40)
                             Text(state.title)
                                 .font(.system(size: 10))
-                                .foregroundStyle(.white.opacity(0.55))
+                                .foregroundStyle(.white.opacity(0.5))
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -120,7 +120,7 @@ struct CatStatesPreview: View {
         case .texting: return .green
         case .chatting: return .purple
         case .mail: return .cyan
-        default: return .white.opacity(0.8)
+        default: return .white.opacity(0.85)
         }
     }
 }

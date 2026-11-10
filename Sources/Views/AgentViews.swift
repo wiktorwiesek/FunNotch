@@ -120,7 +120,7 @@ struct ClaudeSpinner: View {
 
     private func glyph(_ character: String) -> some View {
         Text(character)
-            .font(.system(size: size, weight: .heavy))
+            .font(.system(size: size, weight: .bold))
             .foregroundStyle(tint)
             .frame(width: size * 1.3, height: size * 1.3)
     }
@@ -502,7 +502,7 @@ private final class ClaudeGlyphLayerView: AgentLayerView {
     private func glyphImage(_ character: String, in canvasSize: CGSize) -> NSImage? {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return nil }
         let text = NSAttributedString(string: character, attributes: [
-            .font: NSFont.systemFont(ofSize: size, weight: .heavy),
+            .font: NSFont.systemFont(ofSize: size, weight: .bold),
             .foregroundColor: tint,
         ])
         return NSImage(size: canvasSize, flipped: false) { rect in
@@ -601,7 +601,7 @@ struct AgentPip: View {
             }
         }
         // Clear of the camera housing, the way the widgets beside it are.
-        .padding(.leading, 11)
+        .padding(.leading, 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .transition(.scale(scale: 0.3).combined(with: .opacity))
         .help(agents.activitySummary)
@@ -614,8 +614,8 @@ struct AgentCountLabel: View {
 
     var body: some View {
         Text("\(count)")
-            .font(.system(size: 9.5, weight: .bold, design: .rounded))
-            .foregroundStyle(.white.opacity(0.75))
+            .font(.system(size: 9, weight: .bold, design: .rounded))
+            .foregroundStyle(.white.opacity(0.7))
             .contentTransition(.numericText(value: Double(count)))
     }
 }

@@ -115,7 +115,7 @@ private struct MediaPanelFrame<Content: View>: View {
                 Button {
                     MediaOverlayState.shared.dismiss()
                 } label: {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 2) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 9, weight: .bold))
                         Text("Wróć")
@@ -123,7 +123,7 @@ private struct MediaPanelFrame<Content: View>: View {
                     }
                     .foregroundStyle(.white.opacity(0.85))
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.vertical, 2)
                     .contentShape(Capsule())
                 }
                 .buttonStyle(NotchPressStyle())

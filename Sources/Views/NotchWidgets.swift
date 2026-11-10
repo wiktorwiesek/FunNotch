@@ -250,7 +250,7 @@ private struct FocusTimerWidget: View {
     private var colour: Color {
         if focus.isActive { return focus.isOnBreak ? ClockPalette.rest : settings.accentColor }
         if showsTimer { return timer.finished ? ClockPalette.alarm : ClockPalette.timer }
-        return .white.opacity(0.4)
+        return .white.opacity(0.35)
     }
 }
 
@@ -260,20 +260,20 @@ private struct NextEventWidget: View {
     var body: some View {
         Group {
             if let event = calendar.nextItem {
-                HStack(spacing: 5) {
+                HStack(spacing: 4) {
                     if event.meetingURL != nil {
                         Image(systemName: "video.fill")
                             .font(.system(size: 9))
                             .foregroundStyle(event.calendarColor)
                     } else {
-                        RoundedRectangle(cornerRadius: 1.5)
+                        RoundedRectangle(cornerRadius: 2)
                             .fill(event.calendarColor)
                             .frame(width: 2.5, height: 14)
                     }
                     VStack(alignment: .leading, spacing: -1) {
                         Text(event.title)
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(.white.opacity(0.95))
                             .lineLimit(1)
                             .truncationMode(.tail)
                         Text(event.countdownText ?? event.timeText)
@@ -306,18 +306,18 @@ private struct NowPlayingWidget: View {
                     .foregroundStyle(.white.opacity(0.35))
                     .fixedSize()
             } else {
-                HStack(spacing: 5) {
+                HStack(spacing: 4) {
                     if let artwork = music.artwork {
                         Image(nsImage: artwork)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 15, height: 15)
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
                     VStack(alignment: .leading, spacing: -1) {
                         Text(music.track.title)
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(.white.opacity(0.95))
                             .lineLimit(1)
                             .truncationMode(.tail)
                         Text(music.track.artist)
@@ -424,7 +424,7 @@ private struct NetworkWidget: View {
     private func line(_ arrow: String, _ value: String) -> some View {
         HStack(spacing: 2) {
             Text(arrow)
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.white.opacity(0.5))
             Spacer(minLength: 0)
             Text(value)
                 .foregroundStyle(.white.opacity(0.85))
@@ -508,7 +508,7 @@ private struct MoonWidget: View {
                 Text("\(Int(round(MoonPhase.fraction(on: context.date) * 100)))%")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.7))
             }
             .fixedSize()
             .help(MoonPhase.name(on: context.date))
@@ -533,7 +533,7 @@ private struct ShelfCountWidget: View {
             Text("\(shelf.items.count)")
                 .font(.system(size: 11, weight: .medium, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.white.opacity(0.7))
         }
         .fixedSize()
         .help(shelf.items.isEmpty
@@ -552,10 +552,10 @@ private struct UnreadWidget: View {
             if unread.badges.isEmpty {
                 Image(systemName: "bubble.left.and.bubble.right")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.35))
             } else {
                 ForEach(unread.badges) { badge in
-                    HStack(spacing: 3) {
+                    HStack(spacing: 2) {
                         if let icon = UnreadBadgesManager.icon(for: badge.bundleIdentifier) {
                             Image(nsImage: icon)
                                 .resizable()

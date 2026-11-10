@@ -123,10 +123,10 @@ struct WindowSnapOverlayView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color.black.opacity(0.9))
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
             ForEach(WindowSnapLayout.cells, id: \.zone.id) { cell in
                 ZoneCell(zone: cell.zone, isHot: model.hovered == cell.zone)
                     .frame(width: cell.rect.width, height: cell.rect.height)
@@ -145,7 +145,7 @@ private struct ZoneCell: View {
     private let glyphSize = CGSize(width: 26, height: 17)
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 6) {
             glyph
             Text(zone.title)
                 .font(.system(size: 11, weight: .medium))
@@ -153,7 +153,7 @@ private struct ZoneCell: View {
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 9)
+        .padding(.horizontal, 8)
         .foregroundStyle(Color.white.opacity(isHot ? 1 : 0.75))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
@@ -166,7 +166,7 @@ private struct ZoneCell: View {
     private var glyph: some View {
         let f = zone.fraction
         return ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .strokeBorder(Color.white.opacity(isHot ? 0.9 : 0.5), lineWidth: 1)
             RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(Color.white.opacity(isHot ? 1 : 0.7))

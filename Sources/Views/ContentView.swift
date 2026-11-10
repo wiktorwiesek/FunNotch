@@ -343,7 +343,7 @@ private struct ClosedAlbumArt: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 RoundedRectangle(cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.closed)
-                    .fill(Color.white.opacity(0.15))
+                    .fill(Color.white.opacity(0.16))
                     .overlay(
                         Image(systemName: "music.note")
                             .font(.system(size: 10))

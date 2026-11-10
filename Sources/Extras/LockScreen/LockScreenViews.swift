@@ -85,7 +85,7 @@ struct LockScreenWidgetsView: View {
 private extension View {
     /// Dark translucent rounded card with white text.
     func lockScreenCard() -> some View {
-        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
         return self
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
@@ -112,7 +112,7 @@ private struct NowPlayingCard: View {
                 if !music.track.artist.isEmpty {
                     Text(music.track.artist)
                         .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.65))
+                        .foregroundStyle(.white.opacity(0.7))
                         .lineLimit(1)
                 }
             }
@@ -128,7 +128,7 @@ private struct NowPlayingCard: View {
 
     @ViewBuilder
     private var artwork: some View {
-        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
         if let image = music.artwork {
             Image(nsImage: image)
                 .resizable()
@@ -140,7 +140,7 @@ private struct NowPlayingCard: View {
                 .font(.system(size: 20))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 48, height: 48)
-                .background(shape.fill(Color.white.opacity(0.1)))
+                .background(shape.fill(Color.white.opacity(0.12)))
         }
     }
 
@@ -220,13 +220,13 @@ private struct ChargingCard: View {
                     .monospacedDigit()
                 Text(status)
                     .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1)
             }
             Spacer(minLength: 4)
             Image(systemName: battery.symbolName)
                 .font(.system(size: 18))
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(.white.opacity(0.85))
         }
         .lockScreenCard()
     }

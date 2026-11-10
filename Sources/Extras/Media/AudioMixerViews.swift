@@ -61,7 +61,7 @@ struct AudioMixerPanel: View {
 
     private func row(_ app: MixerApp) -> some View {
         let levels = mixer.levels(for: app.id)
-        return VStack(spacing: 3) {
+        return VStack(spacing: 2) {
             HStack(spacing: 8) {
                 appIcon(app)
 
@@ -72,7 +72,7 @@ struct AudioMixerPanel: View {
                         .lineLimit(1)
                     if let problem = app.problem {
                         Text(problem)
-                            .font(.system(size: 8.5))
+                            .font(.system(size: 8))
                             .foregroundStyle(Color.orange.opacity(0.9))
                             .lineLimit(1)
                             .help(problem)
@@ -107,7 +107,7 @@ struct AudioMixerPanel: View {
 
                 Text(levels.muted ? "0%" : "\(Int((levels.volume * 100).rounded()))%")
                     .font(.system(size: 10).monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.7))
                     .frame(width: 34, alignment: .trailing)
 
                 HoverButton(
@@ -133,9 +133,9 @@ struct AudioMixerPanel: View {
                     .transition(.opacity)
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 2)
         .padding(.horizontal, 6)
-        .notchCard(in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .notchCard(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func appIcon(_ app: MixerApp) -> some View {
@@ -164,8 +164,8 @@ struct AudioMixerPanel: View {
     private func band(_ title: String, value: Double, set: @escaping (Double) -> Void) -> some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(.system(size: 9.5))
-                .foregroundStyle(.white.opacity(0.55))
+                .font(.system(size: 9))
+                .foregroundStyle(.white.opacity(0.5))
                 .frame(width: 40, alignment: .leading)
             NotchSlider(
                 value: Binding(
@@ -196,13 +196,13 @@ struct AudioMixerPanel: View {
                 Spacer(minLength: 0)
                 Button("Zezwól teraz") { mixer.requestPermission() }
                     .buttonStyle(NotchPressStyle())
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(.white.opacity(0.95))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
                     .notchControl(in: Capsule(), resting: true)
             }
             .font(.system(size: 9))
-            .foregroundStyle(.white.opacity(0.4))
+            .foregroundStyle(.white.opacity(0.35))
         }
     }
 
@@ -210,7 +210,7 @@ struct AudioMixerPanel: View {
         symbol: String, text: String, detail: String,
         button: (title: String, action: () -> Void)? = nil
     ) -> some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 4) {
             Image(systemName: symbol)
                 .font(.system(size: 20))
                 .foregroundStyle(.white.opacity(0.5))
@@ -225,9 +225,9 @@ struct AudioMixerPanel: View {
                 Button(button.title, action: button.action)
                     .buttonStyle(NotchPressStyle())
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 5)
+                    .foregroundStyle(.white.opacity(0.95))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
                     .notchControl(in: Capsule(), resting: true)
                     .padding(.top, 2)
             }

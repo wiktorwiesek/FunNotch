@@ -46,7 +46,7 @@ struct HomePanelChrome<Content: View>: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 7)
+            .padding(.horizontal, 6)
             .notchCard(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
@@ -58,7 +58,7 @@ struct PanelLabel: View {
     let text: String
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 7.5, weight: .semibold, design: .monospaced))
+            .font(.system(size: 7, weight: .semibold, design: .monospaced))
             .tracking(0.6)
             .foregroundStyle(.white.opacity(0.35))
             .lineLimit(1)
@@ -246,7 +246,7 @@ private struct SystemStatsPanel: View {
 
     private func graph(_ name: String, _ history: [Double], _ now: Double, _ tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 3) {
+            HStack(spacing: 2) {
                 PanelLabel(text: name)
                 Spacer(minLength: 0)
                 Text("\(Int(now * 100))%")
@@ -319,7 +319,7 @@ private struct BatteryPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
                 PanelLabel(text: "Bateria")
                 Spacer(minLength: 0)
@@ -333,8 +333,8 @@ private struct BatteryPanel: View {
                 .frame(height: 15)
 
             Text(detail)
-                .font(.system(size: 8.5))
-                .foregroundStyle(.white.opacity(0.45))
+                .font(.system(size: 8))
+                .foregroundStyle(.white.opacity(0.5))
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -383,13 +383,13 @@ private struct BatteryMeter: View {
 
     private func shell(width: CGFloat, height: CGFloat, radius: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .strokeBorder(Color.white.opacity(0.25), lineWidth: 1.3)
+            .strokeBorder(Color.white.opacity(0.24), lineWidth: 1.3)
             .frame(width: width, height: height)
     }
 
     private func terminal(nub: CGFloat, height: CGFloat, offset: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: nub * 0.45, style: .continuous)
-            .fill(Color.white.opacity(0.25))
+            .fill(Color.white.opacity(0.24))
             .frame(width: nub, height: height * 0.38)
             .offset(x: offset)
     }
@@ -557,8 +557,8 @@ private struct DevicesPanel: View {
             PanelLabel(text: "Urządzenia")
             if withBattery.isEmpty {
                 Text(bluetooth.devices.isEmpty ? "Brak połączonych" : "Brak danych o baterii")
-                    .font(.system(size: 8.5))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.35))
                     .lineLimit(1)
             } else {
                 ForEach(withBattery, id: \.name) { device in
@@ -588,21 +588,21 @@ private struct FocusStreakPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             PanelLabel(text: "Seria skupienia")
-            HStack(spacing: 3) {
+            HStack(spacing: 2) {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 11))
-                    .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.3))
+                    .foregroundStyle(focus.streak > 0 ? Color.orange : .white.opacity(0.35))
                 Text("\(focus.streak)")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.92))
+                    .foregroundStyle(.white.opacity(0.95))
                 Text(Polish.plural(focus.streak, "dzień", "dni", "dni"))
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.5))
             }
             Text("Dziś \(FocusManager.duration(focus.todaySeconds))")
-                .font(.system(size: 8.5))
-                .foregroundStyle(.white.opacity(0.45))
+                .font(.system(size: 8))
+                .foregroundStyle(.white.opacity(0.5))
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -620,8 +620,8 @@ private struct RecentShelfPanel: View {
             PanelLabel(text: "Ostatnie")
             if shelf.items.isEmpty {
                 Text("Półka jest pusta")
-                    .font(.system(size: 8.5))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.35))
             } else {
                 HStack(spacing: 4) {
                     ForEach(shelf.items.prefix(4)) { item in
@@ -634,14 +634,14 @@ private struct RecentShelfPanel: View {
                                 } else {
                                     Image(systemName: "doc")
                                         .font(.system(size: 10))
-                                        .foregroundStyle(.white.opacity(0.6))
+                                        .foregroundStyle(.white.opacity(0.7))
                                 }
                             }
                             .frame(width: 22, height: 22)
                             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                         }
                         .buttonStyle(NotchPressStyle(scale: 0.9))
-                        .notchControl(in: RoundedRectangle(cornerRadius: 5, style: .continuous), lift: 1.08)
+                        .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.08)
                         .help(item.name)
                     }
                 }
@@ -665,19 +665,19 @@ private struct ClipboardPanel: View {
                 } label: {
                     Text(entry.preview)
                         .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.85))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(NotchPressStyle(scale: 0.97))
-                .notchControl(in: RoundedRectangle(cornerRadius: 5, style: .continuous), lift: 1.02)
+                .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.02)
                 .help("Kliknij, aby skopiować ponownie")
             } else {
                 Text("Jeszcze nic")
-                    .font(.system(size: 8.5))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.35))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -713,7 +713,7 @@ private struct NotesPanel: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(NotchPressStyle(scale: 0.97))
-        .notchControl(in: RoundedRectangle(cornerRadius: 5, style: .continuous), lift: 1.02)
+        .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.02)
         .help("Otwórz kartę Notatki")
     }
 }
@@ -729,17 +729,17 @@ private struct WiFiPanel: View {
             HStack(spacing: 4) {
                 Image(systemName: wifi.isConnected ? "wifi" : "wifi.slash")
                     .font(.system(size: 11))
-                    .foregroundStyle(wifi.isConnected ? .white.opacity(0.85) : .white.opacity(0.4))
+                    .foregroundStyle(wifi.isConnected ? .white.opacity(0.85) : .white.opacity(0.35))
                 Text(wifi.network ?? (wifi.isConnected ? "Połączono" : "Wyłączone"))
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1)
             }
             // macOS hides the network name behind location access, so say so
             // rather than looking broken when it is simply not permitted.
             if wifi.isConnected, wifi.network == nil, !wifi.isLocationAuthorized {
                 Text("Nazwa wymaga lokalizacji")
-                    .font(.system(size: 7.5))
+                    .font(.system(size: 7))
                     .foregroundStyle(.white.opacity(0.35))
                     .lineLimit(1)
             }
@@ -774,7 +774,7 @@ private struct OpenAppPanel: View {
             guard let url else { return }
             NSWorkspace.shared.openApplication(at: url, configuration: .init())
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 if let icon {
                     Image(nsImage: icon)
                         .resizable()
@@ -785,18 +785,18 @@ private struct OpenAppPanel: View {
                     // button that does nothing.
                     Image(systemName: "questionmark.app.dashed")
                         .font(.system(size: 16))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.white.opacity(0.35))
                 }
                 Text(name)
                     .font(.system(size: 8))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(NotchPressStyle(scale: 0.95))
-        .notchControl(in: RoundedRectangle(cornerRadius: 7, style: .continuous), lift: 1.04)
+        .notchControl(in: RoundedRectangle(cornerRadius: 6, style: .continuous), lift: 1.04)
         .disabled(icon == nil)
         .help(icon == nil ? "Wybierz aplikację w Ustawieniach" : "Otwórz: \(name)")
     }
@@ -812,17 +812,17 @@ struct MediaScrubberPanel: View {
     @ObservedObject private var settings = Settings.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             if music.track.isEmpty {
                 PanelLabel(text: "Nic nie gra")
             } else {
                 Text(music.track.title)
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.95))
                     .lineLimit(1)
                 Text(music.track.artist)
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
 
                 GeometryReader { geo in
@@ -830,7 +830,7 @@ struct MediaScrubberPanel: View {
                         ? min(max(playback.elapsed / music.track.duration, 0), 1)
                         : 0
                     ZStack(alignment: .leading) {
-                        Capsule().fill(.white.opacity(0.14))
+                        Capsule().fill(.white.opacity(0.16))
                         Capsule()
                             .fill(settings.accentColor)
                             .frame(width: geo.size.width * fraction)
@@ -853,17 +853,17 @@ struct NextEventPanel: View {
             PanelLabel(text: "Następne")
             if let item = calendar.nextItem, !item.isSample {
                 Text(item.title)
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.95))
                     .lineLimit(1)
                 if let start = item.start {
                     Text(start.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Polish.locale)))
                         .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .foregroundStyle(.white.opacity(0.5))
                 }
             } else {
                 Text("Nic w planach")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.35))
             }
         }
@@ -885,14 +885,14 @@ struct DiskSpacePanel: View {
         VStack(alignment: .leading, spacing: 2) {
             PanelLabel(text: "Wolne miejsce")
             Text(freeText)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white.opacity(0.92))
+                .foregroundStyle(.white.opacity(0.95))
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(.white.opacity(0.12))
                     Capsule()
-                        .fill(stats.diskUsage > 0.9 ? Color.orange : Color.white.opacity(0.6))
+                        .fill(stats.diskUsage > 0.9 ? Color.orange : Color.white.opacity(0.7))
                         .frame(width: geo.size.width * stats.diskUsage)
                 }
             }

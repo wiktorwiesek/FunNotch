@@ -40,7 +40,7 @@ struct ShelfView: View {
 
             Text(viewModel.isDropTargeted ? "Upuść, aby dodać" : "Upuść pliki tutaj")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.white.opacity(0.7))
 
             Text("Zostają na Półce, dopóki ich stąd nie wyciągniesz")
                 .font(.system(size: 10))
@@ -48,7 +48,7 @@ struct ShelfView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(
                     style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])
                 )
@@ -65,7 +65,7 @@ struct ShelfView: View {
 
             if !shelf.missingOnRestore.isEmpty {
                 Label("Brakuje: \(shelf.missingOnRestore.count)", systemImage: "questionmark.folder")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 9))
                     .foregroundStyle(.orange.opacity(0.85))
                     .help("Te pliki były na Półce, ale zostały przeniesione lub usunięte:\n" +
                           shelf.missingOnRestore.joined(separator: "\n"))
@@ -109,7 +109,7 @@ struct ShelfView: View {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.down.doc")
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.35))
                 ForEach(targets, id: \.self) { path in
                     FolderTargetChip(path: path)
                 }
@@ -159,9 +159,9 @@ private struct ShelfToolbarButton: View {
                 Text(label)
                     .font(.system(size: 10, weight: .medium))
             }
-            .foregroundStyle(.white.opacity(0.9))
+            .foregroundStyle(.white.opacity(0.95))
             .padding(.horizontal, 8)
-            .padding(.vertical, 3.5)
+            .padding(.vertical, 4)
             .contentShape(Capsule())
         }
         .buttonStyle(NotchPressStyle())
@@ -236,13 +236,13 @@ private struct ShelfItemTile: View {
             }
             .frame(width: 62, height: 62)
             .notchGlass(
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous),
                 tint: isSelected ? settings.accentColor : nil,
                 lit: isHovering || isSelected,
                 subtle: !isHovering && !isSelected
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(isSelected ? settings.accentColor : .clear, lineWidth: 1.5)
             )
             .overlay(alignment: .topTrailing) {
@@ -265,7 +265,7 @@ private struct ShelfItemTile: View {
 
             Text(item.name)
                 .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(.white.opacity(0.7))
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(width: 66)
@@ -357,7 +357,7 @@ private struct FolderTargetChip: View {
                 .foregroundStyle(.white.opacity(0.85))
                 .lineLimit(1)
                 .padding(.horizontal, 8)
-                .padding(.vertical, 3.5)
+                .padding(.vertical, 4)
                 .contentShape(Capsule())
         }
         .buttonStyle(NotchPressStyle())

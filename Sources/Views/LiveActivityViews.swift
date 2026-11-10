@@ -132,13 +132,13 @@ private struct ChinLine: View {
             .frame(maxWidth: .infinity)
             .offset(y: (1 - progress) * 8)
             .opacity(progress)
-            .padding(.bottom, 5)
+            .padding(.bottom, 4)
     }
 }
 
 /// "**Name** did something": the subject in white, the rest softer.
 private func headline(_ subject: String, _ rest: String) -> Text {
-    Text(subject).fontWeight(.semibold) + Text(rest).foregroundColor(.white.opacity(0.62))
+    Text(subject).fontWeight(.semibold) + Text(rest).foregroundColor(.white.opacity(0.7))
 }
 
 // MARK: - Dispatcher
@@ -207,7 +207,7 @@ private struct IslandBanner: View {
 
     private func glyph(_ island: Island, time: Double) -> some View {
         Image(systemName: island.symbol)
-            .font(.system(size: 15, weight: .semibold))
+            .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(island.tint)
             .frame(width: 24, height: 24)
             .modifier(WingPop(time: time))
@@ -222,7 +222,7 @@ private struct IslandBanner: View {
             // label in the same colour, looked like a badge from another app.
             Button(action.title) { action.perform() }
                 .buttonStyle(NotchPressStyle())
-                .font(.system(size: 10.5, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.95))
                 .lineLimit(1)
                 .fixedSize()
@@ -322,7 +322,7 @@ private struct HUDGlyph: View {
                     .symbolEffect(.bounce.down, value: level)
             }
         }
-        .font(.system(size: 15, weight: .semibold))
+        .font(.system(size: 14, weight: .semibold))
         .frame(width: 22, height: 20)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: level)
     }
@@ -340,20 +340,20 @@ private struct HUDReadout: View {
                 // The right wing is only ~48 points wide, so the word shrinks
                 // to fit rather than wrapping onto a second line.
                 Text("Wyciszono")
-                    .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.7))
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 1) {
                     Text("\(percent)")
-                        .font(.system(size: 13.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .contentTransition(.numericText(value: Double(percent)))
                     Text("%")
                         .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .foregroundStyle(.white.opacity(0.5))
                 }
                 .foregroundStyle(.white)
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
@@ -376,7 +376,7 @@ private struct HUDLevelBar: View {
             let fill = level <= 0 ? 0 : max(width * level, 5)
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.white.opacity(0.13))
+                    .fill(Color.white.opacity(0.12))
                 Capsule()
                     .fill(LinearGradient(
                         colors: [tint.opacity(0.5), tint],
@@ -444,9 +444,9 @@ private struct BatteryGlyph: View {
         let bolt = Motion.spring(time - 0.4, response: 0.4, damping: 0.85)
         let sheen = (time * 0.8).truncatingRemainder(dividingBy: 1)
 
-        HStack(spacing: 1.2) {
+        HStack(spacing: 1) {
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 3.6, style: .continuous)
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .stroke(Color.white.opacity(0.5), lineWidth: 1.2)
                     .frame(width: 25, height: 12.5)
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
@@ -455,7 +455,7 @@ private struct BatteryGlyph: View {
                     .overlay(alignment: .leading) {
                         if charging {
                             LinearGradient(
-                                colors: [.clear, .white.opacity(0.55), .clear],
+                                colors: [.clear, .white.opacity(0.5), .clear],
                                 startPoint: .leading, endPoint: .trailing
                             )
                             .frame(width: 8)
@@ -463,7 +463,7 @@ private struct BatteryGlyph: View {
                         }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-                    .padding(.leading, 2.25)
+                    .padding(.leading, 2)
             }
             Capsule()
                 .fill(Color.white.opacity(0.5))
@@ -472,7 +472,7 @@ private struct BatteryGlyph: View {
         .overlay {
             if charging {
                 Image(systemName: "bolt.fill")
-                    .font(.system(size: 9, weight: .black))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.7), radius: 1.2)
                     .scaleEffect(max(bolt, 0))
@@ -506,7 +506,7 @@ private struct BluetoothBanner: View {
                         }
                     }
                     Image(systemName: activity.icon.isEmpty ? "dot.radiowaves.left.and.right" : activity.icon)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.white.opacity(connected ? 1 : 0.5))
                 }
                 .frame(width: 24, height: 24)
@@ -556,7 +556,7 @@ private struct ScreenshotBanner: View {
                             .blur(radius: 3)
                             .opacity(flash < 1 ? 1 : 0)
                         Image(systemName: "camera.viewfinder")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.white)
                     }
                     .frame(width: 24, height: 24)
@@ -622,9 +622,9 @@ private struct ShelfThumbnail: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 26, height: 18)
-                    .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .stroke(Color.white.opacity(0.35), lineWidth: 0.6)
                     )
             } else {
@@ -665,7 +665,7 @@ private struct FocusBanner: View {
                         AgentDoneGlyph(time: time, size: 17, tint: Color(red: 0.55, green: 0.5, blue: 1))
                     } else {
                         Image(systemName: activity.icon.isEmpty ? "cup.and.saucer.fill" : activity.icon)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.white)
                             .modifier(WingPop(time: time))
                     }
@@ -673,7 +673,7 @@ private struct FocusBanner: View {
                 .frame(width: 24, height: 24)
             } trailing: {
                 Text(finished || !focus.isActive ? "Gotowe" : focus.compactRemainingText)
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white)
                     .modifier(WingSlide(time: time))
@@ -824,12 +824,12 @@ struct MusicPeekBanner: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(Color.white.opacity(0.15))
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.white.opacity(0.16))
                     .overlay(Image(systemName: "music.note").font(.system(size: 10)))
             }
         }
         .frame(width: 22, height: 22)
-        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }

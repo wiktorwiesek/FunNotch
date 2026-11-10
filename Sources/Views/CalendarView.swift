@@ -95,13 +95,13 @@ struct CalendarPane: View {
                 .foregroundStyle(.white.opacity(0.35))
             Text("Brak wydarzeń")
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.white.opacity(0.35))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var permissionPrompt: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 4) {
             Text("Potrzebny dostęp do kalendarza")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
@@ -127,7 +127,7 @@ private struct DayCell: View {
 
     @State private var isHovering = false
 
-    private let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
+    private let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
 
     var body: some View {
         Button(action: action) {
@@ -194,7 +194,7 @@ private struct AgendaRow: View {
                 .buttonStyle(NotchPressStyle())
                 .padding(.top, 1)
             } else {
-                RoundedRectangle(cornerRadius: 1.5)
+                RoundedRectangle(cornerRadius: 2)
                     .fill(item.calendarColor)
                     .frame(width: 3)
                     .padding(.vertical, 1)
@@ -214,17 +214,17 @@ private struct AgendaRow: View {
                     if item.isSample {
                         Text("Przykład")
                             .font(.system(size: 7, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.55))
-                            .padding(.horizontal, 3)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .padding(.horizontal, 2)
                             .padding(.vertical, 1)
-                            .notchGlass(in: RoundedRectangle(cornerRadius: 3, style: .continuous), subtle: true)
+                            .notchGlass(in: RoundedRectangle(cornerRadius: 4, style: .continuous), subtle: true)
                             .fixedSize()
                     }
                 }
 
                 Text(item.countdownText.map { "\(item.timeText) · \($0)" } ?? item.timeText)
                     .font(.system(size: 9))
-                    .foregroundStyle(item.isCurrent ? item.calendarColor : .white.opacity(0.45))
+                    .foregroundStyle(item.isCurrent ? item.calendarColor : .white.opacity(0.5))
             }
 
             Spacer(minLength: 0)
@@ -237,7 +237,7 @@ private struct AgendaRow: View {
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 2)
                         .notchGlass(in: Capsule(), tint: settings.accentColor, lit: true)
                 }
                 .buttonStyle(NotchPressStyle())

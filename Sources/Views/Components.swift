@@ -368,7 +368,7 @@ struct NotchSlider: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.white.opacity(0.22))
+                    .fill(Color.white.opacity(0.24))
                 Capsule()
                     .fill(color)
                     .frame(width: proxy.size.width * fraction)
@@ -411,20 +411,20 @@ struct BatteryPill: View {
     @State private var showsDetail = false
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             if settings.showBatteryPercentage {
                 Text(battery.percentageText)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(.white.opacity(0.95))
                     .monospacedDigit()
             }
 
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.white.opacity(0.5), lineWidth: 1)
                     .frame(width: 24, height: 12)
 
-                RoundedRectangle(cornerRadius: 1.5)
+                RoundedRectangle(cornerRadius: 2)
                     .fill(battery.indicatorColor)
                     .frame(width: max(2, 20 * CGFloat(battery.level)), height: 8)
                     .padding(.leading, 2)
@@ -438,7 +438,7 @@ struct BatteryPill: View {
             }
             .overlay(alignment: .trailing) {
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(Color.white.opacity(0.45))
+                    .fill(Color.white.opacity(0.5))
                     .frame(width: 2, height: 5)
                     .offset(x: 3)
             }
