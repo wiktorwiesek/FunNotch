@@ -1,31 +1,18 @@
 //
-//  ScreenAssistantExtras.swift
+//  ScreenAssistantSettings.swift
 //  FunNotch
 //
-//  "Asystent ekranu": pick a region of the screen and ask an AI about it.
+//  Settings of "Asystent ekranu": pick a region of the screen and ask an AI
+//  about it.
 //
-//  The feature is invisible until used. `start()` only registers one palette
-//  command; the crosshair, the panel and the child process all come into
-//  existence when that command runs and are gone when the panel closes (see
-//  ScreenAssistantController). The AI is a command-line client the user
-//  already has, so Fun Notch stores and asks for no key.
+//  The feature is invisible until used: the crosshair, the panel and the child
+//  process all come into existence when it is picked from the tools menu and
+//  are gone when the panel closes (see ScreenAssistantController). The AI is a
+//  command-line client the user already has, so Fun Notch stores and asks for
+//  no key.
 //
 
 import SwiftUI
-
-enum ScreenAssistantExtras {
-    @MainActor
-    static func start() {
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "screenassistant.ask",
-            title: "Zapytaj o fragment ekranu",
-            subtitle: "Zaznacz obszar i zapytaj AI",
-            symbol: "viewfinder",
-            keywords: ["ai", "ekran", "zrzut", "zapytaj", "asystent", "screen"],
-            perform: { ScreenAssistantController.shared.begin() }
-        ))
-    }
-}
 
 struct ScreenAssistantSettings: View {
     private enum ClientStatus {
@@ -43,7 +30,7 @@ struct ScreenAssistantSettings: View {
     var body: some View {
         SettingsCard(
             title: "Asystent ekranu",
-            footer: "Zaznaczony fragment ekranu jest wysyłany do usługi AI skonfigurowanej w tym kliencie, razem z pytaniami z okna asystenta; dopóki nie zadasz pytania, nic nie jest wysyłane. Fun Notch nie przechowuje ani nie pyta o klucze API. Zrzut robi systemowe polecenie screencapture uruchamiane przez aplikację, dlatego potrzebne jest uprawnienie Nagrywanie ekranu (macOS zapyta przy pierwszym użyciu). Obraz leży w prywatnym folderze tymczasowym i jest usuwany po zamknięciu okna. Uruchom z palety poleceń: „Zapytaj o fragment ekranu”."
+            footer: "Zaznaczony fragment ekranu jest wysyłany do usługi AI skonfigurowanej w tym kliencie, razem z pytaniami z okna asystenta; dopóki nie zadasz pytania, nic nie jest wysyłane. Fun Notch nie przechowuje ani nie pyta o klucze API. Zrzut robi systemowe polecenie screencapture uruchamiane przez aplikację, dlatego potrzebne jest uprawnienie Nagrywanie ekranu (macOS zapyta przy pierwszym użyciu). Obraz leży w prywatnym folderze tymczasowym i jest usuwany po zamknięciu okna. Uruchamiasz przyciskiem narzędzi w otwartym notchu: „Zapytaj o fragment ekranu”."
         ) {
             statusLine
             SettingsRow(

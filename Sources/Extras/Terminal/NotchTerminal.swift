@@ -3,7 +3,7 @@
 //  FunNotch
 //
 //  A terminal that drops from the notch: a panel under the camera running the
-//  user's login shell, shown and hidden from the command palette.
+//  user's login shell, shown and hidden from the tools menu in the notch.
 //
 //  The emulator is SwiftTerm (see Tools/fetch-swiftterm.sh). Nothing of it is
 //  touched until the terminal is first shown. Hiding the panel keeps the shell
@@ -15,29 +15,6 @@
 import AppKit
 import SwiftTerm
 import SwiftUI
-
-/// Called once at startup by the app. Registers the commands; starts nothing.
-@MainActor
-enum TerminalExtras {
-    static func start() {
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "terminal.toggle",
-            title: "Terminal: pokaż lub ukryj",
-            subtitle: "Powłoka pod notchem",
-            symbol: "terminal",
-            keywords: ["terminal", "shell", "zsh", "konsola", "powłoka", "cli"],
-            perform: { NotchTerminalController.shared.toggle() }
-        ))
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "terminal.end",
-            title: "Terminal: zakończ sesję",
-            subtitle: "Zamyka powłokę i zwalnia terminal",
-            symbol: "xmark.rectangle",
-            keywords: ["terminal", "zakończ", "zamknij", "exit", "kill"],
-            perform: { NotchTerminalController.shared.endSession() }
-        ))
-    }
-}
 
 /// Borderless panels refuse key status by default, and a terminal that cannot
 /// be typed into is a picture of one.
@@ -210,7 +187,7 @@ struct TerminalSettings: View {
     var body: some View {
         SettingsCard(
             title: "Terminal",
-            footer: "Otwierasz go z palety poleceniem „Terminal: pokaż lub ukryj”. Ukrycie nie kończy powłoki; kończy ją polecenie exit albo „Terminal: zakończ sesję”. Dopóki go nie otworzysz, nic nie działa w tle."
+            footer: "Otwierasz go przyciskiem narzędzi w otwartym notchu. Ukrycie nie kończy powłoki; kończy ją polecenie exit albo „Zakończ sesję terminala” w tym samym menu. Dopóki go nie otworzysz, nic nie działa w tle."
         ) {
             SettingsRow(
                 title: "Rozmiar czcionki",

@@ -117,8 +117,7 @@ final class NotifyCenter: ObservableObject {
 
     // MARK: - Lifecycle
 
-    /// Safe to call repeatedly: the watcher, the timer and the palette
-    /// command are each set up once.
+    /// Safe to call repeatedly: the watcher and the timer are each set up once.
     func start() {
         guard !started else { return }
         started = true
@@ -133,15 +132,6 @@ final class NotifyCenter: ObservableObject {
         applyCapture()
         applyDatabase()
         announceMissingAccess()
-
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "notify.show",
-            title: "Pokaż powiadomienia",
-            subtitle: "Lista ostatnich powiadomień w notchu",
-            symbol: "bell.fill",
-            keywords: ["powiadomienia", "notification", "wiadomości", "kod", "lustro"],
-            perform: { NotifyCenter.shared.showTab() }
-        ))
     }
 
     /// Capture is on by default and does nothing without Accessibility, so a
@@ -196,20 +186,6 @@ final class NotifyCenter: ObservableObject {
         RunLoop.main.add(timer, forMode: .common)
         databaseTimer = timer
         pollDatabase()
-    }
-
-    /// Opens the notch on the display under the pointer, on the notifications.
-    func showTab() {
-        let mouse = NSEvent.mouseLocation
-        // Not NSMouseInRect: it leaves out the top edge, which is exactly where
-        // the pointer sits when the notch is opened by flinging it upwards.
-        let target = DesktopGeometry.screen(containing: mouse)?.displayIdentifier
-        let models = NotchWindowManager.shared.viewModels
-        let chosen = models.filter { $0.screenIdentifier == target }
-        for model in chosen.isEmpty ? models : chosen {
-            model.open()
-            withAnimation(.notchContent) { model.currentTab = .notifications }
-        }
     }
 
     // MARK: - Banners

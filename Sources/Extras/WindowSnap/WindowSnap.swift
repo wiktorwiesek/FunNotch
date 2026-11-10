@@ -70,7 +70,6 @@ final class WindowSnapManager: ObservableObject {
             }
         }
 
-        registerPaletteCommands()
         apply()
     }
 
@@ -123,52 +122,5 @@ final class WindowSnapManager: ObservableObject {
             WindowAccess.openPrivacyPane()
         }
         apply()
-    }
-
-    // MARK: - Palette
-
-    private func registerPaletteCommands() {
-        let registry = PaletteCommandRegistry.shared
-        registry.register(PaletteCommand(
-            id: "windowsnap.toggleNotchSnap",
-            title: "Przyciąganie okien do notcha: włącz lub wyłącz",
-            symbol: "rectangle.split.2x2",
-            keywords: ["okna", "okno", "snap", "notch", "przyciąganie", "kafelki", "podział"],
-            perform: { [weak self] in
-                self?.toggle(WindowSnapKeys.notchSnap, name: "Przyciąganie okien", symbol: "rectangle.split.2x2.fill")
-            }
-        ))
-        registry.register(PaletteCommand(
-            id: "windowsnap.toggleModifierDrag",
-            title: "Przesuwanie okien z klawiszem: włącz lub wyłącz",
-            symbol: "arrow.up.left.and.arrow.down.right",
-            keywords: ["okna", "okno", "przesuwanie", "rozmiar", "klawisz", "easy move", "resize"],
-            perform: { [weak self] in
-                self?.toggle(
-                    WindowSnapKeys.modifierDrag,
-                    name: "Przesuwanie okien",
-                    symbol: "arrow.up.left.and.arrow.down.right"
-                )
-            }
-        ))
-    }
-
-    private func toggle(_ key: String, name: String, symbol: String) {
-        let on = !UserDefaults.standard.bool(forKey: key)
-        UserDefaults.standard.set(on, forKey: key)
-        apply()
-
-        var detail = on ? " · włączone" : " · wyłączone"
-        if on && !accessibilityGranted {
-            requestAccess()
-            detail = " · włączone, brakuje uprawnienia Dostępność"
-        }
-        IslandCenter.shared.post(Island(
-            symbol: symbol,
-            tint: on && !accessibilityGranted ? .orange : .white,
-            title: name,
-            detail: detail,
-            duration: 3
-        ))
     }
 }

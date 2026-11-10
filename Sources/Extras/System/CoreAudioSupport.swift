@@ -213,7 +213,10 @@ enum PointerMenu {
         var symbol: String?
         var isChecked = false
         var isEnabled = true
+        var isSeparator = false
         var perform: @MainActor () -> Void
+
+        static let separator = Item(title: "", isSeparator: true, perform: {})
     }
 
     /// The targets must outlive the menu, which only retains them weakly.
@@ -230,6 +233,10 @@ enum PointerMenu {
         menu.autoenablesItems = false
         targets = []
         for item in items {
+            if item.isSeparator {
+                menu.addItem(.separator())
+                continue
+            }
             let target = Target(item.perform)
             targets.append(target)
             let menuItem = NSMenuItem(title: item.title, action: #selector(Target.run), keyEquivalent: "")

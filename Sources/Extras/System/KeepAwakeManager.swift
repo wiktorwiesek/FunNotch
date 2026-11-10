@@ -217,7 +217,7 @@ final class KeepAwakeManager: ObservableObject {
         return "Mac nie zaśnie do \(Self.clock.string(from: endDate)) (zostało \(remaining)) — kliknij, aby wyłączyć"
     }
 
-    /// The choices offered on right-click and in the palette.
+    /// The choices offered on right-click.
     static let durationChoices: [(title: String, minutes: Int?)] = [
         ("Bez limitu", nil),
         ("15 minut", 15),

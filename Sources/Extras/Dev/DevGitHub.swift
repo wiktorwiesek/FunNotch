@@ -477,7 +477,7 @@ final class GitHubManager: ObservableObject {
         return "\(parts[0])/\(name)"
     }
 
-    /// The Actions page of the first repository in the settings, for the palette.
+    /// The Actions page of the first repository in the settings.
     func actionsURL() -> URL? {
         configuredSlugs.first.flatMap { URL(string: "https://github.com/\($0)/actions") }
     }

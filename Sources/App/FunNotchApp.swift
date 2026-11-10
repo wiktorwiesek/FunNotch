@@ -89,7 +89,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HUDManager.shared.start()
         // Features added in this build. After the windows, since several of
         // them announce through the notch as soon as they start.
-        PaletteExtras.start()
         SystemExtras.start()
         MediaExtras.start()
         ShelfClipExtras.start()
@@ -97,9 +96,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotifyExtras.start()
         WindowSnap.start()
         DecorExtras.start()
-        TerminalExtras.start()
-        TeleprompterExtras.start()
-        ScreenAssistantExtras.start()
         LockScreenExtras.start()
 
         statusBar = StatusBarController()

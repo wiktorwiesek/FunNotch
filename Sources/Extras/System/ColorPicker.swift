@@ -1,5 +1,5 @@
 //
-//  PaletteColorPicker.swift
+//  ColorPicker.swift
 //  FunNotch
 //
 //  The system eyedropper. Picking a colour copies its HEX code and announces
@@ -30,7 +30,11 @@ enum ColorPicker {
                     completion?(nil)
                     return
                 }
-                PaletteClipboard.copy(hex)
+                // Through the clipboard manager, so the history does not record
+                // our own write as something the user copied.
+                ClipboardManager.shared.copyBack(
+                    ClipboardEntry(id: UUID(), payload: .text(hex), copiedAt: Date(), sourceApp: nil)
+                )
                 IslandCenter.shared.post(Island(
                     symbol: "eyedropper.halffull",
                     tint: Color(nsColor: color),

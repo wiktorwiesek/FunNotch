@@ -82,11 +82,12 @@ Free and open source. No account, no subscription, no telemetry.
   system callbacks; nothing polls and none needs a permission.
 - **Shelf from a terminal** — `open -a FunNotch report.pdf` puts files on the
   shelf, from a script as well.
-- **Window switcher** — open windows are results in the command palette, and
-  "Przełącz okno" lists nothing else. Needs Accessibility.
-- **Terminal** — a drop-down terminal under the notch running your login shell
-  ("Terminal: pokaż lub ukryj" in the palette). Hiding it keeps the session;
-  nothing of it exists until it is first opened.
+- **Window switcher** — "Przełącz okno" lists every open window, most recently
+  used app first, and brings the one you pick to the front. Needs
+  Accessibility.
+- **Terminal** — a drop-down terminal under the notch running your login
+  shell. Hiding it keeps the session; nothing of it exists until it is first
+  opened.
 - **Teleprompter** — your script scrolling right under the camera, at a set
   speed or following your voice (speech recognition, asked for only when you
   switch that on), hidden from screen recordings.
@@ -97,8 +98,8 @@ Free and open source. No account, no subscription, no telemetry.
   charging and the weather, above the lock screen. Off unless "Pokazuj na
   ekranie blokady" is on.
 - **Tools button** — the teleprompter, the terminal, the screen assistant, the
-  window switcher and the palette are one click away, behind the wrench in the
-  open notch's header.
+  window switcher, a colour eyedropper, the per-app mixer and "zip the shelf"
+  are one click away, behind the wrench in the open notch's header.
 - **No notch? Still works.** On an external display it draws a floating pill in
   the same place, like the Dynamic Island.
 - **And** — camera mirror, calendar and reminders, meeting-link detection,

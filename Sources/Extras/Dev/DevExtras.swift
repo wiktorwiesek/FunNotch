@@ -16,32 +16,6 @@ enum DevExtras {
         LocalAPIManager.shared.start()
         GitHubManager.shared.start()
         AIUsageManager.shared.start()
-
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "dev.github.ci",
-            title: "Otwórz CI",
-            subtitle: "GitHub Actions pierwszego repozytorium z ustawień",
-            symbol: "checkmark.seal",
-            keywords: ["github", "ci", "actions", "build", "testy", "deploy"],
-            perform: {
-                if let url = GitHubManager.shared.actionsURL() {
-                    NSWorkspace.shared.open(url)
-                } else {
-                    IslandCenter.shared.post(Island(
-                        symbol: "exclamationmark.triangle.fill", tint: SettingsStyle.orange,
-                        title: "GitHub", detail: " · dodaj repozytorium w ustawieniach"
-                    ))
-                }
-            }
-        ))
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "dev.ai.usage",
-            title: "Zużycie AI dzisiaj",
-            subtitle: "Koszt i tokeny z logów omp i Claude Code",
-            symbol: "sparkles",
-            keywords: ["ai", "tokeny", "koszt", "claude", "omp", "usage", "wydatki"],
-            perform: { AIUsageManager.shared.announceToday() }
-        ))
     }
 }
 

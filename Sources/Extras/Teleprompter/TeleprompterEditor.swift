@@ -12,7 +12,7 @@ import AppKit
 import SwiftUI
 
 /// The app has no main menu, so ⌘X/⌘C/⌘V/⌘A/⌘Z would do nothing in the text
-/// view; route them to the first responder by hand, as the palette panel does.
+/// view; route them to the first responder by hand.
 final class TeleprompterEditorWindow: NSWindow {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)

@@ -3,8 +3,8 @@
 //  FunNotch
 //
 //  Entry point for the media extras: synced lyrics, the per-app sound mixer
-//  and the real audio spectrum. Holds their settings keys, starts their
-//  managers and registers the palette commands.
+//  and the real audio spectrum. Holds their settings keys and starts their
+//  managers.
 //
 
 import AppKit
@@ -51,26 +51,6 @@ enum MediaExtras {
         LyricsManager.shared.start()
         AudioMixerManager.shared.start()
         SpectrumAnalyzer.shared.start()
-
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "media.lyrics",
-            title: "Pokaż tekst piosenki",
-            subtitle: "Tekst granego utworu w otwartym notchu",
-            symbol: "text.quote",
-            keywords: ["tekst", "piosenka", "lyrics", "słowa", "muzyka"]
-        ) {
-            MediaOverlayState.shared.present(.lyrics)
-        })
-
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "media.mixer",
-            title: "Mikser dźwięku",
-            subtitle: "Głośność i korektor osobno dla każdej aplikacji",
-            symbol: "slider.vertical.3",
-            keywords: ["mikser", "głośność", "dźwięk", "volume", "mixer", "equalizer", "korektor"]
-        ) {
-            MediaOverlayState.shared.present(.mixer)
-        })
     }
 }
 

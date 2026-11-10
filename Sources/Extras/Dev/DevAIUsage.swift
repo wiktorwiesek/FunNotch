@@ -347,7 +347,6 @@ final class AIUsageManager: ObservableObject {
     private var subscribers = 0
     private var timer: Timer?
     private var scanning = false
-    private var announceWhenScanned = false
 
     private init() {}
 
@@ -417,32 +416,8 @@ final class AIUsageManager: ObservableObject {
                 self.hasScanned = true
                 if self.snapshot != snapshot { self.snapshot = snapshot }
                 self.checkThreshold()
-                if self.announceWhenScanned {
-                    self.announceWhenScanned = false
-                    self.postToday()
-                }
             }
         }
-    }
-
-    /// Puts today's total in the notch, from a fresh scan.
-    func announceToday() {
-        announceWhenScanned = true
-        refresh()
-    }
-
-    private func postToday() {
-        let providers = snapshot.providers.prefix(2)
-            .map { AIUsageManager.providerName($0.name) }
-            .joined(separator: ", ")
-        IslandCenter.shared.post(Island(
-            symbol: "sparkles",
-            tint: SettingsStyle.orange,
-            title: "Zużycie AI dziś",
-            detail: providers.isEmpty ? " · jeszcze nic" : " · " + providers,
-            trailing: (snapshot.todayIsEstimate ? "~" : "") + Self.money(snapshot.todayCost),
-            duration: 5
-        ))
     }
 
     private func checkThreshold() {
@@ -509,7 +484,7 @@ final class AIUsageManager: ObservableObject {
         }
     }
 
-    /// A one-line summary for the palette and settings.
+    /// A one-line summary for the settings.
     var summaryLine: String {
         guard hasScanned else { return "Liczenie…" }
         let prefix = snapshot.todayIsEstimate ? "ok. " : ""

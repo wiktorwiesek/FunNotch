@@ -1,35 +1,14 @@
 //
-//  TeleprompterExtras.swift
+//  TeleprompterSettings.swift
 //  FunNotch
 //
-//  Entry point and settings card of the teleprompter. `start()` only adds two
-//  commands to the palette; the panel, the editor, the audio engine and the
-//  script do not exist until one of those commands (or a settings button) is
-//  used, and everything is released again when the panel or the window closes.
+//  Settings card of the teleprompter. The panel, the editor, the audio engine
+//  and the script do not exist until the teleprompter is picked from the tools
+//  menu (or a button here), and everything is released again when the panel or
+//  the window closes.
 //
 
 import SwiftUI
-
-enum TeleprompterExtras {
-    @MainActor
-    static func start() {
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "teleprompter.toggle",
-            title: "Teleprompter: pokaż lub ukryj",
-            subtitle: "Tekst pod kamerą, niewidoczny w udostępnianiu ekranu",
-            symbol: "play.rectangle.fill",
-            keywords: ["teleprompter", "prompter", "tekst", "przemówienie", "czytanie", "kamera"],
-            perform: { TeleprompterController.shared.toggle() }
-        ))
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "teleprompter.edit",
-            title: "Teleprompter: edytuj tekst",
-            symbol: "square.and.pencil",
-            keywords: ["teleprompter", "prompter", "skrypt", "tekst", "edytor"],
-            perform: { TeleprompterEditorController.shared.show() }
-        ))
-    }
-}
 
 struct TeleprompterSettings: View {
     @ObservedObject private var store = TeleprompterStore.shared

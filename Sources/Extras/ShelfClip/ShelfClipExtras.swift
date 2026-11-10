@@ -50,19 +50,6 @@ enum ShelfClipExtras {
         for entry in ClipboardManager.shared.entries {
             ClipboardOCRIndex.shared.index(entry)
         }
-
-        PaletteCommandRegistry.shared.register(PaletteCommand(
-            id: "shelfclip.zip-selection",
-            title: "Spakuj Półkę do ZIP",
-            subtitle: "Zaznaczone elementy albo cała Półka",
-            symbol: "doc.zipper",
-            keywords: ["zip", "archiwum", "spakuj", "półka", "polka"],
-            perform: {
-                let shelf = ShelfManager.shared
-                let chosen = shelf.items.filter { shelf.selection.contains($0.id) }
-                ShelfConverter.shared.run(.zip, on: chosen.isEmpty ? shelf.items : chosen)
-            }
-        ))
     }
 }
 

@@ -415,7 +415,7 @@ enum PreviewRenderer {
             scenes = scenes.filter { scene in prefixes.contains { scene.name.hasPrefix($0) } }
         }
         // FUNNOTCH_PREVIEW_JOBS=prefix,prefix skips the notch scenes and renders
-        // only the matching window jobs (settings pages, palette, tiles).
+        // only the matching window jobs (settings pages, tiles).
         if ProcessInfo.processInfo.environment["FUNNOTCH_PREVIEW_JOBS"] != nil { scenes = [] }
 
         // Scenes are rendered one at a time: several of them configure shared
@@ -621,7 +621,7 @@ enum PreviewRenderer {
 
         appendLayoutJobs(to: &jobs) // QALayout audit jobs
         appendNotifySnapJobs(to: &jobs) // QANotifyWindowSnap audit jobs
-        appendSystemPaletteJobs(to: &jobs) // QASystemPalette audit jobs
+        appendSystemJobs(to: &jobs) // QASystem audit jobs
         appendCatJobs(to: &jobs) // CatCompanion: contact sheets of every animation
         if let only = ProcessInfo.processInfo.environment["FUNNOTCH_PREVIEW_JOBS"], !only.isEmpty {
             let prefixes = only.split(separator: ",").map(String.init)
