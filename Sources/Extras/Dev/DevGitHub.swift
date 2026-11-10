@@ -214,8 +214,6 @@ final class GitHubManager: ObservableObject {
 
     static let reposKey = "extras.dev.github.repos"
     static let ciIslandsKey = "extras.dev.github.ciIslands"
-    /// Used when no repositories are configured: this one's `origin` remote.
-    static let defaultCheckout = NSHomeDirectory() + "/Developer/project"
 
     enum Phase: Equatable {
         case idle
@@ -233,7 +231,6 @@ final class GitHubManager: ObservableObject {
     private var timer: Timer?
     private var refreshing = false
     private var defaultBranches: [String: String] = [:]
-    private var detectedDefault: String?
     /// The last run seen per repository, to notice one that has just finished.
     private var lastSeen: [String: GitHubRun] = [:]
 
@@ -324,11 +321,7 @@ final class GitHubManager: ObservableObject {
             phase = .unavailable("Nie znaleziono polecenia gh. Zainstaluj je: brew install gh")
             return
         }
-        var slugs = configuredSlugs
-        if slugs.isEmpty {
-            if detectedDefault == nil { detectedDefault = await Self.detectOrigin(of: Self.defaultCheckout) }
-            if let detectedDefault { slugs = [detectedDefault] }
-        }
+        let slugs = configuredSlugs
         guard !slugs.isEmpty else {
             repos = []
             phase = .unavailable("Dodaj repozytorium w ustawieniach (Dodatki > GitHub).")
@@ -484,22 +477,8 @@ final class GitHubManager: ObservableObject {
         return "\(parts[0])/\(name)"
     }
 
-    private static func detectOrigin(of checkout: String) async -> String? {
-        guard FileManager.default.fileExists(atPath: checkout + "/.git") else { return nil }
-        guard let data = try? await GitHubCLI.run("/usr/bin/git", ["-C", checkout, "remote", "get-url", "origin"], timeout: 8),
-              let url = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        else { return nil }
-        return normalize(url)
-    }
-
-    /// The Actions page of Project: the configured repository of that
-    /// name, otherwise the `origin` of the local checkout. For the palette.
-    func projectActionsURL() async -> URL? {
-        var slug = configuredSlugs.first { $0.lowercased().hasSuffix("/project") }
-        if slug == nil {
-            if detectedDefault == nil { detectedDefault = await Self.detectOrigin(of: Self.defaultCheckout) }
-            slug = detectedDefault
-        }
-        return slug.flatMap { URL(string: "https://github.com/\($0)/actions") }
+    /// The Actions page of the first repository in the settings, for the palette.
+    func actionsURL() -> URL? {
+        configuredSlugs.first.flatMap { URL(string: "https://github.com/\($0)/actions") }
     }
 }

@@ -19,20 +19,18 @@ enum DevExtras {
 
         PaletteCommandRegistry.shared.register(PaletteCommand(
             id: "dev.github.ci",
-            title: "Otwórz CI Project",
-            subtitle: "GitHub Actions w przeglądarce",
+            title: "Otwórz CI",
+            subtitle: "GitHub Actions pierwszego repozytorium z ustawień",
             symbol: "checkmark.seal",
             keywords: ["github", "ci", "actions", "build", "testy", "deploy"],
             perform: {
-                Task { @MainActor in
-                    if let url = await GitHubManager.shared.projectActionsURL() {
-                        NSWorkspace.shared.open(url)
-                    } else {
-                        IslandCenter.shared.post(Island(
-                            symbol: "exclamationmark.triangle.fill", tint: SettingsStyle.orange,
-                            title: "GitHub", detail: " · nie znaleziono repozytorium Project"
-                        ))
-                    }
+                if let url = GitHubManager.shared.actionsURL() {
+                    NSWorkspace.shared.open(url)
+                } else {
+                    IslandCenter.shared.post(Island(
+                        symbol: "exclamationmark.triangle.fill", tint: SettingsStyle.orange,
+                        title: "GitHub", detail: " · dodaj repozytorium w ustawieniach"
+                    ))
                 }
             }
         ))
@@ -189,7 +187,7 @@ struct DevExtrasSettings: View {
         ) {
             SettingsRow(
                 title: "Repozytoria",
-                subtitle: "owner/nazwa, oddzielone przecinkami. Puste: origin projektu Project.",
+                subtitle: "owner/nazwa, oddzielone przecinkami.",
                 symbol: "chevron.left.forwardslash.chevron.right",
                 tint: SettingsStyle.gray
             ) {

@@ -106,7 +106,7 @@ extension PreviewRenderer {
         // or listens to the bell, by the app the news is from.
         let notifications: [(name: String, app: String, bundle: String, title: String, body: String)] = [
             ("sms", "Wiadomości", "com.apple.MobileSMS", "Anna", "Będę za dziesięć minut"),
-            ("chat", "Slack", "com.tinyspeck.slackmacgap", "Marta", "Wrzuciłem nowe zdjęcia do kanału"),
+            ("chat", "Slack", "com.tinyspeck.slackmacgap", "Marta", "Wrzuciłam nowe zdjęcia do kanału"),
             ("mail", "Mail", "com.apple.mail", "Hurtownia", "Potwierdzenie zamówienia"),
             ("other", "Kalendarz sprzątania", "com.example.other", "Przypomnienie", "Podlej kwiaty"),
         ]
