@@ -97,6 +97,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotifyExtras.start()
         WindowSnap.start()
         DecorExtras.start()
+        TerminalExtras.start()
+        TeleprompterExtras.start()
+        ScreenAssistantExtras.start()
+        LockScreenExtras.start()
 
         statusBar = StatusBarController()
         statusBar?.refreshVisibility()
@@ -124,5 +128,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         SettingsWindowController.shared.show()
         return true
+    }
+
+    /// `open -a FunNotch plik…` from a terminal or a script puts the files on
+    /// the shelf. (No document types are declared, so Finder does not offer
+    /// Fun Notch under "Open With"; an explicit `-a` needs none.)
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let added = urls.filter { $0.isFileURL && ShelfManager.shared.add(url: $0) }
+        guard let first = added.first else { return }
+        DiagnosticLog.write("shelf", "added \(added.count) file(s) handed over by open")
+        let name = added.count == 1
+            ? first.lastPathComponent
+            : Polish.count(added.count, "plik", "pliki", "plików")
+        IslandCenter.shared.post(Island(
+            symbol: "tray.and.arrow.down.fill", tint: Color(red: 0.35, green: 0.68, blue: 1),
+            title: "Półka", detail: " · " + name, duration: 3, cat: .peek
+        ))
     }
 }

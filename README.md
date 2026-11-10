@@ -71,6 +71,31 @@ Free and open source. No account, no subscription, no telemetry.
   notch is hidden, the screen is off, Low Power Mode or Reduce Motion is on.
   "Kot zamiast ikon" in Settings → Dodatki → Wygląd turns it off and brings
   the old glyphs back.
+- **Trackpad gestures** — two fingers down on the notch open it and up close
+  it; sideways changes the track, or steps ten seconds if you prefer. Only
+  scrolls already aimed at the notch are looked at, so nothing listens
+  system-wide.
+- **Stats** — beside CPU, memory and disk: network up/down, GPU load and, on
+  Apple Silicon, CPU temperature. Each is read only while its widget is placed.
+- **Privacy dots** — green for the camera, orange for the microphone and
+  purple while anything records or shares the screen. All three arrive as
+  system callbacks; nothing polls and none needs a permission.
+- **Shelf from a terminal** — `open -a FunNotch report.pdf` puts files on the
+  shelf, from a script as well.
+- **Window switcher** — open windows are results in the command palette, and
+  "Przełącz okno" lists nothing else. Needs Accessibility.
+- **Terminal** — a drop-down terminal under the notch running your login shell
+  ("Terminal: pokaż lub ukryj" in the palette). Hiding it keeps the session;
+  nothing of it exists until it is first opened.
+- **Teleprompter** — your script scrolling right under the camera, at a set
+  speed or following your voice (speech recognition, asked for only when you
+  switch that on), hidden from screen recordings.
+- **Screen assistant** — drag out a piece of the screen and ask about it. The
+  question goes to a command-line model you already have installed (`omp`,
+  `gemini`, or a command of your own); the app holds no API key.
+- **Lock screen widgets** — now playing, a running focus session or timer,
+  charging and the weather, above the lock screen. Off unless "Pokazuj na
+  ekranie blokady" is on.
 - **No notch? Still works.** On an external display it draws a floating pill in
   the same place, like the Dynamic Island.
 - **And** — camera mirror, calendar and reminders, meeting-link detection,
@@ -125,7 +150,10 @@ No Xcode project — the app builds with `swiftc` directly.
 ```
 
 Requires the Xcode command line tools. Everything under `build/` and `dist/` is
-generated and git-ignored.
+generated and git-ignored. The first build downloads two pinned, checksummed
+dependencies into `Vendor/`: Sparkle, and the sources of
+[SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) (MIT), which it
+compiles into a static library for the terminal.
 
 ### Signing
 
@@ -194,6 +222,8 @@ None are required; each one only enables the feature that needs it.
 | Calendar & Reminders | The agenda beside the player |
 | Camera | The camera mirror, only while open |
 | Location | The weather scene, to pick a forecast |
+| Microphone & Speech Recognition | The teleprompter following your voice, only while that is on |
+| Screen Recording | The screen assistant's capture (asked by macOS on first use) |
 
 The app makes network requests in exactly three situations: `api.open-meteo.com`
 for the weather, album artwork from whatever URL your media source provides, and

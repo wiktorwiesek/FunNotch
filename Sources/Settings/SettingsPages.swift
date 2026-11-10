@@ -151,6 +151,8 @@ struct GeneralPage: View {
                 )
                 SettingsToggle(title: "Pokazuj na ekranie blokady", isOn: $settings.showOnLockScreen)
             }
+
+            LockScreenSettings()
         }
     }
 

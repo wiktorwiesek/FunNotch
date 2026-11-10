@@ -81,20 +81,22 @@ struct MicMuteWidget: View {
 
 // MARK: - Privacy
 
-/// A green dot while the camera is on and an orange one while the microphone
-/// is, like the menu bar's. When neither is, a quiet shield says it is watching.
+/// A green dot while the camera is on, an orange one while the microphone is
+/// and a purple one while the screen is being recorded, like the menu bar's.
+/// When none is, a quiet shield says it is watching.
 struct PrivacyWidget: View {
     @ObservedObject private var privacy = PrivacyIndicatorManager.shared
 
     var body: some View {
         HStack(spacing: 5) {
-            if !privacy.cameraActive && !privacy.microphoneActive {
+            if !privacy.cameraActive && !privacy.microphoneActive && !privacy.screenActive {
                 Image(systemName: "lock.shield")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.white.opacity(0.4))
             }
             if privacy.cameraActive { dot(.green) }
             if privacy.microphoneActive { dot(.orange) }
+            if privacy.screenActive { dot(.purple) }
         }
         .fixedSize()
         .onAppear { PrivacyIndicatorManager.shared.start() }

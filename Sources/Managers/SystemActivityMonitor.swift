@@ -27,6 +27,14 @@ final class SystemActivityMonitor: ObservableObject {
     /// at most one extra poll.
     nonisolated(unsafe) private(set) static var isScreenIdle = false
 
+    /// Asked whenever the idle state is worked out: true while something is
+    /// deliberately on screen behind the lock screen (the lock-screen widgets),
+    /// so that "locked" alone must not slow the media pollers to one read per
+    /// 30 s. Only the locked reason is waived; a sleeping display or system
+    /// still counts as idle. It is nil unless the widgets are showing, so with
+    /// the feature off the behaviour is exactly what it was without the hook.
+    static var keepsActiveWhileLocked: (@MainActor () -> Bool)?
+
     private var observers: [(center: NotificationCenter, handle: NSObjectProtocol)] = []
 
     /// The three reasons the screen can be unwatched are tracked separately: the
@@ -74,7 +82,18 @@ final class SystemActivityMonitor: ObservableObject {
 
     private func set(_ reason: Reason, on: Bool) {
         if on { active.insert(reason) } else { active.remove(reason) }
-        let idle = !active.isEmpty
+        reevaluate()
+    }
+
+    /// Recomputes the idle state. Called after every reason change, and by the
+    /// lock-screen widgets when they appear or disappear, since that changes
+    /// the answer without any of the reasons changing.
+    func reevaluate() {
+        var reasons = active
+        if reasons.contains(.locked), Self.keepsActiveWhileLocked?() == true {
+            reasons.remove(.locked)
+        }
+        let idle = !reasons.isEmpty
         guard isIdle != idle else { return }
         isIdle = idle
         Self.isScreenIdle = idle

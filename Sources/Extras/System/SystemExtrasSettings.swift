@@ -263,6 +263,12 @@ private struct PrivacyStatusRow: View {
                     : "Mikrofon nie jest używany",
                 symbol: "circle.fill", tint: privacy.microphoneActive ? .orange : .secondary
             )
+            SettingsStatus(
+                text: privacy.screenActive
+                    ? "Ekran jest nagrywany lub udostępniany"
+                    : "Ekran nie jest nagrywany",
+                symbol: "circle.fill", tint: privacy.screenActive ? .purple : .secondary
+            )
         }
         .padding(14)
     }

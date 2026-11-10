@@ -15,6 +15,7 @@ enum PaletteExtras {
         PaletteHotKey.shared.start()
         PaletteAppIndex.shared.refresh()
         PaletteShortcuts.shared.refresh()
+        PaletteWindows.registerCommand()
 
         PaletteCommandRegistry.shared.register(PaletteCommand(
             id: "palette.colorPicker",

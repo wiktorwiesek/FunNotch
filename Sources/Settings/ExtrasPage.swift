@@ -26,6 +26,13 @@ struct ExtrasPage: View {
             NotifyExtrasSettings()
             WindowSnapSettings()
             DecorSettings()
+            // A view builder takes ten views; the newer sections share one.
+            Group {
+                GestureSettings()
+                TerminalSettings()
+                TeleprompterSettings()
+                ScreenAssistantSettings()
+            }
         }
     }
 }

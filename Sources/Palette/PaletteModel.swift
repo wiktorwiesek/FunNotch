@@ -38,6 +38,12 @@ struct PaletteItem: Identifiable {
     let run: @MainActor () -> Void
 }
 
+/// A restriction of the palette to one kind of result, entered through a
+/// command and left with Backspace on an empty field or by closing the palette.
+enum PaletteScope {
+    case windows
+}
+
 @MainActor
 final class PaletteModel: ObservableObject {
     @Published var query = "" {
@@ -59,6 +65,9 @@ final class PaletteModel: ObservableObject {
     var onActivate: ((PaletteItem) -> Void)?
     weak var searchField: NSTextField?
 
+    /// What the list is restricted to, when it is not the whole palette.
+    @Published private(set) var scope: PaletteScope?
+
     private var files: [PaletteFile] = []
     private lazy var fileSearch = PaletteFileSearch { [weak self] found in
         self?.files = found
@@ -79,7 +88,8 @@ final class PaletteModel: ObservableObject {
         let shortcuts = PaletteShortcuts.shared.objectWillChange.map { _ in () }
         let clipboard = ClipboardManager.shared.objectWillChange.map { _ in () }
         let commands = PaletteCommandRegistry.shared.objectWillChange.map { _ in () }
-        Publishers.MergeMany(apps, shortcuts, clipboard, commands)
+        let windows = PaletteWindowIndex.shared.objectWillChange.map { _ in () }
+        Publishers.MergeMany(apps, shortcuts, clipboard, commands, windows)
             .receive(on: RunLoop.main)
             .sink { [weak self] in
                 guard let self, self.isOpen else { return }
@@ -91,8 +101,10 @@ final class PaletteModel: ObservableObject {
     // MARK: Lifecycle
 
     /// Called each time the palette opens.
-    func reset(query initial: String = "") {
+    func reset(query initial: String = "", scope initialScope: PaletteScope? = nil) {
         isOpen = true
+        scope = initialScope
+        PaletteWindowIndex.shared.refresh()
         fileSearch.cancel()
         translationTask?.cancel()
         files = []
@@ -109,8 +121,19 @@ final class PaletteModel: ObservableObject {
 
     func suspend() {
         isOpen = false
+        scope = nil
         fileSearch.cancel()
         translationTask?.cancel()
+        PaletteWindowIndex.shared.clear()
+    }
+
+    /// Backspace on an empty field leaves a scoped listing for the full palette.
+    /// Returns whether it did anything.
+    func leaveScope() -> Bool {
+        guard scope != nil, query.isEmpty else { return false }
+        scope = nil
+        rebuild(keepingSelection: false)
+        return true
     }
 
     // MARK: Keys
@@ -134,8 +157,29 @@ final class PaletteModel: ObservableObject {
 
     // MARK: Building results
 
+    /// The windows listing: every open window (best match first once something
+    /// is typed), nothing else, and no prefix modes.
+    private func windowScopeItems(_ text: String) -> [PaletteItem] {
+        let index = PaletteWindowIndex.shared
+        guard AXIsProcessTrusted() else { return [PaletteWindows.statusItem(isTrusted: false)] }
+        let matches = PaletteWindows.matches(PaletteMatch.fold(text.trimmingCharacters(in: .whitespaces)), in: index.windows)
+        if matches.isEmpty && !index.hasLoaded { return [PaletteWindows.statusItem(isTrusted: true)] }
+        return matches.map { PaletteWindows.item(for: $0.0) }
+    }
+
     private func queryChanged() {
         selection = 0
+        if isOpen { PaletteWindowIndex.shared.refreshIfStale() }
+        if scope != nil {
+            // Nothing but windows is listed, so nothing else is searched.
+            fileSearch.cancel()
+            files = []
+            translationTask?.cancel()
+            translation = .idle
+            translationRequest = nil
+            rebuild(keepingSelection: false)
+            return
+        }
         let mode = Mode(query)
         if case .general(let text) = mode, !text.isEmpty {
             fileSearch.search(text)
@@ -157,7 +201,8 @@ final class PaletteModel: ObservableObject {
 
     private func rebuild(keepingSelection: Bool) {
         let previous = items.indices.contains(selection) ? items[selection].id : nil
-        items = Array(buildItems(for: Mode(query)).prefix(Self.rowLimit))
+        let built = scope == .windows ? windowScopeItems(query) : buildItems(for: Mode(query))
+        items = Array(built.prefix(Self.rowLimit))
         if keepingSelection, let previous, let index = items.firstIndex(where: { $0.id == previous }) {
             selection = index
         } else {
@@ -403,6 +448,10 @@ final class PaletteModel: ObservableObject {
             if let score = PaletteMatch.score(query: folded, in: PaletteMatch.fold(name)) {
                 ranked.append((shortcutItem(name), score))
             }
+        }
+        // Open windows: a few at most, so a common app name cannot crowd the rest out.
+        for (window, score) in PaletteWindows.matches(folded, in: PaletteWindowIndex.shared.windows).prefix(4) {
+            ranked.append((PaletteWindows.item(for: window), score + 10))
         }
         result += ranked.sorted { $0.1 > $1.1 }.prefix(8).map(\.0)
 

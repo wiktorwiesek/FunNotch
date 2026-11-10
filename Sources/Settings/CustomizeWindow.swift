@@ -447,6 +447,9 @@ extension NotchWidget {
         case .micMute: return SettingsStyle.red
         case .privacy: return SettingsStyle.green
         case .audioOutput: return SettingsStyle.purple
+        case .network: return SettingsStyle.blue
+        case .gpu: return SettingsStyle.purple
+        case .cpuTemperature: return SettingsStyle.orange
         }
     }
 }

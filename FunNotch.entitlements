@@ -10,6 +10,9 @@
     <true/>
     <key>com.apple.security.device.camera</key>
     <true/>
+    <!-- The teleprompter's voice following, only while it is switched on. -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
     <key>com.apple.security.personal-information.calendars</key>
     <true/>
     <key>com.apple.security.files.user-selected.read-write</key>

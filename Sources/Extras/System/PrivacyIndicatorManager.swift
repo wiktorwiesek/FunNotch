@@ -2,13 +2,14 @@
 //  PrivacyIndicatorManager.swift
 //  FunNotch
 //
-//  Says when the camera or the microphone is in use by any app, the way the
-//  green and orange dots in the menu bar do. Neither needs a permission and
-//  both arrive as property callbacks, so nothing polls:
+//  Says when the camera, the microphone or the screen is in use by any app,
+//  the way the dots in the menu bar do. None needs a permission and all
+//  arrive as callbacks, so nothing polls:
 //    · camera     CoreMediaIO  kCMIODevicePropertyDeviceIsRunningSomewhere
 //    · microphone CoreAudio    kAudioProcessPropertyIsRunningInput, per client
 //                              process (not the device-level "running somewhere",
 //                              which a headset also reports while it only plays)
+//    · screen     the window server's "screen watcher" events (see ScreenWatcher)
 //  Devices and audio clients come and go, so those lists are watched too and the
 //  per-object listeners are rebuilt when they change.
 //
@@ -27,6 +28,8 @@ final class PrivacyIndicatorManager: ObservableObject {
 
     @Published private(set) var cameraActive = false
     @Published private(set) var microphoneActive = false
+    /// Something is recording or sharing the screen.
+    @Published private(set) var screenActive = false
     /// Names of the devices currently in use, for tooltips.
     @Published private(set) var cameraNames: [String] = []
     @Published private(set) var microphoneNames: [String] = []
@@ -65,6 +68,10 @@ final class PrivacyIndicatorManager: ObservableObject {
             self?.rebuildCameraListeners()
         }
         rebuildCameraListeners()
+
+        // What is already being recorded at launch is not news.
+        screenActive = ScreenWatcher.isPresent
+        ScreenWatcher.observe()
 
         hasBaseline = true
     }
@@ -230,11 +237,76 @@ final class PrivacyIndicatorManager: ObservableObject {
         IslandCenter.shared.post(island)
     }
 
+    // MARK: Screen
+
+    private var pendingScreen: Task<Void, Never>?
+
+    /// Called when something starts or stops watching the screen.
+    fileprivate func refreshScreen() {
+        let active = ScreenWatcher.isPresent
+        guard active != screenActive else { return }
+        screenActive = active
+        DiagnosticLog.write("privacy", active ? "screen is being recorded or shared" : "screen is no longer watched")
+        pendingScreen?.cancel()
+        guard active, hasBaseline, UserDefaults.standard.bool(forKey: Self.announceKey) else { return }
+        // A screenshot watches the screen for an instant; only something
+        // that goes on doing it is worth saying.
+        pendingScreen = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled, let self, self.screenActive else { return }
+            IslandCenter.shared.post(Island(
+                symbol: "record.circle.fill", tint: .purple,
+                title: "Ekran", detail: " · jest nagrywany lub udostępniany", duration: 3
+            ))
+        }
+    }
+
     var helpText: String {
         var lines: [String] = []
         if cameraActive { lines.append("Kamera w użyciu: " + cameraNames.joined(separator: ", ")) }
         if microphoneActive { lines.append("Mikrofon w użyciu: " + microphoneNames.joined(separator: ", ")) }
-        return lines.isEmpty ? "Kamera i mikrofon nie są używane" : lines.joined(separator: "\n")
+        if screenActive { lines.append("Ekran jest nagrywany lub udostępniany") }
+        return lines.isEmpty ? "Kamera, mikrofon i ekran nie są używane" : lines.joined(separator: "\n")
+    }
+}
+
+/// Whether anything is capturing the screen, from the window server itself.
+///
+/// There is no public way to learn this without the Screen Recording
+/// permission (and then only by asking over and over). The window server does
+/// keep the answer, and announces every change of it; both are reached here by
+/// name, so that a system without them simply never reports a recording.
+private enum ScreenWatcher {
+    private typealias IsPresent = @convention(c) () -> Bool
+    private typealias Callback = @convention(c) (Int32, Int32, Int32, UnsafeMutableRawPointer?) -> Void
+    private typealias Register = @convention(c) (Callback, Int32, UnsafeMutableRawPointer?) -> Int32
+
+    private static let handle = UnsafeMutableRawPointer(bitPattern: -2) // RTLD_DEFAULT
+    private static let isPresentSymbol = dlsym(handle, "CGSIsScreenWatcherPresent")
+
+    static var isPresent: Bool {
+        guard let isPresentSymbol else { return false }
+        return unsafeBitCast(isPresentSymbol, to: IsPresent.self)()
+    }
+
+    /// A watcher connected (1502) or went away (1503).
+    private static let events: [Int32] = [1502, 1503]
+
+    @MainActor private static var observing = false
+
+    @MainActor
+    static func observe() {
+        guard !observing, isPresentSymbol != nil, let symbol = dlsym(handle, "CGSRegisterNotifyProc") else { return }
+        observing = true
+        let register = unsafeBitCast(symbol, to: Register.self)
+        let callback: Callback = { _, _, _, _ in
+            // The window server calls on the main thread's run loop, but says
+            // so nowhere: hop rather than assume.
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { PrivacyIndicatorManager.shared.refreshScreen() }
+            }
+        }
+        for event in events { _ = register(callback, event, nil) }
     }
 }
 

@@ -230,6 +230,9 @@ enum NotchWidget: String, CaseIterable, Identifiable {
     case micMute = "Mic mute"
     case privacy = "Privacy"
     case audioOutput = "Audio output"
+    case network = "Network"
+    case gpu = "GPU"
+    case cpuTemperature = "CPU temperature"
 
     var id: String { rawValue }
 
@@ -253,6 +256,9 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .micMute: return "Wyciszenie mikrofonu"
         case .privacy: return "Wskaźnik prywatności"
         case .audioOutput: return "Wyjście dźwięku"
+        case .network: return "Sieć"
+        case .gpu: return "GPU"
+        case .cpuTemperature: return "Temperatura CPU"
         }
     }
 
@@ -260,11 +266,12 @@ enum NotchWidget: String, CaseIterable, Identifiable {
     /// content, since these vary a lot by locale and by what they are showing.
     var estimatedWidth: CGFloat {
         switch self {
-        case .battery, .cpu, .memory, .disk, .weather: return 56
+        case .battery, .cpu, .memory, .disk, .weather, .gpu, .cpuTemperature: return 56
         case .clock, .focusTimer, .moonPhase, .shelfCount, .unread: return 54
         case .date, .wifi: return 82
         case .nextEvent, .nowPlaying: return 132
         case .keepAwake: return 54
+        case .network: return 62
         case .micMute, .audioOutput: return 24
         case .privacy: return 32
         }
@@ -290,6 +297,9 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .micMute: return "mic.fill"
         case .privacy: return "lock.shield"
         case .audioOutput: return "speaker.wave.2.fill"
+        case .network: return "arrow.up.arrow.down"
+        case .gpu: return "display"
+        case .cpuTemperature: return "thermometer.medium"
         }
     }
 
@@ -301,7 +311,7 @@ enum NotchWidget: String, CaseIterable, Identifiable {
         case .nextEvent: return .nextMeeting
         case .nowPlaying: return .playingApp
         case .focusTimer: return .focusTab
-        case .cpu, .memory: return .app("com.apple.ActivityMonitor")
+        case .cpu, .memory, .gpu, .network, .cpuTemperature: return .app("com.apple.ActivityMonitor")
         case .disk: return .app("com.apple.Finder")
         case .weather: return .app("com.apple.weather")
         case .wifi: return .locationAccess

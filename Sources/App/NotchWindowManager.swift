@@ -26,6 +26,12 @@ final class NotchWindowManager: ObservableObject {
         controllers.map(\.viewModel)
     }
 
+    /// The notch drawn in `window`, if it is one of ours.
+    func viewModel(owning window: NSWindow?) -> NotchViewModel? {
+        guard let window else { return nil }
+        return controllers.first { $0.panel === window }?.viewModel
+    }
+
     /// The notch on the display the pointer is currently on, else the first.
     var activeViewModel: NotchViewModel? {
         let mouse = NSEvent.mouseLocation
@@ -65,6 +71,7 @@ final class NotchWindowManager: ObservableObject {
             self?.viewModels.forEach { $0.dragDetectorTargeting = dragging }
         }
         tracker.start()
+        NotchGestures.start()
     }
 
     /// Recreates panels to match the current display configuration.

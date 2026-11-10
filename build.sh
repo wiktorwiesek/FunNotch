@@ -91,7 +91,7 @@ FRAMEWORKS=(
   AVFoundation AudioToolbox CoreAudio CoreLocation CoreMedia CoreImage CoreGraphics
   CoreWLAN
   EventKit IOBluetooth IOKit Quartz QuartzCore ServiceManagement
-  QuickLookThumbnailing UniformTypeIdentifiers UserNotifications Vision
+  QuickLookThumbnailing Speech UniformTypeIdentifiers UserNotifications Vision
 )
 FRAMEWORK_FLAGS=()
 for fw in "${FRAMEWORKS[@]}"; do
@@ -107,6 +107,15 @@ SPARKLE_PUBLIC_KEY="Tt+/6ryqRjQqe9D+8b5a8d1q1Icgc+3zyOpA2d2z+t0="
 "$(dirname "$0")/Tools/fetch-sparkle.sh"
 SPARKLE_DIR="$(cd "$(dirname "$0")" && pwd)/Vendor"
 FRAMEWORKS_DIR="$APP_DIR/Contents/Frameworks"
+
+# SwiftTerm is the terminal that drops from the notch: fetched and built as a
+# static library per architecture, so nothing of it ships beside the binary.
+if [ "$UNIVERSAL" -eq 1 ]; then
+  MIN_MACOS="$MIN_MACOS" "$(dirname "$0")/Tools/fetch-swiftterm.sh" arm64 x86_64
+else
+  MIN_MACOS="$MIN_MACOS" "$(dirname "$0")/Tools/fetch-swiftterm.sh" "$(uname -m)"
+fi
+SWIFTTERM_DIR="$SPARKLE_DIR/SwiftTerm"
 
 echo "==> Cleaning"
 rm -rf "$APP_DIR"
@@ -125,6 +134,7 @@ compile_slice() {
     -module-name "$APP_NAME" \
     "${FRAMEWORK_FLAGS[@]}" \
     -F "$SPARKLE_DIR" -framework Sparkle \
+    -I "$SWIFTTERM_DIR/$arch" -L "$SWIFTTERM_DIR/$arch" -lSwiftTerm \
     -Xlinker -rpath -Xlinker "@executable_path/../Frameworks" \
     -o "$out" \
     $SOURCES
@@ -197,6 +207,11 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
     <!-- Core Audio process taps: the real spectrum and the per-app mixer. -->
     <key>NSAudioCaptureUsageDescription</key>
     <string>Fun Notch używa dźwięku systemu do spektrum muzyki i miksera głośności aplikacji.</string>
+    <!-- The teleprompter's voice following; asked for when it is switched on. -->
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Fun Notch rozpoznaje Twoją mowę na tym Macu, żeby teleprompter przewijał tekst razem z Twoim głosem.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Mikrofon jest używany tylko wtedy, gdy teleprompter czyta z włączonym podążaniem za głosem.</string>
     <key>NSCameraUsageDescription</key>
     <string>The mirror shows a live preview of your camera inside the notch.</string>
     <key>NSCalendarsUsageDescription</key>

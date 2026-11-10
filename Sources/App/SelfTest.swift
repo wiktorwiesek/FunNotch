@@ -607,6 +607,34 @@ enum SelfTest {
         widgetModel.setPreviewPointerOverMenuBar(false)
         settings.hideWingsAtMenuBar = savedHideWings
 
+        // Two-finger swipes: the direction follows the fingers whichever way
+        // the system scrolls, and a diagonal is nobody's.
+        check("a short scroll is not a swipe", NotchGestures.swipe(travelled: CGSize(width: 0, height: 20), natural: true) == nil)
+        check(
+            "fingers down open with natural scrolling on and off",
+            NotchGestures.swipe(travelled: CGSize(width: 4, height: 50), natural: true) == .down
+                && NotchGestures.swipe(travelled: CGSize(width: 4, height: -50), natural: false) == .down
+        )
+        check("fingers up close", NotchGestures.swipe(travelled: CGSize(width: 0, height: -50), natural: true) == .up)
+        check(
+            "sideways is told from vertical",
+            NotchGestures.swipe(travelled: CGSize(width: -60, height: 10), natural: true) == .left
+                && NotchGestures.swipe(travelled: CGSize(width: 60, height: 10), natural: true) == .right
+        )
+        check("a diagonal does nothing", NotchGestures.swipe(travelled: CGSize(width: 50, height: 50), natural: true) == nil)
+
+        // The assistant's own command line: quotes group, nothing is evaluated.
+        check(
+            "a command template keeps quoted words together, without running a shell",
+            ScreenAssistantCommand.split(#"tool --flag "two words" "say \"hi\"" "" {prompt}"#)
+                == ["tool", "--flag", "two words", #"say "hi""#, "", "{prompt}"]
+        )
+        check(
+            "network rates read in the user's units",
+            SystemStatsManager.rateText(980_000) == "980 KB/s" && SystemStatsManager.rateText(1_200_000) == "1,2 MB/s"
+                && SystemStatsManager.rateText(nil) == "—"
+        )
+
         // The strip test, on a notched 1470-point display (cutout 179 pt, bar 33 pt).
         let notchedScreen = CGRect(x: 0, y: 0, width: 1470, height: 956)
         func overWings(_ x: CGFloat, _ y: CGFloat, frame: CGRect = notchedScreen, cutout: CGFloat = 185) -> Bool {

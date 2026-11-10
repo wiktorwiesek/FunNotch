@@ -33,6 +33,14 @@ struct PaletteView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.secondary)
+                if model.scope == .windows {
+                    Text("Okna")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.white.opacity(0.1)))
+                }
                 PaletteSearchField(model: model)
             }
             .padding(.horizontal, 20)
@@ -188,13 +196,7 @@ struct PaletteSearchField: NSViewRepresentable {
         field.focusRingType = .none
         field.font = .systemFont(ofSize: 20, weight: .regular)
         field.textColor = .white
-        field.placeholderAttributedString = NSAttributedString(
-            string: "Szukaj, licz (=), tłumacz (t), szablony (s)…",
-            attributes: [
-                .foregroundColor: NSColor.white.withAlphaComponent(0.35),
-                .font: NSFont.systemFont(ofSize: 20),
-            ]
-        )
+        field.placeholderAttributedString = Self.placeholder(for: model.scope)
         field.cell?.usesSingleLineMode = true
         field.cell?.isScrollable = true
         field.lineBreakMode = .byTruncatingTail
@@ -209,14 +211,32 @@ struct PaletteSearchField: NSViewRepresentable {
         if field.stringValue != model.query {
             field.stringValue = model.query
         }
+        if context.coordinator.placeholderScope != model.scope {
+            context.coordinator.placeholderScope = model.scope
+            field.placeholderAttributedString = Self.placeholder(for: model.scope)
+        }
+    }
+
+    private static func placeholder(for scope: PaletteScope?) -> NSAttributedString {
+        NSAttributedString(
+            string: scope == .windows ? "Szukaj okna…" : "Szukaj, licz (=), tłumacz (t), szablony (s)…",
+            attributes: [
+                .foregroundColor: NSColor.white.withAlphaComponent(0.35),
+                .font: NSFont.systemFont(ofSize: 20),
+            ]
+        )
     }
 
     @MainActor
     final class Coordinator: NSObject, NSTextFieldDelegate {
         let model: PaletteModel
 
+        /// The scope the placeholder text was last set for.
+        var placeholderScope: PaletteScope?
+
         init(model: PaletteModel) {
             self.model = model
+            placeholderScope = model.scope
         }
 
         func controlTextDidChange(_ notification: Notification) {
@@ -234,6 +254,10 @@ struct PaletteSearchField: NSViewRepresentable {
                 model.activateSelection()
             case #selector(NSResponder.cancelOperation(_:)):
                 PaletteController.shared.hide()
+            case #selector(NSResponder.deleteBackward(_:)):
+                // Only a scoped listing with an empty field reacts; otherwise
+                // the field deletes a character as usual.
+                return model.leaveScope()
             default:
                 return false
             }

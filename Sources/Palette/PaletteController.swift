@@ -74,12 +74,12 @@ final class PaletteController: NSObject, NSWindowDelegate {
         if isVisible { hide() } else { show() }
     }
 
-    func show(query: String = "") {
+    func show(query: String = "", scope: PaletteScope? = nil) {
         let panel = ensurePanel()
         if !isVisible {
             let front = NSWorkspace.shared.frontmostApplication
             previousApp = front?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : front
-            model.reset(query: query)
+            model.reset(query: query, scope: scope)
             place(panel)
         } else if !query.isEmpty {
             model.query = query

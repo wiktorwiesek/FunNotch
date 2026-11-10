@@ -106,6 +106,9 @@ private struct NotchWidgetButton: View {
         case .micMute: MicMuteWidget()
         case .privacy: PrivacyWidget()
         case .audioOutput: AudioOutputWidget()
+        case .network: NetworkWidget()
+        case .gpu: StatWidget(kind: .gpu)
+        case .cpuTemperature: StatWidget(kind: .temperature)
         }
     }
 
@@ -332,7 +335,7 @@ private struct NowPlayingWidget: View {
 }
 
 private struct StatWidget: View {
-    enum Kind { case cpu, memory, disk }
+    enum Kind { case cpu, memory, disk, gpu, temperature }
     let kind: Kind
 
     @ObservedObject private var stats = SystemStatsManager.shared
@@ -348,8 +351,19 @@ private struct StatWidget: View {
                 .foregroundStyle(.white.opacity(0.85))
         }
         .fixedSize()
-        .onAppear { stats.addSubscriber() }
-        .onDisappear { stats.removeSubscriber() }
+        // Each widget asks the manager for its own metric only.
+        .onAppear { stats.addSubscriber(metric) }
+        .onDisappear { stats.removeSubscriber(metric) }
+    }
+
+    private var metric: SystemStatsManager.Metrics {
+        switch kind {
+        case .cpu: return .cpu
+        case .memory: return .memory
+        case .disk: return .disk
+        case .gpu: return .gpu
+        case .temperature: return .temperature
+        }
     }
 
     private var symbol: String {
@@ -357,6 +371,8 @@ private struct StatWidget: View {
         case .cpu: return "cpu"
         case .memory: return "memorychip"
         case .disk: return "internaldrive"
+        case .gpu: return "display"
+        case .temperature: return "thermometer.medium"
         }
     }
 
@@ -365,6 +381,8 @@ private struct StatWidget: View {
         case .cpu: return stats.cpuText
         case .memory: return stats.memoryText
         case .disk: return stats.diskFreeText
+        case .gpu: return stats.gpuText
+        case .temperature: return stats.temperatureText
         }
     }
 
@@ -374,10 +392,47 @@ private struct StatWidget: View {
         case .cpu: usage = stats.cpuUsage
         case .memory: usage = stats.memoryUsage
         case .disk: usage = stats.diskUsage
+        case .gpu: usage = stats.gpuUsage ?? 0
+        case .temperature:
+            // Degrees rather than a fraction: amber from 85 °C, red from 95 °C.
+            guard let degrees = stats.cpuTemperature else { return .white.opacity(0.7) }
+            if degrees >= 95 { return .red }
+            if degrees >= 85 { return .orange }
+            return .white.opacity(0.7)
         }
         if usage > 0.9 { return .red }
         if usage > 0.75 { return .orange }
         return .white.opacity(0.7)
+    }
+}
+
+/// Download over upload, two short lines. The lines have a fixed width and
+/// monospaced digits so the notch does not change width on every tick.
+private struct NetworkWidget: View {
+    @ObservedObject private var stats = SystemStatsManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: -1) {
+            line("↓", stats.downloadText)
+            line("↑", stats.uploadText)
+        }
+        .fixedSize()
+        .onAppear { stats.addSubscriber(.network) }
+        .onDisappear { stats.removeSubscriber(.network) }
+    }
+
+    private func line(_ arrow: String, _ value: String) -> some View {
+        HStack(spacing: 2) {
+            Text(arrow)
+                .foregroundStyle(.white.opacity(0.55))
+            Spacer(minLength: 0)
+            Text(value)
+                .foregroundStyle(.white.opacity(0.85))
+        }
+        .font(.system(size: 9, weight: .medium, design: .rounded))
+        .monospacedDigit()
+        .lineLimit(1)
+        .frame(width: 52)
     }
 }
 
