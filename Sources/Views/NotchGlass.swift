@@ -91,18 +91,44 @@ private struct SystemGlassFill<S: InsettableShape>: View {
     var body: some View {
         // `Color.clear` keeps the glass out of layout: it fills whatever the
         // content's frame is and nothing more.
+        //
+        // The open notch is pure black, and Liquid Glass only refracts what is
+        // behind it, so untinted glass there is black on black and vanishes.
+        // A faint white body plus the drawn rim and sheen give it an edge.
+        let k = subtle ? 0.5 : 1.0
         Color.clear
             .glassEffect(glass, in: shape)
+            .overlay(
+                shape
+                    .inset(by: 1)
+                    .fill(
+                        LinearGradient(
+                            colors: [.white.opacity((lit ? 0.20 : 0.11) * k), .clear],
+                            startPoint: .top, endPoint: .center
+                        )
+                    )
+                    .allowsHitTesting(false)
+            )
+            .overlay(
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity((lit ? 0.48 : 0.30) * k), .white.opacity(0.06 * k)],
+                        startPoint: .top, endPoint: .bottom
+                    ),
+                    lineWidth: 0.8
+                )
+                .allowsHitTesting(false)
+            )
     }
 
     private var glass: Glass {
-        let colour: Color?
+        let colour: Color
         if let tint {
-            colour = tint.opacity(subtle ? 0.16 : 0.34)
+            colour = tint.opacity(subtle ? 0.22 : 0.42)
         } else if lit {
-            colour = .white.opacity(0.14)
+            colour = .white.opacity(subtle ? 0.12 : 0.22)
         } else {
-            colour = nil
+            colour = .white.opacity(subtle ? 0.06 : 0.13)
         }
         return Glass.regular.tint(colour).interactive(interactive)
     }
