@@ -120,10 +120,10 @@ private struct NotificationRow: View {
                     } label: {
                         Text("Kopiuj")
                             .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.yellow)
+                            .foregroundStyle(.white.opacity(0.95))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .notchGlass(in: Capsule(), tint: .yellow, lit: true)
+                            .notchGlass(in: Capsule(), lit: true)
                             .contentShape(Capsule())
                     }
                     .buttonStyle(NotchPressStyle())

@@ -105,7 +105,7 @@ struct NotesView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
-                    .notchControl(in: Capsule(), tint: .blue, active: true)
+                    .notchControl(in: Capsule(), active: true)
             }
 
             Spacer()

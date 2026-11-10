@@ -73,7 +73,7 @@ struct AgentSessionsTile: View {
             } else if agents.workingCount > 0 {
                 AgentWorkingGlyph(agent: agents.headline?.agent ?? .claude, size: 8)
                 Text("\(agents.workingCount) \(agents.workingCount == 1 ? "pracuje" : "pracują")")
-                    .foregroundStyle(AgentPalette.claude)
+                    .foregroundStyle(.white.opacity(0.7))
             } else if !agents.sessions.isEmpty {
                 Text("Wszystko spokojnie")
                     .foregroundStyle(.white.opacity(0.4))
@@ -215,9 +215,12 @@ private struct AgentRow: View {
         return "\(status)  \(usage.summary)"
     }
 
+    /// Colour is kept for what concerns the user: a session waiting for an
+    /// answer, and one that has finished. Work in progress is the normal
+    /// state, and a list where every row is coloured has no row that stands out.
     static func detailColor(for session: AgentSessionsManager.Session) -> Color {
         switch session.status {
-        case .working: return AgentPalette.claude.opacity(0.9)
+        case .working: return .white.opacity(0.5)
         case .waiting: return AgentPalette.waiting
         case .idle:
             return session.lastTurnDuration != nil
@@ -234,7 +237,8 @@ private struct AgentRowTime: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             Text(label(now: context.date))
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .font(.system(size: 9, weight: .medium, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(color)
         }
     }
@@ -249,7 +253,7 @@ private struct AgentRowTime: View {
 
     private var color: Color {
         switch session.status {
-        case .working: return AgentPalette.claude
+        case .working: return .white.opacity(0.7)
         case .waiting: return AgentPalette.waiting
         case .idle: return .white.opacity(0.4)
         }

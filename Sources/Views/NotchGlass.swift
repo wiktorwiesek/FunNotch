@@ -199,20 +199,22 @@ extension View {
     }
 
     /// A control: glass that appears (or brightens) under the pointer, lifts a
-    /// little, and tints while `active`. `resting` keeps the glass drawn when
+    /// little, and stays lit while `active`. The glass itself is never coloured:
+    /// what is on says so with the colour of its icon or label, and a fill in
+    /// that same colour under it would only make the label harder to read.
+    /// `resting` keeps the glass drawn when
     /// nothing is hovered, for chips that should always look like buttons.
     /// `bleed` lets the glass reach that far beyond tight content (a line of
     /// text, an icon) without changing the layout around it.
     func notchControl<S: InsettableShape>(
         in shape: S,
-        tint: Color? = nil,
         active: Bool = false,
         resting: Bool = false,
         lift: CGFloat = 1.04,
         bleed: CGFloat = 0
     ) -> some View {
         padding(bleed)
-            .modifier(NotchControlModifier(shape: shape, tint: tint, active: active, resting: resting, lift: lift))
+            .modifier(NotchControlModifier(shape: shape, active: active, resting: resting, lift: lift))
             .padding(-bleed)
     }
 
@@ -228,12 +230,11 @@ extension View {
         _ selected: Bool,
         id: String,
         in namespace: Namespace.ID,
-        shape: S,
-        tint: Color? = nil
+        shape: S
     ) -> some View {
         background {
             if selected {
-                NotchGlassSurface(shape: shape, tint: tint, lit: true)
+                NotchGlassSurface(shape: shape, lit: true)
                     .matchedGeometryEffect(id: id, in: namespace)
             }
         }
@@ -242,7 +243,6 @@ extension View {
 
 private struct NotchControlModifier<S: InsettableShape>: ViewModifier {
     let shape: S
-    let tint: Color?
     let active: Bool
     let resting: Bool
     let lift: CGFloat
@@ -256,7 +256,7 @@ private struct NotchControlModifier<S: InsettableShape>: ViewModifier {
             .onHover { hovering = $0 }
             .background {
                 if resting || hovering || active {
-                    NotchGlassSurface(shape: shape, tint: active ? tint : nil, lit: hovering || active)
+                    NotchGlassSurface(shape: shape, lit: hovering || active)
                         .transition(.opacity.combined(with: .scale(scale: 0.88)))
                 }
             }

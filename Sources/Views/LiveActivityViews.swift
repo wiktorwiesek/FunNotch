@@ -308,7 +308,6 @@ private struct HUDGlyph: View {
                     variableValue: level
                 )
                 .contentTransition(.symbolEffect(.replace))
-                .symbolEffect(.bounce.down, value: level)
                 .foregroundStyle(.white)
 
             case .brightness:
@@ -322,7 +321,6 @@ private struct HUDGlyph: View {
             case .keyboardBacklight:
                 Image(systemName: "keyboard.fill")
                     .foregroundStyle(.white.opacity(0.45 + 0.55 * level))
-                    .symbolEffect(.bounce.down, value: level)
             }
         }
         .font(.system(size: 14, weight: .semibold))

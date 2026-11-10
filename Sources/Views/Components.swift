@@ -310,7 +310,7 @@ struct HoverButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(NotchPressStyle())
-        .notchControl(in: Circle(), tint: tint, active: isActive, resting: resting, lift: 1.06)
+        .notchControl(in: Circle(), active: isActive, resting: resting, lift: 1.06)
     }
 
     private var symbol: some View {

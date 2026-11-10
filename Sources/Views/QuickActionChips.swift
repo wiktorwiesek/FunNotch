@@ -2,10 +2,13 @@
 //  QuickActionChips.swift
 //  FunNotch
 //
-//  The "Szybkie akcje" tile as a row of glass chips with a caption line.
-//  Seven icons in a tile about 200 points wide leave no room for words, and
-//  widening the chip under the pointer pushed its name over the neighbours,
-//  so the name goes in a line under the row instead. Chips with more options
+//  The quick actions tile as a row of glass chips. Seven icons in a tile
+//  about 200 points wide leave no room for words, and widening the chip under
+//  the pointer pushed its name over the neighbours, so the name goes in a
+//  line under the row instead, and only while the pointer is on a chip: at
+//  rest the row sits in the middle of the tile with nothing under it (a
+//  caption naming the tile said what the icons already show). Chips with
+//  more options
 //  (durations, output devices) carry a dot, and the caption offers "Opcje"
 //  for them, instead of hiding them behind a right click nobody finds.
 //
@@ -59,6 +62,9 @@ struct QuickActionStrip: View {
                 }
             }
             .frame(maxHeight: .infinity)
+            // At rest the row takes the middle of the tile; the pointer
+            // slides it up to make room for the name.
+            .offset(y: hovered == nil ? (Self.captionHeight + 2) / 2 : 0)
             caption
                 .frame(height: Self.captionHeight)
         }
@@ -80,7 +86,7 @@ struct QuickActionStrip: View {
             if let item = hoveredItem {
                 Text(item.label)
                     .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(item.activeTint ?? .white.opacity(0.85))
+                    .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .id(item.label)
@@ -107,11 +113,6 @@ struct QuickActionStrip: View {
                     .buttonStyle(NotchPressStyle())
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
                 }
-            } else {
-                Text("Szybkie akcje")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity)
@@ -127,13 +128,12 @@ private struct QuickActionChip: View {
             Image(systemName: item.symbol)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(item.activeTint ?? .white.opacity(lit ? 1 : 0.85))
-                .symbolEffect(.bounce, value: item.isActive)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
         }
         .buttonStyle(NotchPressStyle())
-        .notchGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous), tint: item.activeTint, lit: lit)
+        .notchGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous), lit: lit || item.isActive)
         // A chip with options carries a small mark, so they are not a secret.
         .overlay(alignment: .bottomTrailing) {
             if !item.menu.isEmpty {

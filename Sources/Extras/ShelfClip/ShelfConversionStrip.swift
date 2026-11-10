@@ -49,7 +49,8 @@ private struct ShelfConversionRow: View {
                         .controlSize(.mini)
                         .frame(width: 80)
                     Text("\(Int((progress * 100).rounded()))%")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 9, design: .rounded))
+                        .monospacedDigit()
                         .foregroundStyle(.white.opacity(0.5))
                 }
             case let .done(name):

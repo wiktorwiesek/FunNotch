@@ -238,24 +238,28 @@ private struct SystemStatsPanel: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            graph("CPU", stats.cpuHistory, stats.cpuUsage, .cyan)
-            graph("RAM", stats.memoryHistory, stats.memoryUsage, .purple)
+            graph("CPU", stats.cpuHistory, stats.cpuUsage)
+            graph("RAM", stats.memoryHistory, stats.memoryUsage)
         }
         .padding(.vertical, 6)
         .onAppear { stats.addSubscriber() }
         .onDisappear { stats.removeSubscriber() }
     }
 
-    private func graph(_ name: String, _ history: [Double], _ now: Double, _ tint: Color) -> some View {
+    /// Both graphs are the same white: the labels tell them apart, and a
+    /// colour each (cyan, purple) was two more colours on a screen that
+    /// already has the artwork, the weather and the battery.
+    private func graph(_ name: String, _ history: [Double], _ now: Double) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 2) {
                 PanelLabel(text: name)
                 Spacer(minLength: 0)
                 Text("\(Int(now * 100))%")
-                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(tint.opacity(0.9))
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.85))
             }
-            PixelSparkline(samples: history, tint: tint)
+            PixelSparkline(samples: history, tint: .white)
         }
     }
 }
@@ -326,8 +330,9 @@ private struct BatteryPanel: View {
                 PanelLabel(text: "Bateria")
                 Spacer(minLength: 0)
                 Text("\(Int(battery.level * 100))%")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(state.tint)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.95))
             }
 
             BatteryMeter(level: Double(battery.level), state: state,
@@ -571,7 +576,8 @@ private struct DevicesPanel: View {
                             .lineLimit(1)
                         Spacer(minLength: 2)
                         Text("\(Int((device.battery ?? 0) * 100))%")
-                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .font(.system(size: 9, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
                             .foregroundStyle((device.battery ?? 1) < 0.2 ? .orange : .white.opacity(0.85))
                     }
                 }
@@ -860,7 +866,8 @@ struct NextEventPanel: View {
                     .lineLimit(1)
                 if let start = item.start {
                     Text(start.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Polish.locale)))
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 9, design: .rounded))
+                        .monospacedDigit()
                         .foregroundStyle(.white.opacity(0.5))
                 }
             } else {

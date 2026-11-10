@@ -1240,7 +1240,6 @@ private struct LengthPicker: View {
     let selection: Int
     let choose: (Int) -> Void
 
-    @EnvironmentObject private var settings: Settings
     @Namespace private var highlight
 
     var body: some View {
@@ -1254,10 +1253,7 @@ private struct LengthPicker: View {
                         .foregroundStyle(selection == minutes ? .white : .white.opacity(0.5))
                         .frame(width: 26, height: 21)
                         .contentShape(Capsule())
-                        .notchSelection(
-                            selection == minutes, id: "length", in: highlight,
-                            shape: Capsule(), tint: settings.accentColor
-                        )
+                        .notchSelection(selection == minutes, id: "length", in: highlight, shape: Capsule())
                 }
                 .buttonStyle(NotchPressStyle(scale: 0.95))
                 .help(Polish.count(minutes, "minuta", "minuty", "minut"))
@@ -1291,12 +1287,7 @@ private struct ToggleChip: View {
             .foregroundStyle(isOn ? settings.accentColor : .white.opacity(isHovering ? 0.75 : 0.45))
             .padding(.horizontal, 8)
             .frame(height: 19)
-            .notchGlass(
-                in: Capsule(),
-                tint: isOn ? settings.accentColor : nil,
-                lit: isHovering || isOn,
-                subtle: !isOn && !isHovering
-            )
+            .notchGlass(in: Capsule(), lit: isHovering || isOn, subtle: !isOn && !isHovering)
             .contentShape(Capsule())
         }
         .buttonStyle(NotchPressStyle(scale: 0.94))

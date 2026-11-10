@@ -87,7 +87,7 @@ struct TeleprompterControlsView: View {
                 .foregroundStyle(.white)
                 .frame(width: 28, height: 24)
                 .contentShape(Rectangle())
-                .notchControl(in: RoundedRectangle(cornerRadius: 8, style: .continuous), tint: .blue, active: active)
+                .notchControl(in: RoundedRectangle(cornerRadius: 8, style: .continuous), active: active)
         }
         .buttonStyle(NotchPressStyle())
         .help(label)
