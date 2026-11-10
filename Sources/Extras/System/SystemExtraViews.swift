@@ -107,7 +107,6 @@ struct PrivacyWidget: View {
         Circle()
             .fill(color)
             .frame(width: 7, height: 7)
-            .shadow(color: color.opacity(0.7), radius: 2)
     }
 }
 

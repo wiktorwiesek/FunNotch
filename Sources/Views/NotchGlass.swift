@@ -138,7 +138,7 @@ private struct DrawnGlassFill<S: InsettableShape>: View {
         let base = tint ?? .white
         // A card is a quieter version of a control, not a different drawing.
         let k = subtle ? 0.42 : 1.0
-        let shadowOpacity = subtle ? 0 : (tint == nil ? 0.35 : 0.45)
+        let shadowOpacity = subtle ? 0 : 0.35
         shape
             .fill(
                 LinearGradient(
@@ -169,8 +169,10 @@ private struct DrawnGlassFill<S: InsettableShape>: View {
                     lineWidth: 0.7
                 )
             )
+            // Depth stays black whatever the glass is tinted: a shadow in the
+            // tint's colour is a glow, and a glow is decoration.
             .shadow(
-                color: (tint ?? .black).opacity(shadowOpacity),
+                color: .black.opacity(shadowOpacity),
                 radius: lit ? 6 : 3, y: lit ? 2 : 1
             )
     }

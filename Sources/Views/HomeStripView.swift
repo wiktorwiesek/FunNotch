@@ -406,7 +406,6 @@ private struct BatteryMeter: View {
             .frame(width: width, height: height)
             .overlay { sheen(width: width, height: height, radius: radius) }
             .clipShape(shape)
-            .shadow(color: state.tint.opacity(isCharging ? 0.35 : 0.16), radius: 2.5)
             .offset(x: inset)
             .animation(.easeInOut(duration: 0.5), value: level)
     }

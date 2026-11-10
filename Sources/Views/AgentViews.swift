@@ -122,7 +122,6 @@ struct ClaudeSpinner: View {
         Text(character)
             .font(.system(size: size, weight: .heavy))
             .foregroundStyle(tint)
-            .shadow(color: tint.opacity(0.6), radius: size * 0.3)
             .frame(width: size * 1.3, height: size * 1.3)
     }
 }
@@ -455,8 +454,7 @@ private struct LayerClaudeGlyph: NSViewRepresentable {
 }
 
 /// `ClaudeSpinner`'s glyphs as one layer whose contents Core Animation steps
-/// through. Each distinct glyph is drawn once, with the glow the drawn version
-/// has, into an image padded enough for the glow not to be cut off.
+/// through. Each distinct glyph is drawn once.
 private final class ClaudeGlyphLayerView: AgentLayerView {
     private let glyph = CALayer()
     private var size: CGFloat = 0
@@ -482,10 +480,7 @@ private final class ClaudeGlyphLayerView: AgentLayerView {
     }
 
     override func layoutCanvas() {
-        let bounds = canvas.bounds
-        // The glow reaches past the box the glyph is laid out in.
-        let margin = size * 0.9
-        glyph.frame = bounds.insetBy(dx: -margin, dy: -margin)
+        glyph.frame = canvas.bounds
         glyph.contentsScale = scale
 
         if let drawnFor, drawnFor.size == size, drawnFor.tint == tint, drawnFor.scale == scale { return }
@@ -506,14 +501,9 @@ private final class ClaudeGlyphLayerView: AgentLayerView {
 
     private func glyphImage(_ character: String, in canvasSize: CGSize) -> NSImage? {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return nil }
-        let shadow = NSShadow()
-        shadow.shadowColor = tint.withAlphaComponent(0.6)
-        shadow.shadowBlurRadius = size * 0.3
-        shadow.shadowOffset = .zero
         let text = NSAttributedString(string: character, attributes: [
             .font: NSFont.systemFont(ofSize: size, weight: .heavy),
             .foregroundColor: tint,
-            .shadow: shadow,
         ])
         return NSImage(size: canvasSize, flipped: false) { rect in
             let measured = text.size()
@@ -552,7 +542,7 @@ struct CheckmarkBurst: View {
     var body: some View {
         let ring = Motion.easeOut(Motion.progress(time, duration: 0.36))
         let tick = Motion.easeOut(Motion.progress(time, delay: 0.24, duration: 0.26))
-        let pop = Motion.spring(time, response: 0.46, damping: 0.48)
+        let pop = Motion.spring(time, response: 0.46, damping: 0.85)
         let burst = Motion.progress(time, delay: 0.32, duration: 0.62)
 
         return ZStack {

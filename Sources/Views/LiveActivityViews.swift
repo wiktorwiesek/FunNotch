@@ -93,7 +93,8 @@ private struct WingPop: ViewModifier {
     var delay: Double = 0
 
     func body(content: Content) -> some View {
-        let pop = Motion.spring(time - delay, response: 0.42, damping: 0.52)
+        // Settles without an overshoot: an announcement arrives, it does not bounce.
+        let pop = Motion.spring(time - delay, response: 0.42, damping: 0.85)
         content
             .scaleEffect(0.35 + 0.65 * pop)
             .opacity(Motion.clamp(pop * 1.6))
@@ -241,7 +242,7 @@ private struct IslandBanner: View {
 // MARK: - HUD
 
 /// Volume, brightness and keyboard backlight: the glyph reacts to every press,
-/// the number rolls, and a glowing bar runs the width of the chin.
+/// the number rolls, and a bar runs the width of the chin.
 private struct HUDBanner: View {
     let activity: SneakPeek
     let geometry: BannerGeometry
@@ -277,7 +278,7 @@ private struct HUDBanner: View {
         }
         .onAppear {
             guard !appeared else { return }
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.62)) { appeared = true }
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) { appeared = true }
         }
     }
 
@@ -314,18 +315,16 @@ private struct HUDGlyph: View {
                     .rotationEffect(.degrees(level * 150))
                     .scaleEffect(0.84 + 0.26 * level)
                     .foregroundStyle(Color(hue: 0.13, saturation: 0.12 + 0.5 * level, brightness: 1))
-                    .shadow(color: Color.yellow.opacity(0.45 * level), radius: 2 + 4 * level)
 
             case .keyboardBacklight:
                 Image(systemName: "keyboard.fill")
                     .foregroundStyle(.white.opacity(0.45 + 0.55 * level))
-                    .shadow(color: Color(red: 0.62, green: 0.84, blue: 1).opacity(0.9 * level), radius: 1 + 5 * level)
                     .symbolEffect(.bounce.down, value: level)
             }
         }
         .font(.system(size: 15, weight: .semibold))
         .frame(width: 22, height: 20)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: level)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: level)
     }
 }
 
@@ -365,7 +364,7 @@ private struct HUDReadout: View {
     }
 }
 
-/// A capsule that fills to the level, with a bright head and a soft glow.
+/// A capsule that fills to the level, with a bright head.
 private struct HUDLevelBar: View {
     let level: Double
     let muted: Bool
@@ -384,11 +383,9 @@ private struct HUDLevelBar: View {
                         startPoint: .leading, endPoint: .trailing
                     ))
                     .frame(width: fill)
-                    .shadow(color: tint.opacity(muted ? 0 : 0.6), radius: 4)
                 Circle()
                     .fill(Color.white)
                     .frame(width: 6, height: 6)
-                    .shadow(color: tint.opacity(0.9), radius: 3)
                     .offset(x: max(fill - 6, 0))
                     .opacity(level > 0.02 && !muted ? 1 : 0)
             }
@@ -396,7 +393,7 @@ private struct HUDLevelBar: View {
             .opacity(muted ? 0.4 : 1)
         }
         .frame(height: 4)
-        .animation(.spring(response: 0.32, dampingFraction: 0.66), value: level)
+        .animation(.spring(response: 0.32, dampingFraction: 0.85), value: level)
         .animation(.easeOut(duration: 0.2), value: muted)
     }
 }
@@ -444,7 +441,7 @@ private struct BatteryGlyph: View {
 
     var body: some View {
         let fill = Motion.easeOut(Motion.progress(time, delay: 0.12, duration: 0.7))
-        let bolt = Motion.spring(time - 0.4, response: 0.4, damping: 0.45)
+        let bolt = Motion.spring(time - 0.4, response: 0.4, damping: 0.85)
         let sheen = (time * 0.8).truncatingRemainder(dividingBy: 1)
 
         HStack(spacing: 1.2) {
@@ -585,7 +582,7 @@ private struct DownloadBanner: View {
             BannerLayout(geometry: geometry) {
                 // The arrow drops into place and rings as it lands; the cat peeks up instead.
                 CatOr(tint: Color(red: 0.35, green: 0.68, blue: 1)) {
-                    let drop = Motion.spring(time, response: 0.45, damping: 0.5)
+                    let drop = Motion.spring(time, response: 0.45, damping: 0.85)
                     let ring = Motion.progress(time, delay: 0.28, duration: 0.6)
                     ZStack {
                         Circle()
@@ -618,7 +615,7 @@ private struct ShelfThumbnail: View {
     let time: Double
 
     var body: some View {
-        let drop = Motion.spring(time - 0.18, response: 0.5, damping: 0.55)
+        let drop = Motion.spring(time - 0.18, response: 0.5, damping: 0.85)
         Group {
             if let image = thumbnail {
                 Image(nsImage: image)

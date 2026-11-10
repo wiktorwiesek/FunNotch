@@ -182,7 +182,6 @@ private struct ModeSwitcher: View {
                     Circle()
                         .fill(ClockPalette.tint(for: mode))
                         .frame(width: 5, height: 5)
-                        .shadow(color: ClockPalette.tint(for: mode).opacity(0.8), radius: 2)
                 }
             }
             .foregroundStyle(selected ? .white : .white.opacity(0.5))
@@ -265,7 +264,6 @@ private struct TimeDial: View {
                     style: StrokeStyle(lineWidth: ring, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .shadow(color: reading.tint.opacity(0.55), radius: ring * 0.9)
                 .opacity(reading.fraction > 0.0005 || reading.laps > 0 ? 1 : 0)
 
             knob(reading)
@@ -959,7 +957,6 @@ private struct FocusWeekPanel: View {
                                     .frame(height: day.seconds == 0
                                            ? 0
                                            : max(CGFloat(day.seconds) / CGFloat(top) * bar.size.height, 5))
-                                    .shadow(color: isToday ? settings.accentColor.opacity(0.5) : .clear, radius: 4)
                             }
                         }
                         .frame(width: 10)

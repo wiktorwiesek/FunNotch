@@ -217,7 +217,6 @@ private struct DecorHUDBar: View {
                     Capsule()
                         .fill(model.tint)
                         .frame(height: max(proxy.size.height * model.level, model.level > 0 ? 4 * s : 0))
-                        .shadow(color: model.tint.opacity(0.5), radius: 3 * s)
                 }
             }
             .frame(width: 5 * s)
@@ -248,7 +247,6 @@ private struct DecorHUDRing: View {
                 .stroke(model.tint, style: StrokeStyle(lineWidth: 6 * s, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .padding(9 * s)
-                .shadow(color: model.tint.opacity(0.45), radius: 3 * s)
 
             VStack(spacing: 1 * s) {
                 Image(systemName: model.glyph, variableValue: model.level)
