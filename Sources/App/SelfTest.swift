@@ -969,14 +969,17 @@ enum SelfTest {
             "with nothing else there the cat has the row to itself",
             stage.showsResidentCat && stage.closedActivityInsets.leading == ResidentCat.width
         )
-        stage.setPreviewMusicActivity(true)
+        stage.setPreviewMusicActivity(true, playing: false)
         check("music brings its own cat, so there is no second one", !stage.showsResidentCat)
         let musicAlone = stage.closedActivityInsets
         stage.setPreviewAgentActivity(AgentActivity(active: 1, waiting: false))
         check(
-            "an agent beside the music borrows that cat instead of adding one",
+            "an agent beside paused music borrows its sleeping cat instead of adding one",
             stage.agentPresentation == .cat && stage.closedActivityInsets.trailing == musicAlone.trailing
         )
+        stage.setPreviewMusicActivity(true, playing: true)
+        check("while the music plays its cat dances and the agent keeps its own", stage.agentPresentation == .pip)
+        stage.setPreviewMusicActivity(true, playing: false)
         decor.catEnabled = false
         check("with the cat off it is a light beside the spectrum again", stage.agentPresentation == .pip)
         decor.catEnabled = true

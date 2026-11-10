@@ -54,12 +54,14 @@ extension NotchViewModel {
         return isShowingWidgets || !showsAgentActivity
     }
 
-    /// In the music's row the cat is the spectrum. An agent at work borrows
-    /// that cat instead of bringing a second one: two side by side, one at a
-    /// laptop and one asleep over paused music, read as two agents. A focus
-    /// countdown has the spectrum's place, so there the light stays a light.
+    /// In the music's row the cat is the spectrum. While the music is paused
+    /// that cat is asleep, and beside an agent's cat at its laptop the pair
+    /// read as one agent working and one finished; so then the agent borrows
+    /// the music's cat instead of bringing a second. A cat that is dancing is
+    /// nobody's agent, and keeps its place. A focus countdown has the
+    /// spectrum's place, so there the light stays a light.
     var musicCatCarriesAgents: Bool {
-        DecorStore.shared.catEnabled && showsClosedMediaActivity && !showsFocusActivity
+        DecorStore.shared.catEnabled && showsClosedMediaActivity && !showsFocusActivity && !musicIsPlaying
     }
 
     /// Room the cat takes at the inner edge of the left wing, with the count

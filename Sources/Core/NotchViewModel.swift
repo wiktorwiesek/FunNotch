@@ -81,6 +81,9 @@ final class NotchViewModel: ObservableObject {
     /// True when the collapsed notch should widen to show album art and the
     /// spectrum on either side of the hardware cutout.
     @Published private(set) var showsMusicActivity = false
+    /// Mirrored from the music manager, so the row can tell a cat that is
+    /// dancing from one asleep over a paused track.
+    @Published private(set) var musicIsPlaying = false
 
     /// Mirrored from the focus manager so geometry can react to it.
     @Published private(set) var focusIsActive = false
@@ -114,6 +117,7 @@ final class NotchViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] track in
                 guard let self else { return }
+                if track.isPlaying != self.musicIsPlaying { self.musicIsPlaying = track.isPlaying }
                 let shouldShow = !track.isEmpty
                 guard shouldShow != self.showsMusicActivity else { return }
                 withAnimation(.notchContent) { self.showsMusicActivity = shouldShow }
@@ -294,9 +298,11 @@ final class NotchViewModel: ObservableObject {
         notchState = state
     }
 
-    /// Forces the music live activity on, for snapshots.
-    func setPreviewMusicActivity(_ visible: Bool) {
+    /// Forces the music live activity on, for snapshots. `playing` defaults to
+    /// what the (injected) track says.
+    func setPreviewMusicActivity(_ visible: Bool, playing: Bool? = nil) {
         showsMusicActivity = visible
+        musicIsPlaying = visible && (playing ?? MusicManager.shared.isPlaying)
     }
 
     /// Forces the focus live activity on, for snapshots.

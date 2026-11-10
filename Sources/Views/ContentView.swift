@@ -361,7 +361,8 @@ private struct ClosedAlbumArt: View {
 }
 
 /// The spectrum bars shown to the right of the cutout, or the cat in their
-/// place: bobbing to the music, and at the laptop while an agent is busy.
+/// place: dancing to the music, and at the laptop while the music is paused
+/// and an agent is busy.
 private struct ClosedVisualizer: View {
     @EnvironmentObject private var settings: Settings
     @EnvironmentObject private var viewModel: NotchViewModel

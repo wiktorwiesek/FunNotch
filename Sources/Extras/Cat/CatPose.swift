@@ -314,17 +314,29 @@ enum CatClips {
     /// 120 bpm until the player says otherwise.
     static let defaultBeat = 0.5
 
+    /// The cat from the "vibing cat" clips: one hard nod a beat, the head
+    /// dropping into the chest on the beat and leaning to alternate sides,
+    /// eyes half shut, ears and body giving a little with every drop.
     private static let music: CatClip = {
         let beat = defaultBeat
         let dt = beat / 4
         let steps = timeline(total: beat * 4, dt: dt) { t in
             let slot = Int(t / dt) % 16
-            let tilts: [Double] = [-6, -6, -3, 0, 0, 3, 6, 6, 6, 3, 0, 0, -3, -6, -6, -3]
+            // Down on the beat, halfway back a step later, up, and a small
+            // wind-up before the next one: fast down, slower up. The travel
+            // is large on purpose: beside the camera the cat is 20 points
+            // tall, and a nod of a few units would not be seen.
+            let nod = [1.0, 0.5, 0, -0.2][slot % 4]
+            let down = max(nod, 0)
+            let side = (slot / 4) % 2 == 0 ? -1.0 : 1.0
             return CatPose(
-                eyes: .happy,
-                headTilt: tilts[slot],
-                headDY: slot % 8 < 2 ? 1.5 : 0,
+                eyes: .focus,
+                headTilt: side * 10 * down,
+                headDY: 13 * nod,
+                earL: 0.4 * down,
+                earR: 0.4 * down,
                 tail: quantised(sin(2 * Double.pi * t / (beat * 4)), step: 0.5),
+                lift: -0.8 * down,
                 smile: true,
                 prop: .note,
                 propPhase: Double(slot % 8) / 8
