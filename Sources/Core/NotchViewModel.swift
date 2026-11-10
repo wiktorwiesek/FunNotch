@@ -259,7 +259,19 @@ final class NotchViewModel: ObservableObject {
     /// pointer where it is drawn, so for as long as it is there the wings
     /// are not given back to the menu bar and hovering does not open the notch.
     var isShowingActionBanner: Bool {
-        isShowingStandardHUD && expandingView.type == .island && IslandCenter.shared.current?.action != nil
+        guard isShowingStandardHUD, expandingView.type == .island, let island = IslandCenter.shared.current else { return false }
+        return island.action != nil || island.onTap != nil
+    }
+
+    /// Does what a click on the island on screen is for, and takes the island
+    /// away. False when there is none, or it has nothing of its own to do.
+    func performIslandTap() -> Bool {
+        guard isShowingStandardHUD, expandingView.type == .island, let tap = IslandCenter.shared.current?.onTap
+        else { return false }
+        tap()
+        expandingViewWorkItem?.cancel()
+        withAnimation(.smooth) { expandingView.show = false }
+        return true
     }
 
     /// Size of the area that takes the pointer (hover and clicks), as opposed

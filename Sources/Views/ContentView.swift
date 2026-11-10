@@ -48,7 +48,9 @@ struct ContentView: View {
             // sits above SwiftUI's hit-test gate and registers the exact types
             // Finder actually puts on the pasteboard.
             .onTapGesture {
-                if viewModel.notchState == .closed {
+                // A click on a notification goes where the notification is
+                // from; on anything else of the closed notch, it opens it.
+                if viewModel.notchState == .closed, !viewModel.performIslandTap() {
                     viewModel.open()
                 }
             }

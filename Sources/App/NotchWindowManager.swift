@@ -139,8 +139,9 @@ final class NotchWindowManager: ObservableObject {
     private func handleClick(at point: CGPoint) {
         guard let controller = controllers.first(where: { $0.hoverRect.contains(point) }) else { return }
         guard controller.viewModel.notchState == .closed else { return }
-        // Tapping the collapsed notch opens it even when hover-to-open is off.
-        if !settings.openNotchOnHover {
+        // Tapping the collapsed notch opens it even when hover-to-open is off;
+        // a tap on a banner with something to press is for the banner.
+        if !settings.openNotchOnHover, !controller.viewModel.isShowingActionBanner {
             controller.viewModel.open()
         }
     }

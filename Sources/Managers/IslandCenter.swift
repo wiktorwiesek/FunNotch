@@ -38,6 +38,10 @@ struct Island: Identifiable {
     /// The cat that takes the symbol's place, in the clip that suits the news:
     /// peeking up when a file lands, reading its phone for a text message.
     var cat: CatState?
+    /// What a click on the island itself does, e.g. go to the app a
+    /// notification is from. Without one the click opens the notch, as it
+    /// does anywhere else on it.
+    var onTap: (@MainActor () -> Void)?
 }
 
 @MainActor

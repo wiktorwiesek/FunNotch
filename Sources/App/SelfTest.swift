@@ -584,6 +584,21 @@ enum SelfTest {
         IslandCenter.shared.post(Island(symbol: "bell.fill", title: "Self test", action: IslandAction(title: "Otwórz") {}))
         widgetModel.expandingView = SneakPeek(show: true, type: .island)
         check("one with a button stays clickable at the menu bar", tuckView?.hitTest(wingProbe) != nil)
+        // A click on an island that stands for something (a notification)
+        // goes there; on any other, it is left to open the notch.
+        check("an island with nothing of its own leaves the click to the notch", !widgetModel.performIslandTap())
+        var wentThere = false
+        IslandCenter.shared.post(Island(symbol: "bell.fill", title: "Self test", onTap: { wentThere = true }))
+        widgetModel.expandingView = SneakPeek(show: true, type: .island)
+        check(
+            "a click on a notification's island goes to its app and takes the island away",
+            widgetModel.performIslandTap() && wentThere && !widgetModel.expandingView.show
+        )
+        check("and it takes clicks where it is drawn", {
+            IslandCenter.shared.post(Island(symbol: "bell.fill", title: "Self test", onTap: {}))
+            widgetModel.expandingView = SneakPeek(show: true, type: .island)
+            return tuckView?.hitTest(wingProbe) != nil
+        }())
         widgetModel.expandingView = SneakPeek()
         widgetModel.setPreviewPointerOverMenuBar(false)
         settings.hideWingsAtMenuBar = false

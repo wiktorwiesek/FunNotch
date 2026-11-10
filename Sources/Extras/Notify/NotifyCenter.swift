@@ -302,6 +302,9 @@ final class NotifyCenter: ObservableObject {
                 }
             }
         }
+        // The island stands in for the banner, so a click on it does what a
+        // click on the banner does.
+        island.onTap = { NotifyCenter.shared.open(item, banner: banner) }
         IslandCenter.shared.post(island)
     }
 
@@ -353,8 +356,10 @@ final class NotifyCenter: ObservableObject {
         ))
     }
 
-    /// Presses the banner, which is what clicking it does, or opens the app
-    /// when the banner is gone.
+    /// Goes to the app a notification is from. While its banner is still up
+    /// the banner is pressed, which is what a click on it does and takes the
+    /// app to the conversation (it works on a banner kept off the screen
+    /// too); once it is gone, the app is simply opened.
     func open(_ item: MirroredNotification, banner: CapturedBanner? = nil) {
         if let banner = banner ?? liveBanners[item.id],
            banner.actions.contains(kAXPressAction as String),
