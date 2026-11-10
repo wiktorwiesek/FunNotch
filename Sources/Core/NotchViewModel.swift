@@ -269,6 +269,10 @@ final class NotchViewModel: ObservableObject {
         guard isShowingStandardHUD, expandingView.type == .island, let tap = IslandCenter.shared.current?.onTap
         else { return false }
         tap()
+        // The pointer came for the island, not to open the notch: a hover
+        // still counting down must not open it now that the island is gone.
+        hoverWorkItem?.cancel()
+        hoverWorkItem = nil
         expandingViewWorkItem?.cancel()
         withAnimation(.smooth) { expandingView.show = false }
         return true

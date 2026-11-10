@@ -121,7 +121,7 @@ final class NotchWindowManager: ObservableObject {
             // lip), so for nearly all of them one comparison settles it,
             // without working out what the notch is currently showing.
             let inside = controller.panel.frame.insetBy(dx: -12, dy: -12).contains(point)
-                && controller.hoverRect.contains(point)
+                && controller.hoverRect.contains(Self.onPanel(point, of: controller))
             controller.viewModel.setHovering(inside)
         }
 
@@ -136,13 +136,36 @@ final class NotchWindowManager: ObservableObject {
         }
     }
 
+    /// A pointer pushed up into the notch stops on the display's top row,
+    /// which is the panel's top edge, and a rect does not include that edge:
+    /// the point one row lower stands for it.
+    private static func onPanel(_ point: CGPoint, of controller: NotchWindowController) -> CGPoint {
+        CGPoint(x: point.x, y: min(point.y, controller.panel.frame.maxY - 1))
+    }
+
     private func handleClick(at point: CGPoint) {
-        guard let controller = controllers.first(where: { $0.hoverRect.contains(point) }) else { return }
-        guard controller.viewModel.notchState == .closed else { return }
+        guard let controller = controllers.first(where: { $0.hoverRect.contains(Self.onPanel(point, of: $0)) })
+        else { return }
+        let model = controller.viewModel
+        guard model.notchState == .closed else { return }
+
+        // A click on the display's top row never reaches the panel (the
+        // window server gives it to whatever is underneath), only this
+        // monitor, yet that row is where a pointer flung at the notch ends
+        // up. Over the cutout, where nothing else can want it, it is given
+        // what the panel would have done with it. Beside the cutout that row
+        // is the menu bar's, and the click has already opened a menu.
+        if point.y >= controller.panel.frame.maxY,
+           abs(point.x - controller.panel.frame.midX) <= model.closedNotchSize.width / 2,
+           !model.hiddenForFullscreen {
+            if !model.performIslandTap() { model.open() }
+            return
+        }
+
         // Tapping the collapsed notch opens it even when hover-to-open is off;
         // a tap on a banner with something to press is for the banner.
-        if !settings.openNotchOnHover, !controller.viewModel.isShowingActionBanner {
-            controller.viewModel.open()
+        if !settings.openNotchOnHover, !model.isShowingActionBanner {
+            model.open()
         }
     }
 
