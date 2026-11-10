@@ -1031,7 +1031,7 @@ extension PreviewRenderer {
         scenes.append(("qa-bt-long", { viewModel in
             qaReset(viewModel)
             BluetoothMonitor.shared.injectPreviewChange(
-                name: "Słuchawki Wiktora — Sony WH-1000XM5 Edycja Limitowana", connected: true, battery: 0.07
+                name: "Słuchawki Marty — Sony WH-1000XM5 Edycja Limitowana", connected: true, battery: 0.07
             )
             viewModel.expandingView = SneakPeek(show: true, type: .bluetooth, value: 0.07, icon: "headphones")
         }))
