@@ -28,8 +28,10 @@ enum NotchGlassMaterial {
     case drawn
 
     /// System glass needs macOS 26 *and* the setting; anything else is drawn.
+    /// So is every offscreen snapshot: the renderer cannot draw system glass,
+    /// and a control wearing it comes out as an empty outline.
     static func resolve(setting: Bool) -> NotchGlassMaterial {
-        if #available(macOS 26.0, *), setting { return .system }
+        if #available(macOS 26.0, *), setting, !Motion.snapshotMode { return .system }
         return .drawn
     }
 

@@ -215,15 +215,19 @@ private struct IslandBanner: View {
     @ViewBuilder
     private func trailing(_ island: Island) -> some View {
         if let action = island.action {
+            // Clear glass with a white label, like every other control in the
+            // notch (real Liquid Glass where the system has it); the island's
+            // colour stays with its glyph. A pill filled with that colour, its
+            // label in the same colour, looked like a badge from another app.
             Button(action.title) { action.perform() }
                 .buttonStyle(NotchPressStyle())
                 .font(.system(size: 10.5, weight: .semibold))
-                .foregroundStyle(island.tint)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 3)
-                .notchControl(in: Capsule(), tint: island.tint, active: true)
+                .foregroundStyle(.white.opacity(0.95))
                 .lineLimit(1)
                 .fixedSize()
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .notchGlass(in: Capsule(), lit: true, interactive: true)
         } else if let value = island.trailing {
             Text(value)
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
