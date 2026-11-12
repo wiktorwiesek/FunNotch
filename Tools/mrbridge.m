@@ -42,10 +42,26 @@ static NSString *stringValue(id value) {
     return [value isKindOfClass:[NSString class]] ? value : @"";
 }
 
+/// A finite number, or 0. A live stream reports an infinite duration (and a
+/// player in a bad moment, NaN), and NSJSONSerialization answers either with
+/// an exception: uncaught, that aborted the helper every time it started for
+/// as long as the stream was what the Mac was playing.
 static double numberValue(id value) {
-    if ([value isKindOfClass:[NSNumber class]]) return [value doubleValue];
-    if ([value isKindOfClass:[NSString class]]) return [value doubleValue];
-    return 0;
+    double number = 0;
+    if ([value isKindOfClass:[NSNumber class]]) number = [value doubleValue];
+    else if ([value isKindOfClass:[NSString class]]) number = [value doubleValue];
+    return isfinite(number) ? number : 0;
+}
+
+/// One line of JSON, or nil for anything JSON cannot carry. Never throws:
+/// what MediaRemote hands over is whatever the playing app put there.
+static NSData *encode(NSDictionary *object, NSJSONWritingOptions options) {
+    if (![NSJSONSerialization isValidJSONObject:object]) return nil;
+    @try {
+        return [NSJSONSerialization dataWithJSONObject:object options:options error:nil];
+    } @catch (NSException *exception) {
+        return nil;
+    }
 }
 
 /// Runs an asynchronous MediaRemote call and waits for its callback, because
@@ -147,7 +163,7 @@ void fn_stream(void) {
                     playingNow = playingKnown ? playing : rate > 0;
                     out[@"playing"] = @(playingNow);
                     NSDate *stamp = info[@"kMRMediaRemoteNowPlayingInfoTimestamp"];
-                    if ([stamp isKindOfClass:[NSDate class]]) {
+                    if ([stamp isKindOfClass:[NSDate class]] && isfinite([stamp timeIntervalSince1970])) {
                         out[@"timestamp"] = @([stamp timeIntervalSince1970]);
                     }
                     out[@"bundle"] = displayID;
@@ -168,8 +184,7 @@ void fn_stream(void) {
                 // Sorted keys, so an unchanged state always serialises the
                 // same and is not sent again. The playhead is `elapsed` at
                 // `timestamp`, which stays put while playback runs on.
-                NSData *line = [NSJSONSerialization dataWithJSONObject:out
-                                                               options:NSJSONWritingSortedKeys error:nil];
+                NSData *line = encode(out, NSJSONWritingSortedKeys);
                 // The image is large; send it once per track, not with every
                 // change — but also when it turns up after the track did.
                 BOOL sendArtwork = artwork && ![artworkID isEqualToString:lastArtworkID];
@@ -178,7 +193,7 @@ void fn_stream(void) {
                     if (sendArtwork) {
                         out[@"artwork"] = [artwork base64EncodedStringWithOptions:0];
                         lastArtworkID = artworkID;
-                        line = [NSJSONSerialization dataWithJSONObject:out options:0 error:nil];
+                        line = encode(out, 0);
                     }
                     if (line) {
                         // A closed pipe raises SIGPIPE, which ends this process

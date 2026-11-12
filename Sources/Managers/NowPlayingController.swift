@@ -71,8 +71,15 @@ final class NowPlayingController: MediaController {
     private var process: Process?
     private var lineBuffer = Data()
     private var stopping = false
+    /// The helper is not delivering: either paused after dying repeatedly
+    /// (it is tried again) or unusable.
     private var bridgeFailed = false
+    /// MediaRemote is missing or the helper cannot be run at all, which no
+    /// retry mends.
+    private var bridgeUnusable = false
     private var quickExits = 0
+    private var retryDelay = NowPlayingController.firstRetryDelay
+    private var retryWork: DispatchWorkItem?
     private var artworkID = ""
     private var artworkImage: NSImage?
 
@@ -149,6 +156,8 @@ final class NowPlayingController: MediaController {
         observers.removeAll()
 
         stopping = true
+        retryWork?.cancel()
+        retryWork = nil
         if let process {
             process.terminationHandler = nil
             (process.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil
@@ -219,6 +228,7 @@ final class NowPlayingController: MediaController {
     private func launchBridge() {
         guard let process = makeProcess(function: "fn_stream") else {
             bridgeFailed = true
+            bridgeUnusable = true
             return
         }
         let pipe = Pipe()
@@ -238,20 +248,16 @@ final class NowPlayingController: MediaController {
             DispatchQueue.main.async {
                 guard let self, !self.stopping, self.process === finished else { return }
                 self.process = nil
-                // A helper that dies at once every time is broken, not unlucky;
-                // stop respawning it and let another source take over.
-                self.quickExits = Date().timeIntervalSince(started) < 3 ? self.quickExits + 1 : 0
+                self.publishEmpty()
+                guard !self.bridgeUnusable else { return }
+                // A helper that dies at once every time is broken for now, not
+                // unlucky: let another source take over, and try again later.
+                self.quickExits = Date().timeIntervalSince(started) < Self.settleTime ? self.quickExits + 1 : 0
                 if self.quickExits >= 3 {
-                    self.bridgeFailed = true
-                    DiagnosticLog.write("media", "now playing bridge keeps exiting (status \(finished.terminationStatus))")
-                    self.publishEmpty()
+                    self.pauseBridge(status: finished.terminationStatus)
                     return
                 }
-                self.publishEmpty()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    guard !self.stopping, self.process == nil, !self.bridgeFailed else { return }
-                    self.launchBridge()
-                }
+                self.relaunchBridge(after: 2)
             }
         }
 
@@ -260,8 +266,51 @@ final class NowPlayingController: MediaController {
             self.process = process
         } catch {
             bridgeFailed = true
+            bridgeUnusable = true
             DiagnosticLog.write("media", "now playing bridge failed to start: \(error.localizedDescription)")
+            return
         }
+
+        // Still running after a moment: whatever was killing it has passed.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleTime) { [weak self] in
+            guard let self, self.process === process, process.isRunning else { return }
+            self.retryDelay = Self.firstRetryDelay
+            if self.bridgeFailed {
+                self.bridgeFailed = false
+                DiagnosticLog.write("media", "now playing bridge is back")
+            }
+        }
+    }
+
+    /// A run shorter than this is the helper dying at once.
+    private static let settleTime: TimeInterval = 3
+    private static let firstRetryDelay: TimeInterval = 30
+    private static let maxRetryDelay: TimeInterval = 600
+
+    /// Stops respawning for a while. It used to stop for good, and what kills
+    /// the helper at start is whatever the Mac is playing at that moment (an
+    /// item it cannot describe): the next item is fine, but system-wide Now
+    /// Playing stayed off until the app was restarted.
+    private func pauseBridge(status: Int32) {
+        if !bridgeFailed {
+            DiagnosticLog.write(
+                "media", "now playing bridge keeps exiting (status \(status)), trying again in \(Int(retryDelay)) s"
+            )
+        }
+        bridgeFailed = true
+        quickExits = 0
+        relaunchBridge(after: retryDelay)
+        retryDelay = min(retryDelay * 2, Self.maxRetryDelay)
+    }
+
+    private func relaunchBridge(after delay: TimeInterval) {
+        retryWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, !self.stopping, self.process == nil, !self.bridgeUnusable else { return }
+            self.launchBridge()
+        }
+        retryWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func publishEmpty() {
@@ -286,6 +335,7 @@ final class NowPlayingController: MediaController {
         guard let root = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { return }
         if let error = root["error"] as? String {
             bridgeFailed = true
+            bridgeUnusable = true
             DiagnosticLog.write("media", "now playing bridge: \(error)")
             return
         }
