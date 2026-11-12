@@ -479,6 +479,9 @@ struct PlayerControls: View {
         if music.isNowPlayingDeprecated, settings.mediaController == .nowPlaying {
             return "macOS nie udostępnia już systemowych informacji „Teraz odtwarzane”. Wybierz Muzykę lub Spotify w Ustawieniach."
         }
+        if settings.mediaController == .nowPlaying {
+            return "Zacznij coś odtwarzać w dowolnej aplikacji."
+        }
         return "Zacznij coś odtwarzać. Źródło: \(settings.mediaController.title)."
     }
 

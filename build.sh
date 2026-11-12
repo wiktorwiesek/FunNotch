@@ -31,8 +31,8 @@ cd "$(dirname "$0")"
 
 APP_NAME="FunNotch"
 BUNDLE_ID="com.funnotch.FunNotch"
-VERSION="1.3"
-BUILD_NUMBER="6"
+VERSION="1.4"
+BUILD_NUMBER="7"
 MIN_MACOS="14.0"
 
 # Overridable so several checkouts or agents can build at once without

@@ -487,7 +487,7 @@ final class Settings: ObservableObject {
     // MARK: - Media playback
 
     var mediaController: MediaControllerType {
-        get { option("mediaController", MediaControllerType.browser) }
+        get { option("mediaController", MediaControllerType.nowPlaying) }
         set {
             write("mediaController", newValue.rawValue)
             NotificationCenter.default.post(name: .mediaControllerChanged, object: nil)
